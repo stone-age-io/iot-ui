@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom global styles */
+body {
+  @apply font-sans antialiased text-gray-900;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  @apply bg-white rounded-md shadow-sm p-4 mb-4;
+}
+
+.page-header {
+  @apply text-2xl font-bold mb-4 text-gray-800;
+}
+
+.section-header {
+  @apply text-xl font-semibold mb-3 text-gray-700;
+}
+
+/* PrimeVue overrides */
+.p-component {
+  @apply font-sans;
+}
+
+.p-button {
+  @apply font-medium;
+}
+
+.p-inputtext:enabled:focus {
+  @apply shadow-sm;
+}
