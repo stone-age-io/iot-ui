@@ -31,6 +31,18 @@ import ThingDetailView from '../views/Entities/Things/ThingDetailView.vue'
 import ThingCreateView from '../views/Entities/Things/ThingCreateView.vue'
 import ThingEditView from '../views/Entities/Things/ThingEditView.vue'
 
+// Messaging Client Views
+import ClientListView from '../views/Messaging/Clients/ClientListView.vue'
+import ClientDetailView from '../views/Messaging/Clients/ClientDetailView.vue'
+import ClientCreateView from '../views/Messaging/Clients/ClientCreateView.vue'
+import ClientEditView from '../views/Messaging/Clients/ClientEditView.vue'
+
+// Topic Permission Views
+import TopicPermissionListView from '../views/Messaging/TopicPermissions/TopicPermissionListView.vue'
+import TopicPermissionDetailView from '../views/Messaging/TopicPermissions/TopicPermissionDetailView.vue'
+import TopicPermissionCreateView from '../views/Messaging/TopicPermissions/TopicPermissionCreateView.vue'
+import TopicPermissionEditView from '../views/Messaging/TopicPermissions/TopicPermissionEditView.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -123,7 +135,57 @@ const router = createRouter({
           meta: { title: 'Edit Thing' }
         },
         
-        // MQTT users and roles routes will be added in the future
+        // Client routes (for Messaging)
+        {
+          path: 'messaging/clients',
+          name: 'clients',
+          component: ClientListView,
+          meta: { title: 'Messaging Clients' }
+        },
+        {
+          path: 'messaging/clients/create',
+          name: 'create-client',
+          component: ClientCreateView,
+          meta: { title: 'Create Client' }
+        },
+        {
+          path: 'messaging/clients/:id',
+          name: 'client-detail',
+          component: ClientDetailView,
+          meta: { title: 'Client Details' }
+        },
+        {
+          path: 'messaging/clients/:id/edit',
+          name: 'edit-client',
+          component: ClientEditView,
+          meta: { title: 'Edit Client' }
+        },
+        
+        // Topic Permission routes (for Messaging)
+        {
+          path: 'messaging/permissions',
+          name: 'topic-permissions',
+          component: TopicPermissionListView,
+          meta: { title: 'Topic Permissions' }
+        },
+        {
+          path: 'messaging/permissions/create',
+          name: 'create-topic-permission',
+          component: TopicPermissionCreateView,
+          meta: { title: 'Create Topic Permission' }
+        },
+        {
+          path: 'messaging/permissions/:id',
+          name: 'topic-permission-detail',
+          component: TopicPermissionDetailView,
+          meta: { title: 'Topic Permission Details' }
+        },
+        {
+          path: 'messaging/permissions/:id/edit',
+          name: 'edit-topic-permission',
+          component: TopicPermissionEditView,
+          meta: { title: 'Edit Topic Permission' }
+        }
       ]
     },
     {
