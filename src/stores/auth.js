@@ -1,3 +1,4 @@
+// Updated src/stores/auth.js
 import { defineStore } from 'pinia'
 import { jwtDecode } from 'jwt-decode'
 import { ref, computed } from 'vue'
@@ -45,11 +46,10 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      // Call the login endpoint through the API gateway
-      const response = await apiService.post('/api/collections/_superusers/auth-with-password', credentials)
+      // Call the login endpoint - now using /api/auth/login
+      const response = await apiService.post('/pb/api/collections/_superusers/auth-with-password', credentials)
       
       // Store the token and user info
-      // Note: Adjust based on your PocketBase response structure
       token.value = response.data.token
       localStorage.setItem('token', token.value)
       

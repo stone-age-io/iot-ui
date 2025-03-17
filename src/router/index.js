@@ -1,3 +1,4 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -8,7 +9,7 @@ import AuthLayout from '../layouts/AuthLayout.vue'
 // Auth Views
 import LoginView from '../views/Auth/LoginView.vue'
 
-// Views
+// Dashboard View
 import DashboardView from '../views/DashboardView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
@@ -17,6 +18,18 @@ import EdgeListView from '../views/Entities/Edges/EdgeListView.vue'
 import EdgeDetailView from '../views/Entities/Edges/EdgeDetailView.vue'
 import EdgeCreateView from '../views/Entities/Edges/EdgeCreateView.vue'
 import EdgeEditView from '../views/Entities/Edges/EdgeEditView.vue'
+
+// Location Views
+import LocationListView from '../views/Entities/Locations/LocationsListView.vue'
+import LocationDetailView from '../views/Entities/Locations/LocationDetailView.vue'
+import LocationCreateView from '../views/Entities/Locations/LocationCreateView.vue'
+import LocationEditView from '../views/Entities/Locations/LocationEditView.vue'
+
+// Thing Views
+import ThingListView from '../views/Entities/Things/ThingListView.vue'
+import ThingDetailView from '../views/Entities/Things/ThingDetailView.vue'
+import ThingCreateView from '../views/Entities/Things/ThingCreateView.vue'
+import ThingEditView from '../views/Entities/Things/ThingEditView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,7 +70,60 @@ const router = createRouter({
           component: EdgeEditView,
           meta: { title: 'Edit Edge' }
         },
-        // Other entity routes will be added here in Phase 2
+        
+        // Location routes
+        {
+          path: 'locations',
+          name: 'locations',
+          component: LocationListView,
+          meta: { title: 'Locations' }
+        },
+        {
+          path: 'locations/create',
+          name: 'create-location',
+          component: LocationCreateView,
+          meta: { title: 'Create Location' }
+        },
+        {
+          path: 'locations/:id',
+          name: 'location-detail',
+          component: LocationDetailView,
+          meta: { title: 'Location Details' }
+        },
+        {
+          path: 'locations/:id/edit',
+          name: 'edit-location',
+          component: LocationEditView,
+          meta: { title: 'Edit Location' }
+        },
+        
+        // Thing routes
+        {
+          path: 'things',
+          name: 'things',
+          component: ThingListView,
+          meta: { title: 'Things' }
+        },
+        {
+          path: 'things/create',
+          name: 'create-thing',
+          component: ThingCreateView,
+          meta: { title: 'Create Thing' }
+        },
+        {
+          path: 'things/:id',
+          name: 'thing-detail',
+          component: ThingDetailView,
+          meta: { title: 'Thing Details' }
+        },
+        {
+          path: 'things/:id/edit',
+          name: 'edit-thing',
+          component: ThingEditView,
+          meta: { title: 'Edit Thing' }
+        },
+        
+        // MQTT users and roles routes will be added in the future
       ]
     },
     {

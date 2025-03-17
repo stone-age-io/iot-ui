@@ -1,4 +1,4 @@
-<!-- src/views/DashboardView.vue -->
+// src/views/DashboardView.vue
 <template>
   <div class="dashboard">
     <h1 class="page-header">Dashboard</h1>
@@ -60,6 +60,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import apiService from '../services/api'
 import StatCard from '../components/dashboard/StatCard.vue'
 import ActivityItem from '../components/dashboard/ActivityItem.vue'
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
@@ -108,19 +109,73 @@ const statCards = computed(() => [
 
 // Fetch dashboard data
 onMounted(async () => {
+  await fetchDashboardData()
+  await fetchActivityData()
+})
+
+// Fetch dashboard statistics
+const fetchDashboardData = async () => {
   try {
     loading.value = true
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Try to fetch stats from API
+    try {
+      const response = await apiService.get('/api/stats')
+      if (response.data) {
+        edgesCount.value = response.data.edges || 0
+        locationsCount.value = response.data.locations || 0
+        thingsCount.value = response.data.things || 0
+        mqttUsersCount.value = response.data.users || 0
+        return
+      }
+    } catch (err) {
+      console.warn('Could not fetch stats from API, fetching individual counts', err)
+    }
     
-    // Set mock data
-    edgesCount.value = 12
-    locationsCount.value = 48
-    thingsCount.value = 156
-    mqttUsersCount.value = 23
+    // If the stats API isn't available, fetch individual counts
+    const [edgesResponse, locationsResponse, thingsResponse] = await Promise.all([
+      apiService.get('/pb/api/collections/edges/records?perPage=1'),
+      apiService.get('/pb/api/collections/locations/records?perPage=1'),
+      apiService.get('/pb/api/collections/things/records?perPage=1')
+    ])
     
-    // Mock activity data
+    edgesCount.value = edgesResponse.data.totalItems || 0
+    locationsCount.value = locationsResponse.data.totalItems || 0
+    thingsCount.value = thingsResponse.data.totalItems || 0
+    mqttUsersCount.value = 0 // Default if not available
+    
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error)
+    // Set fallback values if API calls fail
+    edgesCount.value = 0
+    locationsCount.value = 0
+    thingsCount.value = 0
+    mqttUsersCount.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch recent activity data
+const fetchActivityData = async () => {
+  try {
+    // Try to fetch recent activity from the audit log API
+    try {
+      const response = await apiService.get('/pb/api/collections/audit_logs/records?sort=-created&perPage=5&expand=user')
+      if (response.data && response.data.items) {
+        // Transform audit logs to activity items
+        activity.value = response.data.items.map(log => ({
+          type: mapAuditTypeToActivityType(log.action),
+          title: formatAuditTitle(log),
+          timestamp: formatTimestamp(log.created)
+        }))
+        return
+      }
+    } catch (err) {
+      console.warn('Could not fetch audit logs, using mock data', err)
+    }
+    
+    // If the audit log API isn't available, use mock data
     activity.value = [
       {
         type: 'login',
@@ -144,11 +199,69 @@ onMounted(async () => {
       }
     ]
   } catch (error) {
-    console.error('Error fetching dashboard data:', error)
-  } finally {
-    loading.value = false
+    console.error('Error fetching activity data:', error)
+    activity.value = [] // Empty array if failed
   }
-})
+}
+
+// Helper to map audit log action to activity type
+const mapAuditTypeToActivityType = (action) => {
+  switch (action) {
+    case 'create': return 'create'
+    case 'update': return 'update'
+    case 'delete': return 'delete'
+    case 'login': return 'login'
+    case 'logout': return 'login'
+    case 'error': return 'error'
+    default: return 'info'
+  }
+}
+
+// Helper to format audit log title
+const formatAuditTitle = (log) => {
+  const userName = log.expand?.user?.name || 'A user'
+  
+  switch (log.action) {
+    case 'create':
+      return `${userName} created ${log.collection} "${log.record_id}"`
+    case 'update':
+      return `${userName} updated ${log.collection} "${log.record_id}"`
+    case 'delete':
+      return `${userName} deleted ${log.collection} "${log.record_id}"`
+    case 'login':
+      return `${userName} logged in`
+    case 'logout':
+      return `${userName} logged out`
+    default:
+      return `${log.action} on ${log.collection} "${log.record_id}"`
+  }
+}
+
+// Helper to format timestamp
+const formatTimestamp = (isoDate) => {
+  if (!isoDate) return ''
+  
+  const date = new Date(isoDate)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  if (diffDays < 2) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  
+  // Format date for older entries
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 // Open Grafana
 const openGrafana = () => {

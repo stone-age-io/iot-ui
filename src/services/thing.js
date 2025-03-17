@@ -18,15 +18,16 @@ export const thingService = {
     const transformedParams = transformPaginationParams(params)
     
     // Build filter based on params
-    let filters = []
+    const filters = []
     if (params.location_id) {
       filters.push(`location_id="${params.location_id}"`)
     }
     if (params.edge_id) {
-      // For edge filtering, we need to find locations in that edge first
-      // This would be handled differently in a real implementation
-      // For now, we'll just pass the edge_id and handle it in the mock API
+      // For edge filtering, we need to find locations in that edge
       filters.push(`edge_id="${params.edge_id}"`)
+    }
+    if (params.thing_type) {
+      filters.push(`thing_type="${params.thing_type}"`)
     }
     
     // Add expand parameter to include location data
@@ -54,7 +55,7 @@ export const thingService = {
   getThing(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.THINGS, id)
     // Add expand parameter to include location data
-    return apiHelpers.getList(`${endpoint}?expand=location`);
+    return apiHelpers.getList(`${endpoint}?expand=location`)
   },
 
   /**
@@ -106,25 +107,67 @@ export const thingService = {
       // Transform the response to match our expected format
       return { data: transformResponse(response.data) }
     })
-  },
-  
-  /**
-   * Get all things for a specific edge
-   * @param {string} edgeId - Edge ID
-   * @returns {Promise} - Axios promise with things data
-   */
-  getThingsByEdge(edgeId) {
-    // This is a more complex query that would typically be handled by the backend
-    // In a real implementation, we might have a dedicated API endpoint for this
-    // For now, we'll just pass the edge_id parameter and handle it in the mock API
-    const endpoint = collectionEndpoint(COLLECTIONS.THINGS)
-    return apiHelpers.getList(endpoint, { 
-      filter: `edge_id="${edgeId}"`,
-      expand: 'location'
-    })
-    .then(response => {
-      // Transform the response to match our expected format
-      return { data: transformResponse(response.data) }
-    })
   }
+}
+
+/**
+ * Thing types for dropdown options - EXPORT EXPLICITLY ADDED
+ */
+export const thingTypes = [
+  { label: 'Reader', value: 'reader' },
+  { label: 'Controller', value: 'controller' },
+  { label: 'Lock', value: 'lock' },
+  { label: 'Temperature Sensor', value: 'temperature-sensor' },
+  { label: 'Humidity Sensor', value: 'humidity-sensor' },
+  { label: 'HVAC Unit', value: 'hvac' },
+  { label: 'Lighting Controller', value: 'lighting' },
+  { label: 'Camera', value: 'camera' },
+  { label: 'Motion Sensor', value: 'motion-sensor' },
+  { label: 'Occupancy Sensor', value: 'occupancy-sensor' }
+]
+
+/**
+ * Validate thing code format
+ * @param {string} code - Thing code to validate
+ * @returns {boolean} - True if valid
+ */
+export const validateThingCode = (code) => {
+  if (!code) return false
+  const pattern = /^[a-z]{3,4}-[a-z]+-\d{3,4}$/
+  return pattern.test(code)
+}
+
+/**
+ * Generate a thing code from type, location, and number
+ * @param {string} type - Thing type abbreviation (e.g., rdr)
+ * @param {string} location - Location identifier
+ * @param {number} number - Sequence number
+ * @returns {string} - Formatted thing code
+ */
+export const generateThingCode = (type, location, number) => {
+  if (!type || !location || !number) return ''
+  const paddedNumber = String(number).padStart(3, '0')
+  return `${type}-${location}-${paddedNumber}`
+}
+
+/**
+ * Convert thing type to abbreviation for code generation
+ * @param {string} thingType - Thing type (e.g., 'reader')
+ * @returns {string} - Abbreviation (e.g., 'rdr')
+ */
+export const getThingTypeAbbreviation = (thingType) => {
+  const abbreviations = {
+    'reader': 'rdr',
+    'controller': 'ctrl',
+    'lock': 'lock',
+    'temperature-sensor': 'temp',
+    'humidity-sensor': 'hum',
+    'hvac': 'hvac',
+    'lighting': 'light',
+    'camera': 'cam',
+    'motion-sensor': 'motion',
+    'occupancy-sensor': 'occ'
+  }
+  
+  return abbreviations[thingType] || thingType.substring(0, 3)
 }

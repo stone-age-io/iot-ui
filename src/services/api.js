@@ -1,8 +1,9 @@
+// src/services/api.js
 import axios from 'axios'
 
 // Create axios instance with default config
 const apiService = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.domain.com',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -33,7 +34,7 @@ apiService.interceptors.response.use(
     const originalRequest = error.config
     
     // If the error is due to an expired token and we're not already retrying
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       
       // Here you would typically refresh the token

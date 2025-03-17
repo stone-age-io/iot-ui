@@ -33,7 +33,7 @@
       <!-- Sidebar content -->
       <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
         <h3
-          v-if="!collapsed || isMobileView"
+          v-if="(!collapsed || isMobileView) && section.title"
           class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
         >
           {{ section.title }}
@@ -123,7 +123,7 @@ onUnmounted(() => {
 // External links
 const grafanaUrl = computed(() => import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com')
 
-// Menu structure
+// Menu structure - Updated with Messaging instead of MQTT
 const menuSections = [
   {
     title: 'Core',
@@ -156,17 +156,17 @@ const menuSections = [
     ]
   },
   {
-    title: 'MQTT',
+    title: 'Messaging',  // Changed from "MQTT"
     items: [
       {
-        label: 'Users',
+        label: 'Clients',  // Changed from "Users"
         icon: 'pi pi-users',
-        to: '/mqtt-users'
+        to: '/messaging/clients'  // Updated route
       },
       {
-        label: 'Roles',
+        label: 'Topic Permissions', // Changed from "Roles"
         icon: 'pi pi-key',
-        to: '/mqtt-roles'
+        to: '/messaging/permissions'  // Updated route
       }
     ]
   },

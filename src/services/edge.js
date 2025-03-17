@@ -1,3 +1,4 @@
+// Updated src/services/edge.js
 import { apiHelpers } from './api'
 import { 
   COLLECTIONS, 
@@ -19,7 +20,6 @@ export const edgeService = {
     
     return apiHelpers.getList(endpoint, transformedParams)
       .then(response => {
-        // Transform the response to match our expected format
         return { data: transformResponse(response.data) }
       })
   },
