@@ -2,7 +2,7 @@
 <template>
   <aside
     :class="[
-      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 h-full overflow-hidden',
+      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 h-full overflow-hidden flex flex-col',
       open ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0',
       collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
     ]"
@@ -18,69 +18,68 @@
       />
     </div>
 
-    <div class="flex h-full flex-col">
-      <!-- Collapse toggle for desktop -->
-      <div class="p-4 hidden lg:flex justify-end">
-        <Button
-          @click="$emit('toggle-collapse')"
-          :icon="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
-          class="p-button-text p-button-rounded transition-transform"
-          aria-label="Toggle Sidebar"
-        />
-      </div>
-      
-      <div class="flex-1 overflow-y-auto">
-        <!-- Sidebar content -->
-        <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
-          <h3
-            v-if="!collapsed || isMobileView"
-            class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
+    <!-- Collapse toggle for desktop -->
+    <div class="p-4 hidden lg:flex justify-end">
+      <Button
+        @click="$emit('toggle-collapse')"
+        :icon="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
+        class="p-button-text p-button-rounded transition-transform"
+        aria-label="Toggle Sidebar"
+      />
+    </div>
+    
+    <!-- Main navigation sections: flex-1 makes it take available space -->
+    <div class="flex-1 overflow-y-auto">
+      <!-- Sidebar content -->
+      <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
+        <h3
+          v-if="!collapsed || isMobileView"
+          class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
+        >
+          {{ section.title }}
+        </h3>
+        
+        <div class="space-y-1">
+          <router-link
+            v-for="item in section.items"
+            :key="item.to"
+            :to="item.to"
+            custom
+            v-slot="{ href, navigate, isActive }"
           >
-            {{ section.title }}
-          </h3>
-          
-          <div class="space-y-1">
-            <router-link
-              v-for="item in section.items"
-              :key="item.to"
-              :to="item.to"
-              custom
-              v-slot="{ href, navigate, isActive }"
+            <a
+              :href="href"
+              @click="navigate"
+              class="flex items-center px-3 py-2 rounded-md transition-colors"
+              :class="[
+                isActive
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-gray-700 hover:bg-gray-100'
+              ]"
             >
-              <a
-                :href="href"
-                @click="navigate"
-                class="flex items-center px-3 py-2 rounded-md transition-colors"
-                :class="[
-                  isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                ]"
+              <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600' : 'text-gray-500']"></i>
+              <span 
+                v-if="!collapsed || isMobileView" 
+                class="ml-3 transition-opacity"
               >
-                <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600' : 'text-gray-500']"></i>
-                <span 
-                  v-if="!collapsed || isMobileView" 
-                  class="ml-3 transition-opacity"
-                >
-                  {{ item.label }}
-                </span>
-              </a>
-            </router-link>
-          </div>
+                {{ item.label }}
+              </span>
+            </a>
+          </router-link>
         </div>
       </div>
-    
-      <!-- Bottom section with Grafana link -->
-      <div class="p-4 border-t border-gray-200">
-        <a 
-          :href="grafanaUrl" 
-          target="_blank"
-          class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-        >
-          <i class="pi pi-chart-line text-lg text-gray-500"></i>
-          <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
-        </a>
-      </div>
+    </div>
+  
+    <!-- Bottom section with Grafana link - now properly aligned at bottom -->
+    <div class="mt-auto border-t border-gray-200">
+      <a 
+        :href="grafanaUrl" 
+        target="_blank"
+        class="flex items-center px-3 py-4 text-gray-700 hover:bg-gray-100 transition-colors"
+      >
+        <i class="pi pi-chart-line text-lg text-gray-500"></i>
+        <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
+      </a>
     </div>
   </aside>
 </template>
@@ -183,3 +182,7 @@ const menuSections = [
   }
 ]
 </script>
+
+<style scoped>
+/* Additional sidebar styles as needed */
+</style>

@@ -5,7 +5,7 @@
 
 /* Custom global styles */
 body {
-  @apply font-sans antialiased text-gray-900;
+  @apply font-sans antialiased text-gray-900 bg-gray-50;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
@@ -16,42 +16,139 @@ body {
   flex-direction: column;
 }
 
+/* Base card styling for consistency */
 .card {
-  @apply bg-white rounded-md shadow-sm p-4 mb-4;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  @apply bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-5;
 }
 
-/* Dashboard card specific styling */
-.dashboard-card {
-  @apply transition-shadow duration-200;
+/* Dashboard specific components */
+.page-header {
+  @apply text-xl font-bold text-gray-800 mb-5;
 }
 
-.dashboard-card:hover {
-  @apply shadow-md;
+@media (min-width: 640px) {
+  .page-header {
+    @apply text-2xl mb-6;
+  }
 }
 
-.dashboard-link {
-  @apply inline-flex items-center text-sm font-medium transition-colors duration-150 ease-in-out;
+/* Card headers and titles */
+.card-title {
+  @apply text-lg font-semibold text-gray-800 mb-4;
 }
 
-.dashboard-link:hover {
+/* Icon styling consistency */
+.icon-container {
+  @apply flex items-center justify-center rounded-md;
+}
+
+.icon-sm {
+  @apply w-8 h-8;
+}
+
+.icon-md {
+  @apply w-10 h-10;
+}
+
+.icon-lg {
+  @apply w-12 h-12;
+}
+
+/* Color variants for icons */
+.icon-blue {
+  @apply bg-blue-50 text-blue-600;
+}
+
+.icon-green {
+  @apply bg-green-50 text-green-600;
+}
+
+.icon-purple {
+  @apply bg-purple-50 text-purple-600;
+}
+
+.icon-orange {
+  @apply bg-orange-50 text-orange-600;
+}
+
+.icon-red {
+  @apply bg-red-50 text-red-600;
+}
+
+.icon-gray {
+  @apply bg-gray-50 text-gray-600;
+}
+
+/* Grid layouts */
+.grid-cols-dashboard {
+  @apply grid gap-5;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid-cols-dashboard {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-cols-dashboard {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Stat card styling */
+.stat-card {
+  @apply flex items-center relative p-4 h-full transition-all duration-200;
+}
+
+.stat-card:hover {
+  @apply transform -translate-y-1 shadow-md;
+}
+
+.stat-label {
+  @apply text-sm text-gray-500 font-medium;
+}
+
+.stat-value {
+  @apply text-2xl font-semibold text-gray-900;
+}
+
+.stat-link {
+  @apply absolute right-4 flex items-center text-xs font-medium;
+}
+
+.stat-link:hover {
   @apply underline;
 }
 
-.page-header {
-  @apply text-xl sm:text-2xl font-bold mb-4 text-gray-800;
+/* Activity feed styling */
+.activity-feed {
+  @apply flex flex-col divide-y divide-gray-100;
 }
 
-.section-header {
-  @apply text-lg sm:text-xl font-semibold mb-3 text-gray-700;
+.activity-item {
+  @apply flex items-start py-3 first:pt-0 last:pb-0 last:border-b-0;
 }
 
-/* Responsive table container */
-.table-responsive {
-  @apply w-full overflow-x-auto -mx-4 px-4;
+.activity-content {
+  @apply flex-1 min-w-0;
 }
 
-/* Improved focus styles for accessibility */
+.activity-title {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.activity-time {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+/* Empty state styling */
+.empty-state {
+  @apply flex justify-center items-center py-8 text-gray-500 text-sm;
+}
+
+/* Focus styles for accessibility */
 a:focus-visible, 
 button:focus-visible, 
 input:focus-visible, 
@@ -60,52 +157,55 @@ textarea:focus-visible {
   @apply outline-none ring-2 ring-primary-500 ring-offset-2;
 }
 
+/* Improved buttons */
+.btn {
+  @apply inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500;
+}
+
+.btn-sm {
+  @apply text-xs px-2.5 py-1.5;
+}
+
+.btn-md {
+  @apply text-sm px-4 py-2;
+}
+
+.btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700;
+}
+
+.btn-outline {
+  @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
+}
+
 /* PrimeVue overrides */
 .p-component {
-  @apply font-sans;
+  font-family: inherit;
 }
 
 .p-button {
   @apply font-medium;
 }
 
-.p-inputtext:enabled:focus {
-  @apply shadow-sm;
+.p-button.p-button-sm {
+  @apply text-xs px-2 py-1;
 }
 
-/* Increased touch targets for mobile */
-@media (max-width: 640px) {
-  .p-button,
-  .p-inputtext,
-  .p-dropdown,
-  .p-checkbox,
-  .p-radiobutton {
-    min-height: 40px;
-  }
-  
-  .p-button-icon-only {
-    width: 40px !important;
-    height: 40px !important;
-  }
+.p-button .p-button-icon {
+  @apply text-sm;
 }
 
-/* Adjust mobile padding and spacing */
+/* Responsive tweaks */
 @media (max-width: 640px) {
   .card {
-    @apply p-4;
-    margin-bottom: 0.75rem;
+    @apply p-4 mb-4;
   }
   
-  .page-header {
-    @apply text-xl mb-3;
+  .stat-card {
+    @apply p-3;
   }
   
-  body {
-    @apply text-sm;
-  }
-  
-  /* More compact dashboard on mobile */
-  .dashboard-grid {
-    gap: 0.5rem;
+  .activity-item {
+    @apply py-2.5;
   }
 }

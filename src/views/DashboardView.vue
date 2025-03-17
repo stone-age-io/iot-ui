@@ -1,156 +1,72 @@
 <!-- src/views/DashboardView.vue -->
 <template>
-  <div>
+  <div class="dashboard">
     <h1 class="page-header">Dashboard</h1>
     
-    <!-- Status Cards -->
-    <div class="space-y-3 mb-5">
-      <!-- Edges Card -->
-      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-              <i class="pi pi-server text-blue-600"></i>
-            </div>
-            <div>
-              <h3 class="text-gray-500 text-sm">Edges</h3>
-              <div class="text-2xl font-semibold">{{ edgesCount }}</div>
-            </div>
-          </div>
-          <router-link 
-            to="/edges" 
-            class="dashboard-link text-blue-600 hover:text-blue-800"
-          >
-            View all
-            <i class="pi pi-arrow-right ml-1 text-xs"></i>
-          </router-link>
-        </div>
-      </div>
-      
-      <!-- Locations Card -->
-      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
-              <i class="pi pi-map-marker text-green-600"></i>
-            </div>
-            <div>
-              <h3 class="text-gray-500 text-sm">Locations</h3>
-              <div class="text-2xl font-semibold">{{ locationsCount }}</div>
-            </div>
-          </div>
-          <router-link 
-            to="/locations" 
-            class="dashboard-link text-green-600 hover:text-green-800"
-          >
-            View all
-            <i class="pi pi-arrow-right ml-1 text-xs"></i>
-          </router-link>
-        </div>
-      </div>
-      
-      <!-- Things Card -->
-      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-              <i class="pi pi-wifi text-purple-600"></i>
-            </div>
-            <div>
-              <h3 class="text-gray-500 text-sm">Things</h3>
-              <div class="text-2xl font-semibold">{{ thingsCount }}</div>
-            </div>
-          </div>
-          <router-link 
-            to="/things" 
-            class="dashboard-link text-purple-600 hover:text-purple-800"
-          >
-            View all
-            <i class="pi pi-arrow-right ml-1 text-xs"></i>
-          </router-link>
-        </div>
-      </div>
-      
-      <!-- Users Card -->
-      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-              <i class="pi pi-users text-orange-600"></i>
-            </div>
-            <div>
-              <h3 class="text-gray-500 text-sm">MQTT Users</h3>
-              <div class="text-2xl font-semibold">{{ mqttUsersCount }}</div>
-            </div>
-          </div>
-          <router-link 
-            to="/mqtt-users" 
-            class="dashboard-link text-orange-600 hover:text-orange-800"
-          >
-            View all
-            <i class="pi pi-arrow-right ml-1 text-xs"></i>
-          </router-link>
-        </div>
-      </div>
+    <!-- Status Cards Grid -->
+    <div class="grid-cols-dashboard mb-8">
+      <StatCard
+        v-for="(card, index) in statCards"
+        :key="index"
+        :label="card.label"
+        :value="card.value"
+        :icon="card.icon"
+        :color="card.color"
+        :link-to="card.linkTo"
+      />
     </div>
     
     <!-- Recent Activity -->
-    <div class="card p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">Recent Activity</h2>
-      
-      <div v-if="loading" class="flex justify-center my-4">
-        <ProgressSpinner style="width: 40px; height: 40px" />
+    <DashboardCard title="Recent Activity">
+      <div v-if="loading" class="empty-state">
+        <ProgressSpinner style="width: 24px; height: 24px" />
       </div>
       
-      <div v-else-if="activity.length === 0" class="text-gray-500 text-center py-4">
+      <div v-else-if="activity.length === 0" class="empty-state">
         No recent activity found.
       </div>
       
-      <div v-else class="space-y-3">
-        <div
+      <div v-else class="activity-feed">
+        <ActivityItem
           v-for="(item, index) in activity"
           :key="index"
-          class="flex py-2 border-b border-gray-100 last:border-0"
-        >
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3 flex-shrink-0">
-            <i :class="activityIcon(item.type)" class="text-gray-600"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-medium text-sm sm:text-base">{{ item.title }}</div>
-            <div class="text-xs sm:text-sm text-gray-500">{{ item.timestamp }}</div>
-          </div>
-        </div>
+          :type="item.type"
+          :title="item.title"
+          :time="item.timestamp"
+        />
       </div>
-    </div>
+    </DashboardCard>
     
-    <!-- Grafana Link (simplified for mobile) -->
-    <div class="card p-4">
+    <!-- Integrations -->
+    <DashboardCard>
       <div class="flex items-center">
-        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-          <i class="pi pi-chart-line text-blue-600"></i>
+        <div class="icon-md icon-container icon-blue mr-4">
+          <i class="pi pi-chart-line"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <h2 class="text-base font-medium">Analytics & Dashboards</h2>
-          <p class="text-sm text-gray-500 hidden sm:block">View metrics in Grafana</p>
+          <div class="text-base font-medium text-gray-900">Analytics & Dashboards</div>
+          <div class="text-sm text-gray-500 hidden sm:block mt-1">View metrics in Grafana</div>
         </div>
         <Button
-          icon="pi pi-external-link"
           label="Open"
-          class="p-button-sm whitespace-nowrap"
+          icon="pi pi-external-link"
+          class="p-button-sm"
           @click="openGrafana"
         />
       </div>
-    </div>
+    </DashboardCard>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { apiHelpers } from '../services/api'
+import { ref, computed, onMounted } from 'vue'
+import StatCard from '../components/dashboard/StatCard.vue'
+import ActivityItem from '../components/dashboard/ActivityItem.vue'
+import DashboardCard from '../components/dashboard/DashboardCard.vue'
 import ProgressSpinner from 'primevue/progressspinner'
 import Button from 'primevue/button'
 
-// Mock data for prototype UI
+// State management
 const edgesCount = ref(0)
 const locationsCount = ref(0)
 const thingsCount = ref(0)
@@ -158,21 +74,53 @@ const mqttUsersCount = ref(0)
 const activity = ref([])
 const loading = ref(true)
 
+// Computed stat cards for better maintainability
+const statCards = computed(() => [
+  {
+    label: 'Edges',
+    value: edgesCount.value,
+    icon: 'pi pi-server',
+    color: 'blue',
+    linkTo: '/edges'
+  },
+  {
+    label: 'Locations',
+    value: locationsCount.value,
+    icon: 'pi pi-map-marker',
+    color: 'green',
+    linkTo: '/locations'
+  },
+  {
+    label: 'Things',
+    value: thingsCount.value,
+    icon: 'pi pi-wifi',
+    color: 'purple',
+    linkTo: '/things'
+  },
+  {
+    label: 'MQTT Users',
+    value: mqttUsersCount.value,
+    icon: 'pi pi-users',
+    color: 'orange',
+    linkTo: '/mqtt-users'
+  }
+])
+
 // Fetch dashboard data
 onMounted(async () => {
   try {
     loading.value = true
     
-    // In a real implementation, these would be actual API calls
-    // For now, we're simulating with setTimeout
+    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // Mock data
+    // Set mock data
     edgesCount.value = 12
     locationsCount.value = 48
     thingsCount.value = 156
     mqttUsersCount.value = 23
     
+    // Mock activity data
     activity.value = [
       {
         type: 'login',
@@ -202,20 +150,25 @@ onMounted(async () => {
   }
 })
 
-// Activity icon helper
-const activityIcon = (type) => {
-  switch (type) {
-    case 'login': return 'pi pi-sign-in'
-    case 'create': return 'pi pi-plus'
-    case 'update': return 'pi pi-pencil'
-    case 'delete': return 'pi pi-trash'
-    case 'error': return 'pi pi-exclamation-triangle'
-    default: return 'pi pi-info-circle'
-  }
-}
-
 // Open Grafana
 const openGrafana = () => {
   window.open(import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com', '_blank')
 }
 </script>
+
+<style scoped>
+.dashboard {
+  padding-bottom: 1.5rem;
+}
+
+/* Ensure bottom spacing on mobile */
+@media (max-width: 640px) {
+  .dashboard {
+    padding-bottom: 2rem;
+  }
+  
+  .grid-cols-dashboard {
+    margin-bottom: 1.5rem;
+  }
+}
+</style>

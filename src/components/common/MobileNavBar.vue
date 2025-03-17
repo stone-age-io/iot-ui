@@ -1,0 +1,48 @@
+<!-- src/components/common/MobileNavBar.vue -->
+<template>
+  <nav 
+    class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30"
+    v-if="showMobileNav"
+  >
+    <div class="flex justify-around items-center py-2">
+      <router-link 
+        v-for="item in navItems" 
+        :key="item.to"
+        :to="item.to"
+        class="flex flex-col items-center p-2"
+        :class="{ 'text-primary-600': isActive(item.to), 'text-gray-500': !isActive(item.to) }"
+      >
+        <i :class="[item.icon, 'text-lg']"></i>
+        <span class="text-xs mt-1">{{ item.label }}</span>
+      </router-link>
+    </div>
+  </nav>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// Only show mobile nav when not on dashboard (to avoid redundancy)
+const showMobileNav = computed(() => {
+  return route.path !== '/' && route.name !== 'dashboard';
+})
+
+// Primary navigation items for mobile
+const navItems = [
+  { label: 'Dashboard', icon: 'pi pi-home', to: '/' },
+  { label: 'Edges', icon: 'pi pi-server', to: '/edges' },
+  { label: 'Locations', icon: 'pi pi-map-marker', to: '/locations' },
+  { label: 'Things', icon: 'pi pi-wifi', to: '/things' }
+]
+
+// Check if route is active
+const isActive = (path) => {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  return route.path.startsWith(path)
+}
+</script>
