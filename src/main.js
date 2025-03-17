@@ -1,8 +1,10 @@
+// src/main.js
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './assets/main.css'
+import './assets/responsive-utilities.css' // Import responsive utilities
 
 // PrimeVue
 import PrimeVue from 'primevue/config'

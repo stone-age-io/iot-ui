@@ -1,11 +1,12 @@
+<!-- src/components/common/PageHeader.vue -->
 <template>
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
     <div>
-      <h1 class="text-2xl font-bold text-gray-800">{{ title }}</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800">{{ title }}</h1>
       <p v-if="subtitle" class="text-gray-600 mt-1">{{ subtitle }}</p>
     </div>
     
-    <div class="mt-4 sm:mt-0">
+    <div class="mt-2 sm:mt-0">
       <slot name="actions"></slot>
     </div>
   </div>

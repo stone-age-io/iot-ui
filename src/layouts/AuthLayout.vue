@@ -1,8 +1,9 @@
+<!-- src/layouts/AuthLayout.vue -->
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-primary-700">IoT Platform</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-primary-700">IoT Platform</h1>
         <p class="text-gray-600 mt-2">Physical Access Control & Building Automation</p>
       </div>
       

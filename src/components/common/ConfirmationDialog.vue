@@ -1,7 +1,8 @@
+<!-- src/components/common/ConfirmationDialog.vue -->
 <template>
   <Dialog 
     :visible="visible" 
-    :style="{ width: '450px' }" 
+    :style="{ width: '95%', maxWidth: '450px' }" 
     :modal="true"
     :closable="!loading"
     :closeOnEscape="!loading"
@@ -23,11 +24,11 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-3">
+      <div class="flex justify-end gap-3 flex-wrap">
         <Button 
           @click="$emit('update:visible', false)"
           label="Cancel" 
-          class="p-button-text"
+          class="p-button-text w-full sm:w-auto order-2 sm:order-1"
           :disabled="loading"
           icon="pi pi-times"
         />
@@ -35,7 +36,7 @@
           @click="confirm"
           :label="confirmLabel"
           :icon="confirmIcon" 
-          :class="confirmButtonClass" 
+          :class="[confirmButtonClass, 'w-full sm:w-auto order-1 sm:order-2']"
           :loading="loading"
           :disabled="loading"
           autofocus

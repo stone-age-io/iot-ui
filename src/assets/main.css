@@ -1,3 +1,4 @@
+/* src/assets/main.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +7,7 @@
 body {
   @apply font-sans antialiased text-gray-900;
   min-height: 100vh;
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
 
 #app {
@@ -16,14 +18,46 @@ body {
 
 .card {
   @apply bg-white rounded-md shadow-sm p-4 mb-4;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Dashboard card specific styling */
+.dashboard-card {
+  @apply transition-shadow duration-200;
+}
+
+.dashboard-card:hover {
+  @apply shadow-md;
+}
+
+.dashboard-link {
+  @apply inline-flex items-center text-sm font-medium transition-colors duration-150 ease-in-out;
+}
+
+.dashboard-link:hover {
+  @apply underline;
 }
 
 .page-header {
-  @apply text-2xl font-bold mb-4 text-gray-800;
+  @apply text-xl sm:text-2xl font-bold mb-4 text-gray-800;
 }
 
 .section-header {
-  @apply text-xl font-semibold mb-3 text-gray-700;
+  @apply text-lg sm:text-xl font-semibold mb-3 text-gray-700;
+}
+
+/* Responsive table container */
+.table-responsive {
+  @apply w-full overflow-x-auto -mx-4 px-4;
+}
+
+/* Improved focus styles for accessibility */
+a:focus-visible, 
+button:focus-visible, 
+input:focus-visible, 
+select:focus-visible, 
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
 }
 
 /* PrimeVue overrides */
@@ -37,4 +71,41 @@ body {
 
 .p-inputtext:enabled:focus {
   @apply shadow-sm;
+}
+
+/* Increased touch targets for mobile */
+@media (max-width: 640px) {
+  .p-button,
+  .p-inputtext,
+  .p-dropdown,
+  .p-checkbox,
+  .p-radiobutton {
+    min-height: 40px;
+  }
+  
+  .p-button-icon-only {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* Adjust mobile padding and spacing */
+@media (max-width: 640px) {
+  .card {
+    @apply p-4;
+    margin-bottom: 0.75rem;
+  }
+  
+  .page-header {
+    @apply text-xl mb-3;
+  }
+  
+  body {
+    @apply text-sm;
+  }
+  
+  /* More compact dashboard on mobile */
+  .dashboard-grid {
+    gap: 0.5rem;
+  }
 }

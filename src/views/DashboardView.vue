@@ -1,142 +1,144 @@
+<!-- src/views/DashboardView.vue -->
 <template>
   <div>
     <h1 class="page-header">Dashboard</h1>
     
     <!-- Status Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="space-y-3 mb-5">
       <!-- Edges Card -->
-      <div class="card p-4 bg-white rounded-lg shadow-sm flex flex-col">
-        <div class="flex items-center mb-4">
-          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-            <i class="pi pi-server text-blue-600"></i>
+      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+              <i class="pi pi-server text-blue-600"></i>
+            </div>
+            <div>
+              <h3 class="text-gray-500 text-sm">Edges</h3>
+              <div class="text-2xl font-semibold">{{ edgesCount }}</div>
+            </div>
           </div>
-          <div>
-            <h3 class="text-gray-500 text-sm">Edges</h3>
-            <div class="text-2xl font-semibold">{{ edgesCount }}</div>
-          </div>
+          <router-link 
+            to="/edges" 
+            class="dashboard-link text-blue-600 hover:text-blue-800"
+          >
+            View all
+            <i class="pi pi-arrow-right ml-1 text-xs"></i>
+          </router-link>
         </div>
-        <router-link 
-          to="/edges" 
-          class="text-blue-600 text-sm hover:underline mt-auto flex items-center"
-        >
-          View all edges
-          <i class="pi pi-arrow-right ml-1 text-xs"></i>
-        </router-link>
       </div>
       
       <!-- Locations Card -->
-      <div class="card p-4 bg-white rounded-lg shadow-sm flex flex-col">
-        <div class="flex items-center mb-4">
-          <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
-            <i class="pi pi-map-marker text-green-600"></i>
+      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+              <i class="pi pi-map-marker text-green-600"></i>
+            </div>
+            <div>
+              <h3 class="text-gray-500 text-sm">Locations</h3>
+              <div class="text-2xl font-semibold">{{ locationsCount }}</div>
+            </div>
           </div>
-          <div>
-            <h3 class="text-gray-500 text-sm">Locations</h3>
-            <div class="text-2xl font-semibold">{{ locationsCount }}</div>
-          </div>
+          <router-link 
+            to="/locations" 
+            class="dashboard-link text-green-600 hover:text-green-800"
+          >
+            View all
+            <i class="pi pi-arrow-right ml-1 text-xs"></i>
+          </router-link>
         </div>
-        <router-link 
-          to="/locations" 
-          class="text-green-600 text-sm hover:underline mt-auto flex items-center"
-        >
-          View all locations
-          <i class="pi pi-arrow-right ml-1 text-xs"></i>
-        </router-link>
       </div>
       
       <!-- Things Card -->
-      <div class="card p-4 bg-white rounded-lg shadow-sm flex flex-col">
-        <div class="flex items-center mb-4">
-          <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-            <i class="pi pi-wifi text-purple-600"></i>
+      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+              <i class="pi pi-wifi text-purple-600"></i>
+            </div>
+            <div>
+              <h3 class="text-gray-500 text-sm">Things</h3>
+              <div class="text-2xl font-semibold">{{ thingsCount }}</div>
+            </div>
           </div>
-          <div>
-            <h3 class="text-gray-500 text-sm">Things</h3>
-            <div class="text-2xl font-semibold">{{ thingsCount }}</div>
-          </div>
+          <router-link 
+            to="/things" 
+            class="dashboard-link text-purple-600 hover:text-purple-800"
+          >
+            View all
+            <i class="pi pi-arrow-right ml-1 text-xs"></i>
+          </router-link>
         </div>
-        <router-link 
-          to="/things" 
-          class="text-purple-600 text-sm hover:underline mt-auto flex items-center"
-        >
-          View all things
-          <i class="pi pi-arrow-right ml-1 text-xs"></i>
-        </router-link>
       </div>
       
       <!-- Users Card -->
-      <div class="card p-4 bg-white rounded-lg shadow-sm flex flex-col">
-        <div class="flex items-center mb-4">
-          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-            <i class="pi pi-users text-orange-600"></i>
+      <div class="card dashboard-card p-4 bg-white rounded-lg shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+              <i class="pi pi-users text-orange-600"></i>
+            </div>
+            <div>
+              <h3 class="text-gray-500 text-sm">MQTT Users</h3>
+              <div class="text-2xl font-semibold">{{ mqttUsersCount }}</div>
+            </div>
           </div>
-          <div>
-            <h3 class="text-gray-500 text-sm">MQTT Users</h3>
-            <div class="text-2xl font-semibold">{{ mqttUsersCount }}</div>
-          </div>
+          <router-link 
+            to="/mqtt-users" 
+            class="dashboard-link text-orange-600 hover:text-orange-800"
+          >
+            View all
+            <i class="pi pi-arrow-right ml-1 text-xs"></i>
+          </router-link>
         </div>
-        <router-link 
-          to="/mqtt-users" 
-          class="text-orange-600 text-sm hover:underline mt-auto flex items-center"
-        >
-          View all users
-          <i class="pi pi-arrow-right ml-1 text-xs"></i>
-        </router-link>
       </div>
     </div>
     
-    <!-- Recent Activity and Grafana -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Recent Activity -->
-      <div class="card">
-        <h2 class="text-lg font-semibold mb-4">Recent Activity</h2>
-        
-        <div v-if="loading" class="flex justify-center my-6">
-          <ProgressSpinner style="width: 50px; height: 50px" />
-        </div>
-        
-        <div v-else-if="activity.length === 0" class="text-gray-500 text-center py-6">
-          No recent activity found.
-        </div>
-        
-        <div v-else class="space-y-4">
-          <div
-            v-for="(item, index) in activity"
-            :key="index"
-            class="flex items-start border-b border-gray-100 pb-3 last:border-0"
-          >
-            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-              <i :class="activityIcon(item.type)" class="text-gray-600"></i>
-            </div>
-            <div>
-              <div class="font-medium">{{ item.title }}</div>
-              <div class="text-sm text-gray-500">{{ item.timestamp }}</div>
-            </div>
+    <!-- Recent Activity -->
+    <div class="card p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">Recent Activity</h2>
+      
+      <div v-if="loading" class="flex justify-center my-4">
+        <ProgressSpinner style="width: 40px; height: 40px" />
+      </div>
+      
+      <div v-else-if="activity.length === 0" class="text-gray-500 text-center py-4">
+        No recent activity found.
+      </div>
+      
+      <div v-else class="space-y-3">
+        <div
+          v-for="(item, index) in activity"
+          :key="index"
+          class="flex py-2 border-b border-gray-100 last:border-0"
+        >
+          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3 flex-shrink-0">
+            <i :class="activityIcon(item.type)" class="text-gray-600"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-sm sm:text-base">{{ item.title }}</div>
+            <div class="text-xs sm:text-sm text-gray-500">{{ item.timestamp }}</div>
           </div>
         </div>
       </div>
-      
-      <!-- Grafana Link -->
-      <div class="card">
-        <h2 class="text-lg font-semibold mb-4">Analytics & Dashboards</h2>
-        
-        <div class="bg-gray-50 rounded-lg p-6 text-center">
-          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="pi pi-chart-line text-blue-600 text-2xl"></i>
-          </div>
-          
-          <h3 class="text-lg font-medium mb-2">Grafana Dashboards</h3>
-          <p class="text-gray-600 mb-4">
-            View detailed analytics, metrics, and visualizations in Grafana.
-          </p>
-          
-          <Button
-            label="Open Grafana"
-            icon="pi pi-external-link"
-            class="p-button-primary"
-            @click="openGrafana"
-          />
+    </div>
+    
+    <!-- Grafana Link (simplified for mobile) -->
+    <div class="card p-4">
+      <div class="flex items-center">
+        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+          <i class="pi pi-chart-line text-blue-600"></i>
         </div>
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base font-medium">Analytics & Dashboards</h2>
+          <p class="text-sm text-gray-500 hidden sm:block">View metrics in Grafana</p>
+        </div>
+        <Button
+          icon="pi pi-external-link"
+          label="Open"
+          class="p-button-sm whitespace-nowrap"
+          @click="openGrafana"
+        />
       </div>
     </div>
   </div>

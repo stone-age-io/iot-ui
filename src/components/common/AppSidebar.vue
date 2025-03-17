@@ -1,81 +1,128 @@
+<!-- src/components/common/AppSidebar.vue -->
 <template>
   <aside
-    class="bg-white border-r border-gray-200 w-64 transition-all duration-300 ease-in-out"
-    :class="{ 'w-16': collapsed, 'w-64': !collapsed }"
+    :class="[
+      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 h-full overflow-hidden',
+      open ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0',
+      collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
+    ]"
+    style="max-width: 100%;"
   >
-    <div class="p-4 flex justify-end">
+    <!-- Mobile close button -->
+    <div class="lg:hidden p-4 flex justify-end">
       <Button
-        @click="toggleCollapse"
-        icon="pi pi-chevron-left"
-        :class="{ 'rotate-180': collapsed }"
-        class="p-button-text p-button-rounded transition-transform"
-        aria-label="Toggle Sidebar"
+        @click="$emit('close')"
+        icon="pi pi-times"
+        class="p-button-text p-button-rounded"
+        aria-label="Close sidebar"
       />
     </div>
-    
-    <div class="px-4">
-      <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
-        <h3
-          v-if="!collapsed"
-          class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
-        >
-          {{ section.title }}
-        </h3>
-        
-        <div class="space-y-1">
-          <router-link
-            v-for="item in section.items"
-            :key="item.to"
-            :to="item.to"
-            custom
-            v-slot="{ href, navigate, isActive }"
+
+    <div class="flex h-full flex-col">
+      <!-- Collapse toggle for desktop -->
+      <div class="p-4 hidden lg:flex justify-end">
+        <Button
+          @click="$emit('toggle-collapse')"
+          :icon="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
+          class="p-button-text p-button-rounded transition-transform"
+          aria-label="Toggle Sidebar"
+        />
+      </div>
+      
+      <div class="flex-1 overflow-y-auto">
+        <!-- Sidebar content -->
+        <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
+          <h3
+            v-if="!collapsed || isMobileView"
+            class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
           >
-            <a
-              :href="href"
-              @click="navigate"
-              class="flex items-center px-3 py-2 rounded-md transition-colors"
-              :class="[
-                isActive
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              ]"
+            {{ section.title }}
+          </h3>
+          
+          <div class="space-y-1">
+            <router-link
+              v-for="item in section.items"
+              :key="item.to"
+              :to="item.to"
+              custom
+              v-slot="{ href, navigate, isActive }"
             >
-              <i :class="[item.icon, 'mr-3 text-lg', isActive ? 'text-primary-600' : 'text-gray-500']"></i>
-              <span :class="{ 'opacity-0 w-0 hidden': collapsed }">{{ item.label }}</span>
-            </a>
-          </router-link>
+              <a
+                :href="href"
+                @click="navigate"
+                class="flex items-center px-3 py-2 rounded-md transition-colors"
+                :class="[
+                  isActive
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                ]"
+              >
+                <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600' : 'text-gray-500']"></i>
+                <span 
+                  v-if="!collapsed || isMobileView" 
+                  class="ml-3 transition-opacity"
+                >
+                  {{ item.label }}
+                </span>
+              </a>
+            </router-link>
+          </div>
         </div>
       </div>
-    </div>
     
-    <!-- Bottom section with Grafana link -->
-    <div class="absolute bottom-0 w-full p-4 border-t border-gray-200">
-      <a 
-        :href="grafanaUrl" 
-        target="_blank"
-        class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-      >
-        <i class="pi pi-chart-line mr-3 text-lg text-gray-500"></i>
-        <span :class="{ 'opacity-0 w-0 hidden': collapsed }">Grafana Dashboards</span>
-      </a>
+      <!-- Bottom section with Grafana link -->
+      <div class="p-4 border-t border-gray-200">
+        <a 
+          :href="grafanaUrl" 
+          target="_blank"
+          class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+        >
+          <i class="pi pi-chart-line text-lg text-gray-500"></i>
+          <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
+        </a>
+      </div>
     </div>
   </aside>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Button from 'primevue/button'
+
+const props = defineProps({
+  open: {
+    type: Boolean,
+    default: false
+  },
+  collapsed: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['close', 'toggle-collapse'])
+
+// Responsive state
+const windowWidth = ref(window.innerWidth)
+const isMobileView = computed(() => windowWidth.value < 1024)
+
+// Update window width on resize
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+}
+
+// Add resize event listener
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  handleResize() // Initial check
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 // External links
 const grafanaUrl = computed(() => import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com')
-
-// Sidebar state
-const collapsed = ref(false)
-
-const toggleCollapse = () => {
-  collapsed.value = !collapsed.value
-  // You might want to persist this setting in localStorage
-}
 
 // Menu structure
 const menuSections = [
@@ -136,9 +183,3 @@ const menuSections = [
   }
 ]
 </script>
-
-<style scoped>
-.rotate-180 {
-  transform: rotate(180deg);
-}
-</style>

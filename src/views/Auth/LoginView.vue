@@ -1,5 +1,6 @@
+<!-- src/views/Auth/LoginView.vue -->
 <template>
-  <div class="p-6">
+  <div class="p-4 sm:p-6">
     <h2 class="text-xl font-semibold text-center mb-6">Login to your account</h2>
     
     <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -26,7 +27,7 @@
       
       <!-- Password Input -->
       <div class="space-y-2">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between flex-wrap">
           <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
           <a href="#" class="text-sm text-primary-600 hover:text-primary-500">Forgot password?</a>
         </div>

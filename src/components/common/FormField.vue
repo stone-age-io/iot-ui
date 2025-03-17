@@ -1,11 +1,12 @@
+<!-- src/components/common/FormField.vue -->
 <template>
   <div class="form-field-wrapper mb-4">
-    <div class="flex justify-between items-start mb-1">
+    <div class="flex justify-between items-start mb-1 flex-wrap">
       <label :for="id" class="block text-sm font-medium text-gray-700">
         {{ label }}
         <span v-if="required" class="text-red-500">*</span>
       </label>
-      <small v-if="hint" class="text-gray-500">{{ hint }}</small>
+      <small v-if="hint" class="text-gray-500 w-full sm:w-auto">{{ hint }}</small>
     </div>
     
     <slot></slot>

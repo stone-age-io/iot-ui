@@ -1,17 +1,18 @@
+<!-- src/components/common/DataTable.vue -->
 <template>
   <div class="data-table-wrapper">
     <!-- Table Header with Title, Search and Actions -->
-    <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-800 m-0" v-if="title">{{ title }}</h2>
       
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center ml-auto">
         <!-- Search Input -->
-        <span class="p-input-icon-left" v-if="searchable">
+        <span class="p-input-icon-left w-full sm:w-auto" v-if="searchable">
           <i class="pi pi-search" />
           <InputText 
             v-model="filters.global.value" 
             placeholder="Search..." 
-            class="p-inputtext-sm"
+            class="p-inputtext-sm w-full"
           />
         </span>
         
@@ -20,8 +21,41 @@
       </div>
     </div>
     
-    <!-- DataTable Component -->
+    <!-- Mobile Card View -->
+    <div v-if="isMobileView" class="space-y-4">
+      <div 
+        v-for="(item, index) in items" 
+        :key="index"
+        class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+        @click="$emit('row-click', item)"
+      >
+        <!-- Generate card content based on columns -->
+        <div v-for="col in visibleColumns" :key="col.field" class="mb-2">
+          <div class="flex justify-between items-start">
+            <div class="text-sm text-gray-500">{{ col.header }}</div>
+            <div class="text-right">
+              <slot :name="`${col.field}-body`" :data="item" :field="col.field">
+                {{ formatCellValue(item, col.field, col.format) }}
+              </slot>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Actions Row -->
+        <div v-if="$slots.actions" class="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+          <slot name="actions" :data="item"></slot>
+        </div>
+      </div>
+      
+      <!-- Empty State -->
+      <div v-if="items.length === 0" class="text-center p-4 text-gray-500 bg-white rounded-lg border border-gray-200">
+        {{ emptyMessage || "No records found" }}
+      </div>
+    </div>
+    
+    <!-- Desktop DataTable Component -->
     <DataTable
+      v-else
       :value="items"
       :paginator="paginated"
       :rows="rows"
@@ -96,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { FilterMatchMode } from 'primevue/api'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -170,6 +204,16 @@ const props = defineProps({
   defaultSortOrder: {
     type: Number,
     default: 1 // 1 for ascending, -1 for descending
+  },
+  // New props for responsive behavior
+  mobileBreakpoint: {
+    type: Number,
+    default: 768 // Switch to mobile view under 768px
+  },
+  // Columns to prioritize in mobile view (limit to 3-4 most important)
+  mobileColumns: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -188,6 +232,40 @@ const sortField = ref(props.defaultSortField)
 const sortOrder = ref(props.defaultSortOrder)
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+})
+
+// Track window width for responsive behavior
+const windowWidth = ref(window.innerWidth)
+const isMobileView = computed(() => windowWidth.value < props.mobileBreakpoint)
+
+// Determine visible columns for mobile view
+const visibleColumns = computed(() => {
+  if (props.mobileColumns.length > 0) {
+    // Filter columns based on specified mobile columns
+    return props.columns.filter(col => props.mobileColumns.includes(col.field))
+  }
+  
+  // Default: take first 3 columns plus any that are marked as 'priority'
+  const priorityColumns = props.columns.filter(col => col.priority === true)
+  const essentialColumns = props.columns.slice(0, 3)
+  
+  // Combine and deduplicate
+  return [...new Set([...priorityColumns, ...essentialColumns])]
+})
+
+// Handle window resize
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  // Initial check
+  handleResize()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 
 // Watch for selection changes
