@@ -47,7 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
     
     try {
       // Call the login endpoint - now using /api/auth/login
-      const response = await apiService.post('/pb/api/collections/_superusers/auth-with-password', credentials)
+      const response = await apiService.post('/pb/api/collections/users/auth-with-password', credentials)
       
       // Store the token and user info
       token.value = response.data.token

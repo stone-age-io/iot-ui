@@ -71,7 +71,7 @@ import Button from 'primevue/button'
 const edgesCount = ref(0)
 const locationsCount = ref(0)
 const thingsCount = ref(0)
-const mqttUsersCount = ref(0)
+const clientsCount = ref(0)
 const activity = ref([])
 const loading = ref(true)
 
@@ -99,11 +99,11 @@ const statCards = computed(() => [
     linkTo: '/things'
   },
   {
-    label: 'MQTT Users',
-    value: mqttUsersCount.value,
+    label: 'Clients',
+    value: clientsCount.value,
     icon: 'pi pi-users',
     color: 'orange',
-    linkTo: '/mqtt-users'
+    linkTo: '/messaging/clients'
   }
 ])
 
@@ -118,31 +118,18 @@ const fetchDashboardData = async () => {
   try {
     loading.value = true
     
-    // Try to fetch stats from API
-    try {
-      const response = await apiService.get('/api/stats')
-      if (response.data) {
-        edgesCount.value = response.data.edges || 0
-        locationsCount.value = response.data.locations || 0
-        thingsCount.value = response.data.things || 0
-        mqttUsersCount.value = response.data.users || 0
-        return
-      }
-    } catch (err) {
-      console.warn('Could not fetch stats from API, fetching individual counts', err)
-    }
-    
     // If the stats API isn't available, fetch individual counts
-    const [edgesResponse, locationsResponse, thingsResponse] = await Promise.all([
+    const [edgesResponse, locationsResponse, thingsResponse, clientsResponse] = await Promise.all([
       apiService.get('/pb/api/collections/edges/records?perPage=1'),
       apiService.get('/pb/api/collections/locations/records?perPage=1'),
-      apiService.get('/pb/api/collections/things/records?perPage=1')
+      apiService.get('/pb/api/collections/things/records?perPage=1'),
+      apiService.get('/pb/api/collections/clients/records?perPage=1')
     ])
     
     edgesCount.value = edgesResponse.data.totalItems || 0
     locationsCount.value = locationsResponse.data.totalItems || 0
     thingsCount.value = thingsResponse.data.totalItems || 0
-    mqttUsersCount.value = 0 // Default if not available
+    clientsCount.value = clientsResponse.data.totalItems || 0
     
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
@@ -150,91 +137,122 @@ const fetchDashboardData = async () => {
     edgesCount.value = 0
     locationsCount.value = 0
     thingsCount.value = 0
-    mqttUsersCount.value = 0
+    clientsCount.value = 0
   } finally {
     loading.value = false
   }
 }
 
-// Fetch recent activity data
+// Fetch recent activity data from PocketBase logs
 const fetchActivityData = async () => {
   try {
-    // Try to fetch recent activity from the audit log API
-    try {
-      const response = await apiService.get('/pb/api/collections/audit_logs/records?sort=-created&perPage=5&expand=user')
-      if (response.data && response.data.items) {
-        // Transform audit logs to activity items
-        activity.value = response.data.items.map(log => ({
-          type: mapAuditTypeToActivityType(log.action),
-          title: formatAuditTitle(log),
-          timestamp: formatTimestamp(log.created)
-        }))
-        return
-      }
-    } catch (err) {
-      console.warn('Could not fetch audit logs, using mock data', err)
-    }
+    // Use PocketBase logs endpoint with sorting and limits
+    const response = await apiService.get('/pb/api/logs?sort=-created&perPage=5')
     
-    // If the audit log API isn't available, use mock data
-    activity.value = [
-      {
-        type: 'login',
-        title: 'Admin user logged in',
-        timestamp: '10 minutes ago'
-      },
-      {
-        type: 'create',
-        title: 'New edge "bld-eu-003" created',
-        timestamp: '2 hours ago'
-      },
-      {
-        type: 'update',
-        title: 'Thing "rdr-main-001" updated',
-        timestamp: '4 hours ago'
-      },
-      {
-        type: 'error',
-        title: 'Failed login attempt from 192.168.1.42',
-        timestamp: 'Yesterday at 18:45'
-      }
-    ]
+    if (response.data && response.data.items && response.data.items.length > 0) {
+      // Transform logs to activity items
+      activity.value = response.data.items.map(log => {
+        // Determine activity type based on log level and message
+        const type = getActivityTypeFromLog(log)
+        
+        return {
+          type,
+          title: formatLogMessage(log),
+          timestamp: formatTimestamp(log.created)
+        }
+      })
+    } else {
+      // Use mock data if no logs found
+      console.warn('No logs found, using mock data')
+      useMockActivityData()
+    }
   } catch (error) {
-    console.error('Error fetching activity data:', error)
-    activity.value = [] // Empty array if failed
+    console.error('Error fetching logs:', error)
+    useMockActivityData()
   }
 }
 
-// Helper to map audit log action to activity type
-const mapAuditTypeToActivityType = (action) => {
-  switch (action) {
-    case 'create': return 'create'
-    case 'update': return 'update'
-    case 'delete': return 'delete'
-    case 'login': return 'login'
-    case 'logout': return 'login'
-    case 'error': return 'error'
+// Determine activity type based on log level
+const getActivityTypeFromLog = (log) => {
+  // PocketBase log levels: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR
+  switch (log.level) {
+    case 3: return 'error'
+    case 2: return 'warning'
+    case 1: 
+      if (log.message.toLowerCase().includes('created')) return 'create'
+      if (log.message.toLowerCase().includes('updated')) return 'update'
+      if (log.message.toLowerCase().includes('deleted')) return 'delete'
+      if (log.message.toLowerCase().includes('login')) return 'login'
+      return 'info'
     default: return 'info'
   }
 }
 
-// Helper to format audit log title
-const formatAuditTitle = (log) => {
-  const userName = log.expand?.user?.name || 'A user'
+// Format log message for display
+const formatLogMessage = (log) => {
+  // Extract meaningful info from log message
+  let message = log.message
   
-  switch (log.action) {
-    case 'create':
-      return `${userName} created ${log.collection} "${log.record_id}"`
-    case 'update':
-      return `${userName} updated ${log.collection} "${log.record_id}"`
-    case 'delete':
-      return `${userName} deleted ${log.collection} "${log.record_id}"`
-    case 'login':
-      return `${userName} logged in`
-    case 'logout':
-      return `${userName} logged out`
-    default:
-      return `${log.action} on ${log.collection} "${log.record_id}"`
+  // Clean up common log prefixes
+  message = message.replace(/^\[[^\]]+\]\s+/, '')
+  
+  // Handle API specific messages
+  if (log.data && log.data.url) {
+    const url = log.data.url
+    
+    // Extract collection and operation from URL
+    if (url.includes('/api/collections/')) {
+      const urlParts = url.split('/')
+      const collectionIndex = urlParts.findIndex(part => part === 'collections')
+      
+      if (collectionIndex >= 0 && collectionIndex + 1 < urlParts.length) {
+        const collection = urlParts[collectionIndex + 1]
+        const isRecord = urlParts.includes('records')
+        
+        // Format based on HTTP method
+        if (log.data.method === 'POST' && isRecord) {
+          message = `New ${collection.slice(0, -1)} created`
+        } else if (log.data.method === 'PATCH' && isRecord) {
+          message = `${collection.slice(0, -1).charAt(0).toUpperCase() + collection.slice(0, -1).slice(1)} updated`
+        } else if (log.data.method === 'DELETE' && isRecord) {
+          message = `${collection.slice(0, -1).charAt(0).toUpperCase() + collection.slice(0, -1).slice(1)} deleted`
+        }
+      }
+    }
+    
+    // Handle auth related messages
+    if (url.includes('/auth-with-password')) {
+      message = 'User logged in'
+    }
   }
+  
+  return message
+}
+
+// Use mock activity data when logs aren't available
+const useMockActivityData = () => {
+  activity.value = [
+    {
+      type: 'login',
+      title: 'Admin user logged in',
+      timestamp: '10 minutes ago'
+    },
+    {
+      type: 'create',
+      title: 'New edge created',
+      timestamp: '2 hours ago'
+    },
+    {
+      type: 'update',
+      title: 'Thing updated',
+      timestamp: '4 hours ago'
+    },
+    {
+      type: 'error',
+      title: 'Failed login attempt',
+      timestamp: 'Yesterday at 18:45'
+    }
+  ]
 }
 
 // Helper to format timestamp
