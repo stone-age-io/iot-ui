@@ -1,4 +1,4 @@
-// Updated src/services/location.js
+// Full updated src/services/location.js
 import { apiHelpers } from './api'
 import { 
   COLLECTIONS, 
@@ -18,10 +18,8 @@ export const locationService = {
     const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS)
     const transformedParams = transformPaginationParams(params)
     
-    // Add expand parameter to include edge data
-    if (!transformedParams.expand) {
-      transformedParams.expand = 'edge'
-    }
+    // Add expand parameter to include edge data - corrected to edge_id
+    transformedParams.expand = 'edge_id'
     
     // Add filter for edge_id if provided
     if (params.edge_id) {
@@ -41,8 +39,8 @@ export const locationService = {
    */
   getLocation(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS, id)
-    // Add expand parameter to include edge data
-    return apiHelpers.getList(`${endpoint}?expand=edge`)
+    // Add expand parameter to include edge data - corrected to edge_id
+    return apiHelpers.getById(`${endpoint}?expand=edge_id`)
   },
 
   /**
@@ -52,7 +50,16 @@ export const locationService = {
    */
   createLocation(location) {
     const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS)
-    return apiHelpers.create(endpoint, location)
+    
+    // Process location data before sending to API
+    const locationData = { ...location }
+    
+    // Convert metadata to string if it's an object
+    if (locationData.metadata && typeof locationData.metadata === 'object') {
+      locationData.metadata = JSON.stringify(locationData.metadata)
+    }
+    
+    return apiHelpers.create(endpoint, locationData)
   },
 
   /**
@@ -63,7 +70,16 @@ export const locationService = {
    */
   updateLocation(id, location) {
     const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS, id)
-    return apiHelpers.update(endpoint, null, location)
+    
+    // Process location data before sending to API
+    const locationData = { ...location }
+    
+    // Convert metadata to string if it's an object
+    if (locationData.metadata && typeof locationData.metadata === 'object') {
+      locationData.metadata = JSON.stringify(locationData.metadata)
+    }
+    
+    return apiHelpers.update(endpoint, null, locationData)
   },
 
   /**

@@ -28,7 +28,7 @@
               :to="{ name: 'edge-detail', params: { id: location.edge_id } }" 
               class="text-primary-600 hover:underline"
             >
-              {{ location.edge?.code || location.edge_id }}
+              {{ location.expand?.edge_id?.code || 'Unknown Edge' }}
             </router-link>
             <i class="pi pi-angle-right mx-1 text-gray-400"></i>
             Locations
@@ -104,14 +104,17 @@
                 :to="{ name: 'edge-detail', params: { id: location.edge_id } }"
                 class="text-primary-600 hover:underline flex items-center"
               >
-                {{ location.edge?.code || location.edge_id }}
+                <span class="font-medium">{{ location.expand?.edge_id?.code || 'Unknown Edge' }}</span>
+                <span class="text-gray-500 ml-2 text-sm">{{ location.expand?.edge_id?.name || '' }}</span>
               </router-link>
             </div>
             
-            <!-- Description -->
-            <div class="md:col-span-2">
-              <div class="text-sm text-gray-500 mb-1">Description</div>
-              <div class="text-gray-700">{{ location.description || 'No description provided' }}</div>
+            <!-- Metadata (if any) -->
+            <div v-if="hasMetadata" class="md:col-span-2">
+              <div class="text-sm text-gray-500 mb-1">Metadata</div>
+              <div class="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
+                <pre>{{ JSON.stringify(location.metadata, null, 2) }}</pre>
+              </div>
             </div>
           </div>
         </div>
@@ -126,7 +129,7 @@
               <div class="text-sm text-gray-500 mb-1">Connected Things</div>
               <div class="flex items-center">
                 <i class="pi pi-wifi text-purple-600 mr-2"></i>
-                <div class="text-2xl font-semibold">{{ stats.thingsCount }}</div>
+                <div class="text-2xl font-semibold">{{ things.length }}</div>
               </div>
               <Button
                 label="View Things"
@@ -137,16 +140,16 @@
             </div>
             
             <!-- Thing Types -->
-            <div v-if="stats.thingTypes.length > 0">
+            <div v-if="uniqueThingTypes.length > 0">
               <div class="text-sm text-gray-500 mb-1">Thing Types</div>
               <div class="flex flex-wrap gap-1 mt-1">
                 <span 
-                  v-for="type in stats.thingTypes" 
+                  v-for="type in uniqueThingTypes" 
                   :key="type"
                   class="px-2 py-1 text-xs rounded-full font-medium"
-                  :class="getTypeClass(type)"
+                  :class="getThingTypeClass(type)"
                 >
-                  {{ getTypeName(type) }}
+                  {{ getThingTypeName(type) }}
                 </span>
               </div>
             </div>
@@ -175,6 +178,58 @@
           </div>
         </div>
       </div>
+      
+      <!-- Things List -->
+      <div class="card mt-6" v-if="things.length > 0">
+        <h2 class="text-xl font-semibold mb-4">Connected Things</h2>
+        
+        <DataTable
+          :items="things"
+          :columns="thingColumns"
+          :loading="thingsLoading"
+          :searchable="true"
+          empty-message="No things found for this location"
+          @row-click="navigateToThingDetail"
+        >
+          <!-- Thing Code column -->
+          <template #thing_code-body="{ data }">
+            <div class="font-medium text-primary-700 font-mono">{{ data.thing_code }}</div>
+          </template>
+          
+          <!-- Type column with badge -->
+          <template #thing_type-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium"
+              :class="getThingTypeClass(data.thing_type)"
+            >
+              {{ getThingTypeName(data.thing_type) }}
+            </span>
+          </template>
+          
+          <!-- Status column with badge -->
+          <template #active-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium"
+              :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+            >
+              {{ data.active ? 'Active' : 'Inactive' }}
+            </span>
+          </template>
+          
+          <!-- Actions column -->
+          <template #actions="{ data }">
+            <div class="flex gap-1 justify-center">
+              <Button 
+                icon="pi pi-eye" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToThingDetail(data)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }"
+              />
+            </div>
+          </template>
+        </DataTable>
+      </div>
     </div>
     
     <!-- Delete Confirmation Dialog -->
@@ -196,12 +251,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { locationService, locationTypes, parseLocationPath } from '../../../services/location'
-import { thingService } from '../../../services/thing'
+import { thingService, thingTypes } from '../../../services/thing'
+import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -220,11 +276,31 @@ const deleteDialog = ref({
   loading: false
 })
 
-// Statistics for things in this location
-const stats = ref({
-  thingsCount: 0,
-  thingTypes: []
+// Things data
+const things = ref([])
+const thingsLoading = ref(false)
+
+// Check if we have metadata
+const hasMetadata = computed(() => {
+  return location.value && 
+         location.value.metadata && 
+         (typeof location.value.metadata === 'object' ? 
+          Object.keys(location.value.metadata).length > 0 : 
+          location.value.metadata !== '{}')
 })
+
+// Get unique thing types - renamed to avoid conflict with imported thingTypes
+const uniqueThingTypes = computed(() => {
+  return [...new Set(things.value.map(thing => thing.thing_type))]
+})
+
+// Thing columns for the table
+const thingColumns = [
+  { field: 'thing_code', header: 'Code', sortable: true },
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'thing_type', header: 'Type', sortable: true },
+  { field: 'active', header: 'Status', sortable: true }
+]
 
 // Fetch location data on component mount
 onMounted(async () => {
@@ -247,8 +323,18 @@ const fetchLocation = async () => {
     const response = await locationService.getLocation(id)
     location.value = response.data
     
-    // Fetch related things statistics
-    await fetchThingsStats()
+    // Parse metadata if it's a string
+    if (location.value.metadata && typeof location.value.metadata === 'string') {
+      try {
+        location.value.metadata = JSON.parse(location.value.metadata)
+      } catch (e) {
+        console.warn('Failed to parse metadata for location:', location.value.code)
+        location.value.metadata = {}
+      }
+    }
+    
+    // Now fetch things for this location
+    await fetchThings()
   } catch (err) {
     console.error('Error fetching location:', err)
     error.value = 'Failed to load location details. Please try again.'
@@ -257,16 +343,24 @@ const fetchLocation = async () => {
   }
 }
 
-const fetchThingsStats = async () => {
+// Fetch things for this location
+const fetchThings = async () => {
+  if (!location.value) return
+  
+  thingsLoading.value = true
   try {
     const response = await thingService.getThingsByLocation(location.value.id)
-    const things = response.data.items || []
-    
-    // Calculate stats
-    stats.value.thingsCount = things.length
-    stats.value.thingTypes = [...new Set(things.map(thing => thing.thing_type))]
+    things.value = response.data.items || []
   } catch (err) {
-    console.error('Error fetching things stats:', err)
+    console.error('Error fetching things:', err)
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Failed to load things for this location',
+      life: 3000
+    })
+  } finally {
+    thingsLoading.value = false
   }
 }
 
@@ -286,6 +380,10 @@ const navigateToCreateThing = () => {
     name: 'create-thing', 
     query: { location_id: location.value.id } 
   })
+}
+
+const navigateToThingDetail = (thing) => {
+  router.push({ name: 'thing-detail', params: { id: thing.id } })
 }
 
 const confirmDelete = () => {
@@ -339,6 +437,30 @@ const getTypeClass = (typeCode) => {
     case 'reception': return 'bg-indigo-100 text-indigo-800'
     case 'security': return 'bg-red-100 text-red-800'
     case 'server-room': return 'bg-cyan-100 text-cyan-800'
+    case 'utility-room': return 'bg-teal-100 text-teal-800'
+    case 'storage': return 'bg-gray-100 text-gray-800'
+    case 'entrance-hall': return 'bg-blue-100 text-blue-800'
+    default: return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const getThingTypeName = (typeCode) => {
+  const type = thingTypes.find(t => t.value === typeCode)
+  return type ? type.label : typeCode
+}
+
+const getThingTypeClass = (typeCode) => {
+  switch (typeCode) {
+    case 'reader': return 'bg-blue-100 text-blue-800'
+    case 'controller': return 'bg-purple-100 text-purple-800'
+    case 'lock': return 'bg-amber-100 text-amber-800'
+    case 'temperature-sensor': return 'bg-green-100 text-green-800'
+    case 'humidity-sensor': return 'bg-cyan-100 text-cyan-800'
+    case 'hvac': return 'bg-teal-100 text-teal-800'
+    case 'lighting': return 'bg-yellow-100 text-yellow-800'
+    case 'camera': return 'bg-red-100 text-red-800'
+    case 'motion-sensor': return 'bg-indigo-100 text-indigo-800'
+    case 'occupancy-sensor': return 'bg-orange-100 text-orange-800'
     default: return 'bg-gray-100 text-gray-800'
   }
 }

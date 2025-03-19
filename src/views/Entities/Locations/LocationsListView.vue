@@ -16,10 +16,12 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['code', 'name', 'path', 'type', 'edge.code']"
+        :searchFields="['code', 'name', 'path', 'type', 'expand.edge_id.code']"
         title="Physical Locations"
         empty-message="No locations found"
         @row-click="navigateToDetail"
+        :paginated="true"
+        :rows="10"
       >
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
@@ -46,15 +48,24 @@
           </span>
         </template>
         
-        <!-- Edge column with reference -->
+        <!-- Edge column with code -->
         <template #edge_id-body="{ data }">
           <router-link 
+            v-if="data.expand && data.expand.edge_id"
             :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
             class="text-primary-600 hover:underline flex items-center"
             @click.stop
           >
-            {{ data.edge?.code || data.edge_id }}
+            {{ data.expand.edge_id.code }}
           </router-link>
+          <span v-else class="text-gray-500">Unknown Edge</span>
+        </template>
+        
+        <!-- Created date column -->
+        <template #created-body="{ data }">
+          <div class="text-sm text-gray-600">
+            {{ formatDate(data.created) }}
+          </div>
         </template>
         
         <!-- Actions column -->
@@ -108,6 +119,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import dayjs from 'dayjs'
 import { locationService, locationTypes, parseLocationPath } from '../../../services/location'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
@@ -128,13 +140,15 @@ const deleteDialog = ref({
   item: null
 })
 
-// Table columns definition
+// Table columns definition - updated to include all relevant fields
+// Note: Metadata is intentionally excluded as requested
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'path', header: 'Path', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'edge_id', header: 'Edge', sortable: true },
+  { field: 'created', header: 'Created', sortable: true }
 ]
 
 // Fetch locations on component mount
@@ -152,8 +166,14 @@ const fetchLocations = async () => {
       params.edge_id = route.query.edge
     }
     
+    // Add sorting and pagination
+    params.sort = '-created'
+    
     const response = await locationService.getLocations(params)
     locations.value = response.data.items || []
+    
+    // Debug log to verify expanded data structure
+    // console.log('First location expand data:', locations.value[0]?.expand?.edge_id)
   } catch (error) {
     console.error('Error fetching locations:', error)
     toast.add({
@@ -165,6 +185,12 @@ const fetchLocations = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return dayjs(dateString).format('MMM D, YYYY')
 }
 
 const navigateToCreate = () => {
@@ -232,6 +258,9 @@ const getTypeClass = (typeCode) => {
     case 'reception': return 'bg-indigo-100 text-indigo-800'
     case 'security': return 'bg-red-100 text-red-800'
     case 'server-room': return 'bg-cyan-100 text-cyan-800'
+    case 'utility-room': return 'bg-teal-100 text-teal-800'
+    case 'storage': return 'bg-gray-100 text-gray-800'
+    case 'entrance-hall': return 'bg-blue-100 text-blue-800'
     default: return 'bg-gray-100 text-gray-800'
   }
 }
