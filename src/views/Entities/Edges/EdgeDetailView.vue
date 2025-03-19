@@ -99,10 +99,12 @@
               </div>
             </div>
             
-            <!-- Description -->
-            <div class="md:col-span-2">
-              <div class="text-sm text-gray-500 mb-1">Description</div>
-              <div class="text-gray-700">{{ edge.description || 'No description provided' }}</div>
+            <!-- Metadata (if any) -->
+            <div v-if="hasMetadata" class="md:col-span-2">
+              <div class="text-sm text-gray-500 mb-1">Metadata</div>
+              <div class="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
+                <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
+              </div>
             </div>
           </div>
         </div>
@@ -157,6 +159,74 @@
         </div>
       </div>
       
+      <!-- Recent Locations -->
+      <div class="card mt-6" v-if="recentLocations.length > 0">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Recent Locations</h2>
+          <Button
+            label="View All"
+            icon="pi pi-arrow-right"
+            class="p-button-text p-button-sm"
+            @click="navigateToLocations"
+          />
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div 
+            v-for="location in recentLocations" 
+            :key="location.id"
+            class="bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+            @click="navigateToLocationDetail(location)"
+          >
+            <div class="flex justify-between items-start mb-2">
+              <span class="text-primary-600 font-mono">{{ location.code }}</span>
+              <span 
+                class="px-2 py-1 text-xs rounded-full font-medium"
+                :class="getLocationTypeClass(location.type)"
+              >
+                {{ getLocationTypeName(location.type) }}
+              </span>
+            </div>
+            <div class="font-semibold mb-1">{{ location.name }}</div>
+            <div class="text-sm text-gray-500">{{ formatPath(location.path) }}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Things -->
+      <div class="card mt-6" v-if="recentThings.length > 0">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Recent Things</h2>
+          <Button
+            label="View All"
+            icon="pi pi-arrow-right"
+            class="p-button-text p-button-sm"
+            @click="navigateToThings"
+          />
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div 
+            v-for="thing in recentThings" 
+            :key="thing.id"
+            class="bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+            @click="navigateToThingDetail(thing)"
+          >
+            <div class="flex justify-between items-start mb-2">
+              <span class="text-primary-600 font-mono">{{ thing.thing_code }}</span>
+              <span 
+                class="px-2 py-1 text-xs rounded-full font-medium"
+                :class="getThingTypeClass(thing.thing_type)"
+              >
+                {{ getThingTypeName(thing.thing_type) }}
+              </span>
+            </div>
+            <div class="font-semibold mb-1">{{ thing.name }}</div>
+            <div class="text-sm text-gray-500">{{ getLocationName(thing.location_id) }}</div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Graph Link Card -->
       <div class="card mt-6">
         <div class="flex items-center">
@@ -192,11 +262,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { edgeService, edgeTypes, edgeRegions } from '../../../services/edge'
+import { locationService, locationTypes } from '../../../services/location'
+import { thingService, thingTypes } from '../../../services/thing'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -215,10 +287,23 @@ const deleteDialog = ref({
   loading: false
 })
 
-// Mock stats (in a real app, these would come from the API)
-const stats = ref({
-  locationsCount: 0,
-  thingsCount: 0
+// Real data from API
+const recentLocations = ref([])
+const recentThings = ref([])
+const allLocations = ref({}) // Map of location_id -> location for quick lookups
+
+// Stats based on real data
+const stats = computed(() => ({
+  locationsCount: recentLocations.value.length,
+  thingsCount: recentThings.value.length
+}))
+
+// Check if we have metadata
+const hasMetadata = computed(() => {
+  return edge.value && 
+         edge.value.metadata && 
+         typeof edge.value.metadata === 'object' && 
+         Object.keys(edge.value.metadata).length > 0
 })
 
 // Fetch edge data on component mount
@@ -242,12 +327,11 @@ const fetchEdge = async () => {
     const response = await edgeService.getEdge(id)
     edge.value = response.data
     
-    // In a real application, fetch associated stats
-    // For now, using mock data
-    stats.value = {
-      locationsCount: Math.floor(Math.random() * 10) + 1,
-      thingsCount: Math.floor(Math.random() * 30) + 5
-    }
+    // Now fetch associated locations and things
+    await Promise.all([
+      fetchLocations(),
+      fetchThings()
+    ])
   } catch (err) {
     console.error('Error fetching edge:', err)
     error.value = 'Failed to load edge details. Please try again.'
@@ -256,8 +340,88 @@ const fetchEdge = async () => {
   }
 }
 
+// Fetch locations for this edge
+const fetchLocations = async () => {
+  if (!edge.value) return
+  
+  try {
+    const response = await locationService.getLocations({
+      edge_id: edge.value.id,
+      sort: '-created',
+      perPage: 6 // Limit to 6 recent locations
+    })
+    
+    recentLocations.value = response.data.items || []
+    
+    // Build a lookup map for locations
+    recentLocations.value.forEach(loc => {
+      allLocations.value[loc.id] = loc
+    })
+  } catch (err) {
+    console.error('Error fetching locations:', err)
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Failed to load locations for this edge',
+      life: 3000
+    })
+  }
+}
+
+// Fetch things for this edge
+const fetchThings = async () => {
+  if (!edge.value) return
+  
+  try {
+    const response = await thingService.getThings({
+      edge_id: edge.value.id,
+      sort: '-created',
+      perPage: 6 // Limit to 6 recent things
+    })
+    
+    recentThings.value = response.data.items || []
+  } catch (err) {
+    console.error('Error fetching things:', err)
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Failed to load things for this edge',
+      life: 3000
+    })
+  }
+}
+
+// Navigation methods
 const navigateToEdit = () => {
   router.push({ name: 'edit-edge', params: { id: edge.value.id } })
+}
+
+const navigateToLocations = () => {
+  router.push({ name: 'locations', query: { edge: edge.value.id } })
+}
+
+const navigateToThings = () => {
+  router.push({ name: 'things', query: { edge: edge.value.id } })
+}
+
+const navigateToLocationDetail = (location) => {
+  router.push({ name: 'location-detail', params: { id: location.id } })
+}
+
+const navigateToThingDetail = (thing) => {
+  router.push({ name: 'thing-detail', params: { id: thing.id } })
+}
+
+// Get location name for a thing
+const getLocationName = (locationId) => {
+  const location = allLocations.value[locationId]
+  return location ? location.name : 'Unknown location'
+}
+
+// Format location path for display
+const formatPath = (path) => {
+  if (!path) return ''
+  return path.split('/').join(' > ')
 }
 
 const confirmDelete = () => {
@@ -289,16 +453,6 @@ const deleteEdge = async () => {
   } finally {
     deleteDialog.value.loading = false
   }
-}
-
-const navigateToLocations = () => {
-  // In a real app, you might want to filter locations by edge
-  router.push({ name: 'locations', query: { edge: edge.value.id } })
-}
-
-const navigateToThings = () => {
-  // In a real app, you might want to filter things by edge
-  router.push({ name: 'things', query: { edge: edge.value.id } })
 }
 
 const openInGrafana = () => {
@@ -342,6 +496,37 @@ const getRegionClass = (regionCode) => {
     case 'af': return 'bg-orange-100 text-orange-800'
     case 'me': return 'bg-purple-100 text-purple-800'
     case 'aus': return 'bg-teal-100 text-teal-800'
+    default: return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const getLocationTypeName = (typeCode) => {
+  const type = locationTypes.find(t => t.value === typeCode)
+  return type ? type.label : typeCode
+}
+
+const getLocationTypeClass = (typeCode) => {
+  switch (typeCode) {
+    case 'entrance': return 'bg-blue-100 text-blue-800'
+    case 'work-area': return 'bg-green-100 text-green-800'
+    case 'meeting-room': return 'bg-purple-100 text-purple-800'
+    case 'break-area': return 'bg-amber-100 text-amber-800'
+    case 'reception': return 'bg-indigo-100 text-indigo-800'
+    default: return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const getThingTypeName = (typeCode) => {
+  const type = thingTypes.find(t => t.value === typeCode)
+  return type ? type.label : typeCode
+}
+
+const getThingTypeClass = (typeCode) => {
+  switch (typeCode) {
+    case 'reader': return 'bg-blue-100 text-blue-800'
+    case 'controller': return 'bg-purple-100 text-purple-800'
+    case 'temperature-sensor': return 'bg-green-100 text-green-800'
+    case 'motion-sensor': return 'bg-amber-100 text-amber-800'
     default: return 'bg-gray-100 text-gray-800'
   }
 }

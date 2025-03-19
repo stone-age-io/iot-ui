@@ -10,7 +10,7 @@ import {
 // Edge service with CRUD operations
 export const edgeService = {
   /**
-   * Get a paginated list of edges
+   * Get a paginated list of edges with metadata
    * @param {Object} params - Query parameters for pagination, sorting, filtering
    * @returns {Promise} - Axios promise with edges data
    */
@@ -18,9 +18,32 @@ export const edgeService = {
     const endpoint = collectionEndpoint(COLLECTIONS.EDGES)
     const transformedParams = transformPaginationParams(params)
     
+    // Add specific fields to expand or filter
+    if (params.withMetadata) {
+      transformedParams.fields = 'id,code,name,type,region,metadata,created,updated,active,description'
+    }
+    
     return apiHelpers.getList(endpoint, transformedParams)
       .then(response => {
-        return { data: transformResponse(response.data) }
+        // Transform the response to match our expected format
+        const data = transformResponse(response.data)
+        
+        // Parse metadata JSON if needed
+        if (data.items && data.items.length > 0) {
+          data.items = data.items.map(item => {
+            if (item.metadata && typeof item.metadata === 'string') {
+              try {
+                item.metadata = JSON.parse(item.metadata)
+              } catch (e) {
+                console.warn('Failed to parse metadata for edge:', item.code)
+                item.metadata = {}
+              }
+            }
+            return item
+          })
+        }
+        
+        return { data }
       })
   },
 
@@ -32,6 +55,18 @@ export const edgeService = {
   getEdge(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.EDGES, id)
     return apiHelpers.getById(endpoint)
+      .then(response => {
+        // Parse metadata if needed
+        if (response.data && response.data.metadata && typeof response.data.metadata === 'string') {
+          try {
+            response.data.metadata = JSON.parse(response.data.metadata)
+          } catch (e) {
+            console.warn('Failed to parse metadata for edge:', response.data.code)
+            response.data.metadata = {}
+          }
+        }
+        return response
+      })
   },
 
   /**
@@ -41,7 +76,16 @@ export const edgeService = {
    */
   createEdge(edge) {
     const endpoint = collectionEndpoint(COLLECTIONS.EDGES)
-    return apiHelpers.create(endpoint, edge)
+    
+    // Process edge data before sending to API
+    const edgeData = { ...edge }
+    
+    // Convert metadata to string if it's an object
+    if (edgeData.metadata && typeof edgeData.metadata === 'object') {
+      edgeData.metadata = JSON.stringify(edgeData.metadata)
+    }
+    
+    return apiHelpers.create(endpoint, edgeData)
   },
 
   /**
@@ -52,7 +96,16 @@ export const edgeService = {
    */
   updateEdge(id, edge) {
     const endpoint = collectionEndpoint(COLLECTIONS.EDGES, id)
-    return apiHelpers.update(endpoint, null, edge)
+    
+    // Process edge data before sending to API
+    const edgeData = { ...edge }
+    
+    // Convert metadata to string if it's an object
+    if (edgeData.metadata && typeof edgeData.metadata === 'object') {
+      edgeData.metadata = JSON.stringify(edgeData.metadata)
+    }
+    
+    return apiHelpers.update(endpoint, null, edgeData)
   },
 
   /**
@@ -63,6 +116,37 @@ export const edgeService = {
   deleteEdge(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.EDGES, id)
     return apiHelpers.delete(endpoint)
+  },
+  
+  /**
+   * Update edge metadata
+   * @param {string} id - Edge ID
+   * @param {Object} metadata - Metadata object to update or replace
+   * @param {boolean} merge - If true, merge with existing metadata
+   * @returns {Promise} - Axios promise with updated edge
+   */
+  updateEdgeMetadata(id, metadata, merge = true) {
+    const endpoint = collectionEndpoint(COLLECTIONS.EDGES, id)
+    
+    // First get the current edge to access its metadata
+    return this.getEdge(id).then(response => {
+      const edge = response.data
+      let updatedMetadata = metadata
+      
+      // If merge is true, merge the new metadata with the existing
+      if (merge && edge.metadata) {
+        updatedMetadata = {
+          ...(typeof edge.metadata === 'object' ? edge.metadata : {}),
+          ...metadata
+        }
+      }
+      
+      // Convert to string for PocketBase storage
+      const metadataString = JSON.stringify(updatedMetadata)
+      
+      // Only update the metadata field
+      return apiHelpers.update(endpoint, null, { metadata: metadataString })
+    })
   }
 }
 

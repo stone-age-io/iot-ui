@@ -1,3 +1,4 @@
+<!-- Updated src/views/Entities/Edges/EdgeListView.vue -->
 <template>
   <div>
     <PageHeader title="Edges" subtitle="Manage your edge installations">
@@ -20,6 +21,8 @@
         title="Edge Installations"
         empty-message="No edges found"
         @row-click="navigateToDetail"
+        :paginated="true"
+        :rows="10"
       >
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
@@ -46,6 +49,17 @@
           </span>
         </template>
         
+        <!-- Metadata column with simple visualization -->
+        <template #metadata-body="{ data }">
+          <div v-if="data.metadata && Object.keys(data.metadata).length > 0">
+            <div class="flex items-center">
+              <i class="pi pi-info-circle text-primary-500 mr-1"></i>
+              <span class="text-sm">{{ getMetadataSummary(data.metadata) }}</span>
+            </div>
+          </div>
+          <span v-else class="text-gray-500 text-sm">No metadata</span>
+        </template>
+        
         <!-- Status column with badge -->
         <template #active-body="{ data }">
           <span 
@@ -54,6 +68,13 @@
           >
             {{ data.active ? 'Active' : 'Inactive' }}
           </span>
+        </template>
+        
+        <!-- Created date column -->
+        <template #created-body="{ data }">
+          <div class="text-sm text-gray-600">
+            {{ formatDate(data.created) }}
+          </div>
         </template>
         
         <!-- Actions column -->
@@ -104,9 +125,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import dayjs from 'dayjs'
 import { edgeService, edgeTypes, edgeRegions } from '../../../services/edge'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
@@ -126,14 +148,15 @@ const deleteDialog = ref({
   item: null
 })
 
-// Table columns definition
+// Table columns definition - updated to include all relevant fields
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'region', header: 'Region', sortable: true },
   { field: 'active', header: 'Status', sortable: true },
-  { field: 'description', header: 'Description', sortable: false }
+  { field: 'metadata', header: 'Metadata', sortable: false },
+  { field: 'created', header: 'Created', sortable: true },
 ]
 
 // Fetch edges on component mount
@@ -145,7 +168,10 @@ onMounted(async () => {
 const fetchEdges = async () => {
   loading.value = true
   try {
-    const response = await edgeService.getEdges()
+    const response = await edgeService.getEdges({ 
+      withMetadata: true,
+      sort: '-created' // Sort by newest first
+    })
     edges.value = response.data.items || []
   } catch (error) {
     console.error('Error fetching edges:', error)
@@ -158,6 +184,30 @@ const fetchEdges = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return dayjs(dateString).format('MMM D, YYYY')
+}
+
+// Get a summary of metadata for display
+const getMetadataSummary = (metadata) => {
+  if (!metadata || typeof metadata !== 'object') {
+    return 'No metadata'
+  }
+  
+  const keys = Object.keys(metadata)
+  if (keys.length === 0) {
+    return 'Empty metadata'
+  }
+  
+  // Display a summary of the first few keys
+  const displayKeys = keys.slice(0, 2)
+  const summary = displayKeys.map(key => `${key}: ${typeof metadata[key] === 'object' ? '{...}' : metadata[key]}`).join(', ')
+  
+  return keys.length > 2 ? `${summary}, +${keys.length - 2} more` : summary
 }
 
 const navigateToCreate = () => {
