@@ -25,81 +25,111 @@
       </div>
     </div>
     
-    <!-- Map with floor plan -->
-    <div v-else-if="hasFloorPlan" class="relative">
-      <!-- Map Options -->
-      <div class="map-controls absolute top-3 right-3 z-50 bg-white rounded-md shadow-md p-2">
-        <!-- Map legend -->
-        <Button
-          icon="pi pi-list"
-          class="p-button-rounded p-button-text p-button-sm"
-          @click="showLegend = !showLegend"
-          tooltip="Toggle Legend"
-          tooltipOptions="{ position: 'left' }"
-        />
-        
-        <!-- Edit mode toggle -->
-        <Button
-          v-if="editable"
-          :icon="editMode ? 'pi pi-check' : 'pi pi-pencil'"
-          :class="[
-            'p-button-rounded p-button-text p-button-sm ml-1',
-            editMode ? 'p-button-success' : ''
-          ]"
-          @click="toggleEditMode"
-          :tooltip="editMode ? 'Save Positions' : 'Edit Positions'"
-          tooltipOptions="{ position: 'left' }"
-        />
-      </div>
+    <!-- Map container - always render the div, but conditionally populate it -->
+    <div class="relative">
+      <!-- Map container must always exist, even if hidden -->
+      <div id="floorplan-map" :style="{ 
+        height: height || '500px', 
+        display: hasFloorPlan && !loading ? 'block' : 'none' 
+      }"></div>
       
-      <!-- Legend panel -->
+      <!-- Fallback message when floor plan load fails but hasFloorPlan is true -->
       <div 
-        v-if="showLegend" 
-        class="legend-panel absolute left-3 top-3 z-50 bg-white rounded-md shadow-md p-3"
-        style="max-width: 250px; max-height: 80%; overflow-y: auto;"
+        v-if="hasFloorPlan && initAttempted && !mapInitialized && !loading" 
+        class="floor-plan-error p-4 bg-red-50 border border-red-200 rounded-md"
       >
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-semibold">Legend</h3>
-          <Button
-            icon="pi pi-times"
-            class="p-button-rounded p-button-text p-button-sm"
-            @click="showLegend = false"
-          />
-        </div>
-        
-        <div class="space-y-2">
-          <div v-for="(typeObj, index) in uniqueThingTypes" :key="index" class="flex items-center">
-            <span 
-              class="h-3 w-3 rounded-full mr-2"
-              :style="{ backgroundColor: getMarkerColor(typeObj.type) }"
-            ></span>
-            <span class="text-xs">{{ typeObj.label }} ({{ typeObj.count }})</span>
+        <div class="flex items-start">
+          <i class="pi pi-exclamation-circle text-red-500 mt-0.5 mr-2"></i>
+          <div>
+            <p class="text-red-700 font-medium">Failed to load floor plan</p>
+            <p class="text-red-600 text-sm mt-1">There was an error loading the floor plan image. Please try again later or upload a new image.</p>
+            <div class="mt-3">
+              <FileUpload
+                v-if="showUpload"
+                mode="basic"
+                :maxFileSize="5000000"
+                accept="image/*"
+                :auto="true"
+                chooseLabel="Upload New Floor Plan"
+                @upload="onUpload"
+                :customUpload="true"
+                @uploader="handleUpload"
+              />
+            </div>
           </div>
         </div>
       </div>
+    </div>
+    
+    <!-- Map Controls section (will be hidden when map is not initialized) -->
+    <div v-if="mapInitialized" class="map-controls absolute top-3 right-3 z-50 bg-white rounded-md shadow-md p-2">
+      <!-- Map legend -->
+      <Button
+        icon="pi pi-list"
+        class="p-button-rounded p-button-text p-button-sm"
+        @click="showLegend = !showLegend"
+        tooltip="Toggle Legend"
+        tooltipOptions="{ position: 'left' }"
+      />
       
-      <!-- The Leaflet map with the floor plan -->
-      <div id="floorplan-map" :style="{ height: height || '500px' }"></div>
+      <!-- Edit mode toggle -->
+      <Button
+        v-if="editable"
+        :icon="editMode ? 'pi pi-check' : 'pi pi-pencil'"
+        :class="[
+          'p-button-rounded p-button-text p-button-sm ml-1',
+          editMode ? 'p-button-success' : ''
+        ]"
+        @click="toggleEditMode"
+        :tooltip="editMode ? 'Save Positions' : 'Edit Positions'"
+        tooltipOptions="{ position: 'left' }"
+      />
+    </div>
+    
+    <!-- Legend panel -->
+    <div 
+      v-if="showLegend && mapInitialized" 
+      class="legend-panel absolute left-3 top-3 z-50 bg-white rounded-md shadow-md p-3"
+      style="max-width: 250px; max-height: 80%; overflow-y: auto;"
+    >
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-sm font-semibold">Legend</h3>
+        <Button
+          icon="pi pi-times"
+          class="p-button-rounded p-button-text p-button-sm"
+          @click="showLegend = false"
+        />
+      </div>
       
-      <!-- Edit mode panel -->
-      <div v-if="editMode" class="edit-panel p-3 bg-gray-100 border-t border-gray-300">
-        <h3 class="text-sm font-medium mb-2">Edit Mode: Place things on the map</h3>
-        <p class="text-xs text-gray-500 mb-3">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="thing in things" :key="thing.id" class="flex items-center">
-            <span 
-              class="h-3 w-3 rounded-full mr-2"
-              :style="{ backgroundColor: getMarkerColor(thing.type) }"
-            ></span>
-            <span class="text-sm truncate flex-1">{{ thing.name }}</span>
-            <Button
-              icon="pi pi-search"
-              class="p-button-rounded p-button-text p-button-sm"
-              @click="locateThing(thing)"
-              tooltip="Locate on map"
-            />
-          </div>
+      <div class="space-y-2">
+        <div v-for="(typeObj, index) in uniqueThingTypes" :key="index" class="flex items-center">
+          <span 
+            class="h-3 w-3 rounded-full mr-2"
+            :style="{ backgroundColor: getMarkerColor(typeObj.type) }"
+          ></span>
+          <span class="text-xs">{{ typeObj.label }} ({{ typeObj.count }})</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Edit mode panel -->
+    <div v-if="editMode && mapInitialized" class="edit-panel p-3 bg-gray-100 border-t border-gray-300">
+      <h3 class="text-sm font-medium mb-2">Edit Mode: Place things on the map</h3>
+      <p class="text-xs text-gray-500 mb-3">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="thing in things" :key="thing.id" class="flex items-center">
+          <span 
+            class="h-3 w-3 rounded-full mr-2"
+            :style="{ backgroundColor: getMarkerColor(thing.type) }"
+          ></span>
+          <span class="text-sm truncate flex-1">{{ thing.name }}</span>
+          <Button
+            icon="pi pi-search"
+            class="p-button-rounded p-button-text p-button-sm"
+            @click="locateThing(thing)"
+            tooltip="Locate on map"
+          />
         </div>
       </div>
     </div>
@@ -107,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -157,7 +187,7 @@ const markerLayer = ref(null)
 const mapInitialized = ref(false)
 const initAttempted = ref(false)
 const initTimer = ref(null)
-const blobUrl = ref(null)  // To store the blob URL for the image
+const imageUrl = ref(null) // Direct image URL
 
 // Check if the location has a floor plan
 const hasFloorPlan = computed(() => {
@@ -186,16 +216,15 @@ const uniqueThingTypes = computed(() => {
 onMounted(() => {
   // Defer initialization to avoid DOM issues
   if (hasFloorPlan.value) {
-    fetchFloorPlanImage().then(() => {
-      scheduleMapInitialization();
-    });
+    prepareImageUrl();
+    scheduleMapInitialization();
   } else {
     loading.value = false;
   }
 })
 
 // Clean up on unmount
-onBeforeUnmount(() => {
+onUnmounted(() => {
   // Clear any pending timers
   if (initTimer.value) {
     clearTimeout(initTimer.value);
@@ -205,12 +234,6 @@ onBeforeUnmount(() => {
   if (map.value) {
     map.value.remove();
     map.value = null;
-  }
-  
-  // Release any blob URLs
-  if (blobUrl.value) {
-    URL.revokeObjectURL(blobUrl.value);
-    blobUrl.value = null;
   }
 })
 
@@ -224,25 +247,22 @@ watch(() => props.things, () => {
 // Watch for changes to floorplan
 watch(() => hasFloorPlan.value, (newValue) => {
   if (newValue && !mapInitialized.value) {
-    fetchFloorPlanImage().then(() => {
-      scheduleMapInitialization();
-    });
+    prepareImageUrl();
+    scheduleMapInitialization();
   }
 })
 
-// Fetch the floor plan image with CORS handling
-const fetchFloorPlanImage = async () => {
+// Prepare the direct image URL
+const prepareImageUrl = () => {
   if (!hasFloorPlan.value) return;
   
-  try {
-    // Get a blob URL for the image using the location service
-    blobUrl.value = await locationService.getFloorPlanImageUrl(props.location);
-    console.log("Blob URL created:", blobUrl.value ? "Success" : "Failed");
-    return !!blobUrl.value;
-  } catch (error) {
-    console.error("Error fetching floor plan image:", error);
-    return false;
-  }
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const collectionName = 'locations';
+  const recordId = props.location.id;
+  const filename = props.location.floorplan;
+  
+  imageUrl.value = `${baseUrl}pb/api/files/${collectionName}/${recordId}/${filename}`;
+  console.log("Prepared direct image URL:", imageUrl.value);
 }
 
 // Schedule map initialization with increasing delays
@@ -252,25 +272,42 @@ const scheduleMapInitialization = () => {
     clearTimeout(initTimer.value);
   }
   
-  // Set timeouts with increasing delays to handle various timing issues
-  const attemptInit = (delay) => {
-    console.log(`Scheduling map initialization in ${delay}ms`);
-    initTimer.value = setTimeout(() => {
-      // Make sure we still need to initialize
-      if (!mapInitialized.value && hasFloorPlan.value) {
-        initMap().then(success => {
-          if (!success && delay < 2000) {
-            // If initialization failed and we haven't waited too long, try again with longer delay
-            attemptInit(delay * 2);
-          }
-        });
+  // Helper to wait for the element to be available in the DOM
+  const waitForElement = (selector, callback, maxAttempts = 10, delay = 200) => {
+    let attempts = 0;
+    
+    const check = () => {
+      attempts++;
+      const element = document.getElementById(selector);
+      if (element) {
+        callback(element);
+        return;
       }
-    }, delay);
+      
+      if (attempts >= maxAttempts) {
+        console.error(`Element with ID ${selector} not found after ${maxAttempts} attempts`);
+        loading.value = false;
+        return;
+      }
+      
+      console.log(`Element ${selector} not found, retry in ${delay}ms (attempt ${attempts}/${maxAttempts})`);
+      setTimeout(check, delay);
+    };
+    
+    check();
   };
   
-  // Start with a short delay
-  attemptInit(200);
-}
+  // Wait for the map container to exist in the DOM before initializing
+  waitForElement('floorplan-map', (element) => {
+    console.log("Found map container element, initializing map");
+    initMap().then(success => {
+      if (!success) {
+        console.error("Map initialization failed");
+        loading.value = false;
+      }
+    });
+  });
+};
 
 // Initialize the map with floor plan
 const initMap = async () => {
@@ -280,12 +317,12 @@ const initMap = async () => {
     
     // Find the map container element
     const mapElement = document.getElementById('floorplan-map');
-    console.log("Initializing map, container element:", mapElement);
-    
     if (!mapElement) {
       console.error('Map container element not found');
       return false;
     }
+    
+    console.log("Initializing map with container element:", mapElement);
     
     // Fix Leaflet icon paths
     fixLeafletIconPaths();
@@ -324,19 +361,28 @@ const initMap = async () => {
   }
 }
 
-// Load the floor plan image and set up the map
+// Load the floor plan image and set up the map using direct URL approach
 const loadFloorPlanImage = () => {
   return new Promise((resolve, reject) => {
-    if (!blobUrl.value) {
-      reject('No floor plan blob URL available');
+    if (!imageUrl.value) {
+      console.error('No floor plan image URL available');
+      reject('No floor plan image URL available');
       return;
     }
     
-    console.log("Loading floor plan image from blob URL");
+    console.log("Loading floor plan image from URL:", imageUrl.value);
     
     const img = new Image();
     
+    // Set a timeout to handle cases where the image load hangs
+    const timeoutId = setTimeout(() => {
+      console.error('Floor plan image load timed out');
+      reject('Floor plan image load timed out');
+    }, 10000); // 10 second timeout
+    
     img.onload = () => {
+      clearTimeout(timeoutId);
+      
       try {
         // Calculate bounds based on image dimensions
         const width = img.width;
@@ -345,8 +391,8 @@ const loadFloorPlanImage = () => {
         
         const bounds = [[0, 0], [height, width]];
         
-        // Add the floor plan as an image overlay
-        L.imageOverlay(blobUrl.value, bounds).addTo(map.value);
+        // Add the floor plan as an image overlay using the direct URL
+        L.imageOverlay(imageUrl.value, bounds).addTo(map.value);
         
         // Set the view to show the entire floor plan
         map.value.fitBounds(bounds);
@@ -359,11 +405,33 @@ const loadFloorPlanImage = () => {
     };
     
     img.onerror = (error) => {
+      clearTimeout(timeoutId);
       console.error('Failed to load floor plan image:', error);
-      reject('Failed to load floor plan image. Check network tab for details.');
+      
+      // Try as fallback: directly add the image overlay with estimated dimensions
+      try {
+        console.log("Attempting fallback method with estimated dimensions");
+        // Default dimensions for a placeholder
+        const estimatedWidth = 1000;
+        const estimatedHeight = 800;
+        const bounds = [[0, 0], [estimatedHeight, estimatedWidth]];
+        
+        // Add the floor plan as an image overlay directly with the URL
+        L.imageOverlay(imageUrl.value, bounds).addTo(map.value);
+        
+        // Set the view to show the entire floor plan
+        map.value.fitBounds(bounds);
+        
+        resolve();
+      } catch (fallbackError) {
+        console.error("Fallback method also failed:", fallbackError);
+        reject('Failed to load floor plan image. Check network tab for details.');
+      }
     };
     
-    img.src = blobUrl.value;
+    // Set crossOrigin if needed based on your server setup
+    // img.crossOrigin = "anonymous";
+    img.src = imageUrl.value;
   });
 }
 

@@ -109,46 +109,25 @@ export const locationService = {
     })
   },
   
-  /**
-   * Get the floor plan image URL with proper CORS headers
-   * @param {Object} location - Location object with floorplan field
-   * @returns {Promise} - Promise that resolves with a blob URL
-   */
-  getFloorPlanImageUrl(location) {
-    if (!location || !location.floorplan) {
-      return Promise.resolve(null);
-    }
+/**
+ * Get the floor plan image URL
+ * @param {Object} location - Location object with floorplan field
+ * @returns {string} - URL of the floor plan image
+ */
+getFloorPlanImageUrl(location) {
+  if (!location || !location.floorplan) {
+    return null;
+  }
 
-    // Construct the PocketBase file URL
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    const collectionId = location.collectionId || 'locations';
-    const recordId = location.id;
-    const filename = location.floorplan;
-    
-    const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
-    
-    // Fetch the image with CORS headers and create a blob URL
-    return fetch(fileUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.blob();
-    })
-    .then(blob => {
-      return URL.createObjectURL(blob);
-    })
-    .catch(error => {
-      console.error('Error fetching floor plan image:', error);
-      return null;
-    });
-  },
+  // Construct the PocketBase file URL with /pb prefix
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const collectionName = 'locations'; // Use the fixed collection name
+  const recordId = location.id;
+  const filename = location.floorplan;
   
+  // Return direct URL without attempting to fetch
+  return `${baseUrl}/pb/api/files/${collectionName}/${recordId}/${filename}`;
+},
   /**
    * Update location coordinates (for global maps)
    * @param {string} id - Location ID
