@@ -123,7 +123,7 @@ onUnmounted(() => {
 // External links
 const grafanaUrl = computed(() => import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com')
 
-// Menu structure - Updated with Messaging instead of MQTT
+// Menu structure - Updated with Map menu item
 const menuSections = [
   {
     title: 'Core',
@@ -132,6 +132,11 @@ const menuSections = [
         label: 'Dashboard',
         icon: 'pi pi-home',
         to: '/'
+      },
+      {
+        label: 'Map',
+        icon: 'pi pi-map',
+        to: '/map'
       }
     ]
   },
@@ -156,17 +161,17 @@ const menuSections = [
     ]
   },
   {
-    title: 'Messaging',  // Changed from "MQTT"
+    title: 'Messaging',
     items: [
       {
-        label: 'Clients',  // Changed from "Users"
+        label: 'Clients',
         icon: 'pi pi-users',
-        to: '/messaging/clients'  // Updated route
+        to: '/messaging/clients'
       },
       {
-        label: 'Topic Permissions', // Changed from "Roles"
+        label: 'Topic Permissions',
         icon: 'pi pi-key',
-        to: '/messaging/permissions'  // Updated route
+        to: '/messaging/permissions'
       }
     ]
   },

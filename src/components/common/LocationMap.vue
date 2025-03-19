@@ -1,26 +1,26 @@
 <!-- src/components/common/LocationMap.vue -->
 <template>
-  <div ref="mapContainer" class="map-container" :style="{ height: height }"></div>
+  <div :id="mapId" :style="{ height: height || '400px', width: '100%' }" class="leaflet-map"></div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Props definition
 const props = defineProps({
   center: {
     type: Object,
-    required: true, // {lat: number, lng: number}
+    default: () => ({ lat: 0, lng: 0 })
   },
   zoom: {
     type: Number,
-    default: 15
+    default: 13
   },
   markers: {
     type: Array,
     default: () => []
-    // Expected format: [{id, lat, lng, type, name, popup}]
   },
   height: {
     type: String,
@@ -28,134 +28,136 @@ const props = defineProps({
   }
 });
 
-const mapContainer = ref(null);
+// Generate unique map ID
+const mapId = `map-${Math.random().toString(36).substring(2, 9)}`;
 const map = ref(null);
 const markersLayer = ref(null);
-const openedPopup = ref(null);
 
-// Initialize the map
+// Initialize map on mount
 onMounted(() => {
-  if (!mapContainer.value) return;
+  initMap();
   
-  // Create map
-  map.value = L.map(mapContainer.value).setView(
-    [props.center.lat, props.center.lng], 
-    props.zoom
-  );
-  
-  // Add OpenStreetMap tile layer
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
-  }).addTo(map.value);
-  
-  // Add markers layer
-  markersLayer.value = L.layerGroup().addTo(map.value);
-  
-  // Add initial markers
-  updateMarkers();
+  // Add markers
+  renderMarkers();
 });
 
-// Clean up on unmount
-onUnmounted(() => {
+// Cleanup on unmount
+onBeforeUnmount(() => {
   if (map.value) {
     map.value.remove();
   }
 });
 
-// Update markers when props change
-watch(() => props.markers, updateMarkers, { deep: true });
-watch(() => props.center, updateCenter);
-watch(() => props.zoom, updateZoom);
-
-// Function to update map center
-function updateCenter() {
-  if (map.value) {
-    map.value.setView([props.center.lat, props.center.lng], map.value.getZoom());
+// Watch for prop changes
+watch(() => props.center, (newCenter) => {
+  if (map.value && newCenter && newCenter.lat && newCenter.lng) {
+    map.value.setView([newCenter.lat, newCenter.lng], props.zoom);
   }
-}
+}, { deep: true });
 
-// Function to update zoom level
-function updateZoom() {
-  if (map.value) {
-    map.value.setZoom(props.zoom);
-  }
-}
+watch(() => props.markers, () => {
+  renderMarkers();
+}, { deep: true });
 
-// Function to update markers
-function updateMarkers() {
-  if (!markersLayer.value) return;
+// Create the map
+const initMap = () => {
+  // Fix icon paths (common Leaflet issue in bundled apps)
+  fixLeafletIconPaths();
+  
+  // Make sure we have valid coordinates
+  const centerPoint = [
+    props.center.lat || 0, 
+    props.center.lng || props.center.long || 0
+  ];
+  
+  // Initialize the map
+  map.value = L.map(mapId).setView(centerPoint, props.zoom);
+  
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map.value);
+  
+  // Create a layer for markers
+  markersLayer.value = L.layerGroup().addTo(map.value);
+};
+
+// Render markers on the map
+const renderMarkers = () => {
+  if (!map.value || !markersLayer.value) return;
   
   // Clear existing markers
   markersLayer.value.clearLayers();
   
-  // Add markers
+  // Add new markers
   props.markers.forEach(marker => {
-    // Create custom icon based on thing type
-    const icon = getMarkerIcon(marker.type);
+    // Skip invalid markers
+    if (!marker.lat || (!marker.lng && !marker.long)) return;
     
-    // Create marker
-    const markerObj = L.marker([marker.lat, marker.lng], { icon }).addTo(markersLayer.value);
+    // Create marker with appropriate icon
+    const markerObj = L.marker([
+      marker.lat, 
+      marker.lng || marker.long
+    ]);
     
     // Add popup if provided
     if (marker.popup) {
       markerObj.bindPopup(marker.popup);
     } else {
-      markerObj.bindPopup(`<strong>${marker.name}</strong><br>${marker.type}`);
+      markerObj.bindPopup(`
+        <div class="popup-content">
+          <strong>${marker.name || 'Unnamed'}</strong>
+          ${marker.type ? `<br><span class="badge badge-${marker.type}">${marker.type}</span>` : ''}
+        </div>
+      `);
     }
+    
+    // Add to layer
+    markerObj.addTo(markersLayer.value);
   });
-}
-
-// Helper function to get marker icon based on thing type
-function getMarkerIcon(type) {
-  // Define icon colors based on thing type
-  const iconColor = {
-    'reader': 'blue',
-    'controller': 'purple',
-    'lock': 'orange',
-    'camera': 'red',
-    'temperature-sensor': 'green',
-    'humidity-sensor': 'teal',
-    'motion-sensor': 'indigo',
-    'occupancy-sensor': 'yellow',
-    'default': 'gray'
-  }[type] || 'gray';
   
-  // Create icon using Leaflet's divIcon for custom styling
-  return L.divIcon({
-    className: `custom-marker-${iconColor}`,
-    html: `<div class="marker-pin bg-${iconColor}-500"></div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30]
+  // If we have markers, fit the map to contain all markers
+  if (props.markers.length > 0) {
+    const validMarkers = props.markers.filter(m => m.lat && (m.lng || m.long));
+    if (validMarkers.length > 0) {
+      const group = L.featureGroup(Array.from(markersLayer.value.getLayers()));
+      map.value.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+  }
+};
+
+// Fix Leaflet icon paths (common issue in bundled apps)
+const fixLeafletIconPaths = () => {
+  delete L.Icon.Default.prototype._getIconUrl;
+  
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
   });
-}
+};
 </script>
 
-<style>
-.map-container {
-  width: 100%;
-  border-radius: 0.5rem;
+<style scoped>
+.leaflet-map {
+  border-radius: 4px;
   overflow: hidden;
 }
 
-/* Custom marker styles */
-.marker-pin {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #4a5568;
-  box-shadow: 0 0 0 2px white, 0 0 0 3px rgba(0,0,0,0.2);
+:deep(.leaflet-popup-content-wrapper) {
+  border-radius: 4px;
 }
 
-/* Define colors for different marker types */
-.marker-pin.bg-blue-500 { background-color: #3b82f6; }
-.marker-pin.bg-purple-500 { background-color: #8b5cf6; }
-.marker-pin.bg-orange-500 { background-color: #f97316; }
-.marker-pin.bg-red-500 { background-color: #ef4444; }
-.marker-pin.bg-green-500 { background-color: #22c55e; }
-.marker-pin.bg-teal-500 { background-color: #14b8a6; }
-.marker-pin.bg-indigo-500 { background-color: #6366f1; }
-.marker-pin.bg-yellow-500 { background-color: #eab308; }
-.marker-pin.bg-gray-500 { background-color: #6b7280; }
+:deep(.leaflet-popup-content) {
+  margin: 10px;
+}
+
+:deep(.badge) {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  margin-top: 4px;
+}
 </style>

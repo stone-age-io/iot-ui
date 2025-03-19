@@ -1,4 +1,4 @@
-// src/services/thing.js 
+// src/services/thing.js - Updated for indoor positioning
 import { apiHelpers } from './api'
 import { 
   COLLECTIONS, 
@@ -245,6 +245,38 @@ export const thingService = {
         current_state: stateString,
         last_seen: lastSeen
       })
+    })
+  },
+  
+  /**
+   * Update thing indoor position coordinates
+   * @param {string} id - Thing ID
+   * @param {Object} coordinates - x,y coordinates on the floor plan
+   * @returns {Promise} - Axios promise with updated thing
+   */
+  updateThingPosition(id, coordinates) {
+    return this.getThing(id).then(response => {
+      const thing = response.data
+      
+      // Create or update metadata
+      let metadata = thing.metadata || {}
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata)
+        } catch (e) {
+          metadata = {}
+        }
+      }
+      
+      // Set coordinates
+      metadata.coordinates = {
+        ...metadata.coordinates,
+        x: coordinates.x,
+        y: coordinates.y
+      }
+      
+      // Update thing with new metadata
+      return this.updateThing(id, { metadata })
     })
   }
 }

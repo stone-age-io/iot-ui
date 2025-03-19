@@ -1,4 +1,4 @@
-// src/services/api.js
+// Updated src/services/api.js with exposed Axios instance
 import axios from 'axios'
 
 // Create axios instance with default config
@@ -76,6 +76,11 @@ apiService.interceptors.response.use(
 
 // Helper methods for common patterns
 export const apiHelpers = {
+  /**
+   * Expose the Axios instance for custom requests
+   */
+  axiosInstance: apiService,
+  
   /**
    * Fetch a paginated list of resources
    * @param {string} endpoint - API endpoint

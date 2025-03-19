@@ -1,4 +1,4 @@
-// src/router/index.js
+// src/router/index.js - Updated with Map route
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -9,8 +9,9 @@ import AuthLayout from '../layouts/AuthLayout.vue'
 // Auth Views
 import LoginView from '../views/Auth/LoginView.vue'
 
-// Dashboard View
+// Dashboard & Map Views
 import DashboardView from '../views/DashboardView.vue'
+import MapView from '../views/MapView.vue'  // New Map View
 import NotFoundView from '../views/NotFoundView.vue'
 
 // Edge Views
@@ -56,6 +57,12 @@ const router = createRouter({
           name: 'dashboard',
           component: DashboardView,
           meta: { title: 'Dashboard' }
+        },
+        {
+          path: 'map',
+          name: 'map',
+          component: MapView,
+          meta: { title: 'Locations Map' }
         },
         // Edge routes
         {

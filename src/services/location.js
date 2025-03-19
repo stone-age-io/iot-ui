@@ -1,4 +1,4 @@
-// Full updated src/services/location.js
+// src/services/location.js - Added CORS handling for image loading
 import { apiHelpers } from './api'
 import { 
   COLLECTIONS, 
@@ -90,6 +90,95 @@ export const locationService = {
   deleteLocation(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS, id)
     return apiHelpers.delete(endpoint)
+  },
+  
+  /**
+   * Upload a floor plan image for a location
+   * @param {string} id - Location ID
+   * @param {FormData} formData - FormData containing the floorplan file
+   * @returns {Promise} - Axios promise with updated location
+   */
+  uploadFloorPlan(id, formData) {
+    const endpoint = collectionEndpoint(COLLECTIONS.LOCATIONS, id)
+    
+    // Use custom axios config for multipart/form-data
+    return apiHelpers.axiosInstance.patch(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+  
+  /**
+   * Get the floor plan image URL with proper CORS headers
+   * @param {Object} location - Location object with floorplan field
+   * @returns {Promise} - Promise that resolves with a blob URL
+   */
+  getFloorPlanImageUrl(location) {
+    if (!location || !location.floorplan) {
+      return Promise.resolve(null);
+    }
+
+    // Construct the PocketBase file URL
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    const collectionId = location.collectionId || 'locations';
+    const recordId = location.id;
+    const filename = location.floorplan;
+    
+    const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
+    
+    // Fetch the image with CORS headers and create a blob URL
+    return fetch(fileUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      return URL.createObjectURL(blob);
+    })
+    .catch(error => {
+      console.error('Error fetching floor plan image:', error);
+      return null;
+    });
+  },
+  
+  /**
+   * Update location coordinates (for global maps)
+   * @param {string} id - Location ID
+   * @param {Object} coordinates - {lat, lng} coordinates
+   * @returns {Promise} - Axios promise with updated location
+   */
+  updateLocationCoordinates(id, coordinates) {
+    return this.getLocation(id).then(response => {
+      const location = response.data
+      
+      // Create or update metadata
+      let metadata = location.metadata || {}
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata)
+        } catch (e) {
+          metadata = {}
+        }
+      }
+      
+      // Set coordinates
+      metadata.coordinates = {
+        ...metadata.coordinates,
+        lat: coordinates.lat,
+        lng: coordinates.lng
+      }
+      
+      // Update location with new metadata
+      return this.updateLocation(id, { metadata })
+    })
   }
 }
 

@@ -39,8 +39,8 @@
       </main>
     </div>
     
-    <!-- Mobile Bottom Navigation - only show when not on dashboard -->
-    <MobileNavBar v-if="isMobileView && showMobileNav" />
+    <!-- Mobile Bottom Navigation - only show when not on dashboard 
+    <MobileNavBar v-if="isMobileView && showMobileNav" /> -->
     
     <!-- Notifications -->
     <Toast position="bottom-right" />

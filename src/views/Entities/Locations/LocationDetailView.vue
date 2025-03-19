@@ -1,3 +1,4 @@
+<!-- Updated src/views/Entities/Locations/LocationDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -179,14 +180,17 @@
         </div>
       </div>
       
-      <!-- Location Map -->
-      <div class="card mt-6" v-if="hasMapCoordinates">
-        <h2 class="text-xl font-semibold mb-4">Location Map</h2>
-        <LocationMap
-          :center="mapCenter"
-          :zoom="mapZoom"
-          :markers="thingMarkers"
+      <!-- Floor Plan Map (replaces global map) -->
+      <div class="card mt-6">
+        <h2 class="text-xl font-semibold mb-4">Floor Plan</h2>
+        <FloorPlanMap
+          :location="location"
+          :things="things"
           height="500px"
+          :editable="true"
+          @update-thing-position="updateThingPosition"
+          @upload-floor-plan="uploadFloorPlan"
+          @thing-click="navigateToThingDetail"
         />
       </div>
       
@@ -215,6 +219,17 @@
             >
               {{ getThingTypeName(data.type) }}
             </span>
+          </template>
+          
+          <!-- Indoor Position column -->
+          <template #position-body="{ data }">
+            <div v-if="hasIndoorPosition(data)" class="flex items-center text-sm">
+              <i class="pi pi-map-marker text-primary-500 mr-1"></i>
+              <span>{{ formatPosition(data) }}</span>
+            </div>
+            <div v-else class="text-gray-500 text-sm">
+              Not positioned
+            </div>
           </template>
           
           <!-- Actions column -->
@@ -263,7 +278,7 @@ import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vu
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
-import LocationMap from '../../../components/common/LocationMap.vue'
+import FloorPlanMap from '../../../components/map/FloorPlanMap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -291,100 +306,24 @@ const hasMetadata = computed(() => {
           location.value.metadata !== '{}')
 })
 
-// Check if location has map coordinates
-const hasMapCoordinates = computed(() => {
-  return location.value && 
-         location.value.metadata && 
-         location.value.metadata.coordinates &&
-         location.value.metadata.coordinates.lat &&
-         location.value.metadata.coordinates.lng;
-})
-
-// Get map center coordinates
-const mapCenter = computed(() => {
-  if (hasMapCoordinates.value) {
-    return {
-      lat: location.value.metadata.coordinates.lat,
-      lng: location.value.metadata.coordinates.lng
-    };
-  }
-  return { lat: 0, lng: 0 }; // Default fallback
-})
-
-// Get map zoom level
-const mapZoom = computed(() => {
-  if (location.value && 
-      location.value.metadata && 
-      location.value.metadata.zoom) {
-    return location.value.metadata.zoom;
-  }
-  return 15; // Default zoom level
-})
-
-// Get markers for things with coordinates
-const thingMarkers = computed(() => {
-  if (!things.value || things.value.length === 0) return [];
-  
-  return things.value
-    .filter(thing => {
-      // Only include things with valid coordinates
-      return thing.metadata && 
-             thing.metadata.coordinates &&
-             thing.metadata.coordinates.lat &&
-             thing.metadata.coordinates.lng;
-    })
-    .map(thing => {
-      return {
-        id: thing.id,
-        lat: thing.metadata.coordinates.lat,
-        lng: thing.metadata.coordinates.lng,
-        type: thing.type,
-        name: thing.name,
-        popup: `
-          <div class="popup-content">
-            <strong>${thing.name}</strong><br>
-            <span class="text-sm text-gray-500">${thing.code}</span><br>
-            <span class="badge badge-${thing.type}">${getThingTypeName(thing.type)}</span>
-            <button class="popup-button" 
-                    onclick="window.dispatchEvent(new CustomEvent('view-thing', {detail: '${thing.id}'}))">
-              View Details
-            </button>
-          </div>
-        `
-      };
-    });
-})
-
 // Get unique thing types - renamed to avoid conflict with imported thingTypes
 const uniqueThingTypes = computed(() => {
   return [...new Set(things.value.map(thing => thing.type))]
 })
 
-// Thing columns for the table - updated to match PocketBase fields
+// Thing columns for the table - updated to include indoor position
 const thingColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
+  { field: 'position', header: 'Indoor Position', sortable: false },
   { field: 'actions', header: 'Actions', sortable: false }
 ]
 
 // Fetch location data on component mount
 onMounted(async () => {
   await fetchLocation()
-  // Add event listener for map popup buttons
-  window.addEventListener('view-thing', handleViewThing)
 })
-
-onUnmounted(() => {
-  // Clean up event listener
-  window.removeEventListener('view-thing', handleViewThing)
-})
-
-// Handle view thing event from map popup
-const handleViewThing = (event) => {
-  const thingId = event.detail
-  router.push({ name: 'thing-detail', params: { id: thingId } })
-}
 
 // Methods
 const fetchLocation = async () => {
@@ -441,6 +380,86 @@ const fetchThings = async () => {
   } finally {
     thingsLoading.value = false
   }
+}
+
+// Update thing position on the floor plan
+const updateThingPosition = async ({ thingId, coordinates }) => {
+  const thing = things.value.find(t => t.id === thingId)
+  if (!thing) return
+  
+  try {
+    // Update thing position using the service
+    await thingService.updateThingPosition(thingId, coordinates)
+    
+    // Update local state
+    if (!thing.metadata) thing.metadata = {}
+    if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
+    thing.metadata.coordinates.x = coordinates.x
+    thing.metadata.coordinates.y = coordinates.y
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Updated position for ${thing.name}`,
+      life: 2000
+    })
+  } catch (error) {
+    console.error('Error updating thing position:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update thing position',
+      life: 3000
+    })
+  }
+}
+
+// Upload floor plan image
+const uploadFloorPlan = async (file) => {
+  try {
+    // Create FormData object for file upload
+    const formData = new FormData()
+    formData.append('floorplan', file)
+    
+    // Update location with new floor plan
+    await locationService.uploadFloorPlan(location.value.id, formData)
+    
+    // Refresh location data to get updated floorplan field
+    const response = await locationService.getLocation(location.value.id)
+    location.value = response.data
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Floor plan uploaded successfully',
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Error uploading floor plan:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to upload floor plan',
+      life: 3000
+    })
+  }
+}
+
+// Check if a thing has indoor positioning coordinates
+const hasIndoorPosition = (thing) => {
+  return thing.metadata && 
+         thing.metadata.coordinates && 
+         typeof thing.metadata.coordinates.x !== 'undefined' && 
+         typeof thing.metadata.coordinates.y !== 'undefined'
+}
+
+// Format indoor position for display
+const formatPosition = (thing) => {
+  if (!hasIndoorPosition(thing)) return 'Not positioned'
+  
+  const x = thing.metadata.coordinates.x.toFixed(1)
+  const y = thing.metadata.coordinates.y.toFixed(1)
+  return `x: ${x}, y: ${y}`
 }
 
 const navigateToEdit = () => {
@@ -544,42 +563,3 @@ const getThingTypeClass = (typeCode) => {
   }
 }
 </script>
-
-<style>
-/* Map popup styling */
-.popup-content {
-  padding: 0.5rem;
-}
-
-.popup-button {
-  display: block;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.125rem 0.375rem;
-  border-radius: 9999px;
-  margin-bottom: 0.5rem;
-}
-
-/* Badge colors based on thing type */
-.badge-reader { background-color: #dbeafe; color: #1e40af; }
-.badge-controller { background-color: #ede9fe; color: #5b21b6; }
-.badge-lock { background-color: #ffedd5; color: #9a3412; }
-.badge-camera { background-color: #fee2e2; color: #b91c1c; }
-.badge-temperature-sensor { background-color: #dcfce7; color: #166534; }
-.badge-humidity-sensor { background-color: #ecfdf5; color: #065f46; }
-.badge-hvac { background-color: #e0f2fe; color: #0c4a6e; }
-.badge-lighting { background-color: #fef9c3; color: #854d0e; }
-.badge-motion-sensor { background-color: #e0e7ff; color: #3730a3; }
-.badge-occupancy-sensor { background-color: #fef3c7; color: #92400e; }
-</style>
