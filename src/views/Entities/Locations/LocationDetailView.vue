@@ -179,7 +179,18 @@
         </div>
       </div>
       
-      <!-- Things List -->
+      <!-- Location Map -->
+      <div class="card mt-6" v-if="hasMapCoordinates">
+        <h2 class="text-xl font-semibold mb-4">Location Map</h2>
+        <LocationMap
+          :center="mapCenter"
+          :zoom="mapZoom"
+          :markers="thingMarkers"
+          height="500px"
+        />
+      </div>
+      
+      <!-- Connected Things -->
       <div class="card mt-6" v-if="things.length > 0">
         <h2 class="text-xl font-semibold mb-4">Connected Things</h2>
         
@@ -191,28 +202,18 @@
           empty-message="No things found for this location"
           @row-click="navigateToThingDetail"
         >
-          <!-- Thing Code column -->
-          <template #thing_code-body="{ data }">
-            <div class="font-medium text-primary-700 font-mono">{{ data.thing_code }}</div>
+          <!-- Code column -->
+          <template #code-body="{ data }">
+            <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
           </template>
           
           <!-- Type column with badge -->
-          <template #thing_type-body="{ data }">
+          <template #type-body="{ data }">
             <span 
               class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="getThingTypeClass(data.thing_type)"
+              :class="getThingTypeClass(data.type)"
             >
-              {{ getThingTypeName(data.thing_type) }}
-            </span>
-          </template>
-          
-          <!-- Status column with badge -->
-          <template #active-body="{ data }">
-            <span 
-              class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-            >
-              {{ data.active ? 'Active' : 'Inactive' }}
+              {{ getThingTypeName(data.type) }}
             </span>
           </template>
           
@@ -251,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
@@ -262,6 +263,7 @@ import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vu
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
+import LocationMap from '../../../components/common/LocationMap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -289,23 +291,100 @@ const hasMetadata = computed(() => {
           location.value.metadata !== '{}')
 })
 
-// Get unique thing types - renamed to avoid conflict with imported thingTypes
-const uniqueThingTypes = computed(() => {
-  return [...new Set(things.value.map(thing => thing.thing_type))]
+// Check if location has map coordinates
+const hasMapCoordinates = computed(() => {
+  return location.value && 
+         location.value.metadata && 
+         location.value.metadata.coordinates &&
+         location.value.metadata.coordinates.lat &&
+         location.value.metadata.coordinates.lng;
 })
 
-// Thing columns for the table
+// Get map center coordinates
+const mapCenter = computed(() => {
+  if (hasMapCoordinates.value) {
+    return {
+      lat: location.value.metadata.coordinates.lat,
+      lng: location.value.metadata.coordinates.lng
+    };
+  }
+  return { lat: 0, lng: 0 }; // Default fallback
+})
+
+// Get map zoom level
+const mapZoom = computed(() => {
+  if (location.value && 
+      location.value.metadata && 
+      location.value.metadata.zoom) {
+    return location.value.metadata.zoom;
+  }
+  return 15; // Default zoom level
+})
+
+// Get markers for things with coordinates
+const thingMarkers = computed(() => {
+  if (!things.value || things.value.length === 0) return [];
+  
+  return things.value
+    .filter(thing => {
+      // Only include things with valid coordinates
+      return thing.metadata && 
+             thing.metadata.coordinates &&
+             thing.metadata.coordinates.lat &&
+             thing.metadata.coordinates.lng;
+    })
+    .map(thing => {
+      return {
+        id: thing.id,
+        lat: thing.metadata.coordinates.lat,
+        lng: thing.metadata.coordinates.lng,
+        type: thing.type,
+        name: thing.name,
+        popup: `
+          <div class="popup-content">
+            <strong>${thing.name}</strong><br>
+            <span class="text-sm text-gray-500">${thing.code}</span><br>
+            <span class="badge badge-${thing.type}">${getThingTypeName(thing.type)}</span>
+            <button class="popup-button" 
+                    onclick="window.dispatchEvent(new CustomEvent('view-thing', {detail: '${thing.id}'}))">
+              View Details
+            </button>
+          </div>
+        `
+      };
+    });
+})
+
+// Get unique thing types - renamed to avoid conflict with imported thingTypes
+const uniqueThingTypes = computed(() => {
+  return [...new Set(things.value.map(thing => thing.type))]
+})
+
+// Thing columns for the table - updated to match PocketBase fields
 const thingColumns = [
-  { field: 'thing_code', header: 'Code', sortable: true },
+  { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'thing_type', header: 'Type', sortable: true },
-  { field: 'active', header: 'Status', sortable: true }
+  { field: 'type', header: 'Type', sortable: true },
+  { field: 'actions', header: 'Actions', sortable: false }
 ]
 
 // Fetch location data on component mount
 onMounted(async () => {
   await fetchLocation()
+  // Add event listener for map popup buttons
+  window.addEventListener('view-thing', handleViewThing)
 })
+
+onUnmounted(() => {
+  // Clean up event listener
+  window.removeEventListener('view-thing', handleViewThing)
+})
+
+// Handle view thing event from map popup
+const handleViewThing = (event) => {
+  const thingId = event.detail
+  router.push({ name: 'thing-detail', params: { id: thingId } })
+}
 
 // Methods
 const fetchLocation = async () => {
@@ -465,3 +544,42 @@ const getThingTypeClass = (typeCode) => {
   }
 }
 </script>
+
+<style>
+/* Map popup styling */
+.popup-content {
+  padding: 0.5rem;
+}
+
+.popup-button {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  margin-bottom: 0.5rem;
+}
+
+/* Badge colors based on thing type */
+.badge-reader { background-color: #dbeafe; color: #1e40af; }
+.badge-controller { background-color: #ede9fe; color: #5b21b6; }
+.badge-lock { background-color: #ffedd5; color: #9a3412; }
+.badge-camera { background-color: #fee2e2; color: #b91c1c; }
+.badge-temperature-sensor { background-color: #dcfce7; color: #166534; }
+.badge-humidity-sensor { background-color: #ecfdf5; color: #065f46; }
+.badge-hvac { background-color: #e0f2fe; color: #0c4a6e; }
+.badge-lighting { background-color: #fef9c3; color: #854d0e; }
+.badge-motion-sensor { background-color: #e0e7ff; color: #3730a3; }
+.badge-occupancy-sensor { background-color: #fef3c7; color: #92400e; }
+</style>

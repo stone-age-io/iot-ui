@@ -1,3 +1,4 @@
+// src/services/thing.js 
 import { apiHelpers } from './api'
 import { 
   COLLECTIONS, 
@@ -17,22 +18,19 @@ export const thingService = {
     const endpoint = collectionEndpoint(COLLECTIONS.THINGS)
     const transformedParams = transformPaginationParams(params)
     
+    // Add expand parameters to include location and edge data
+    transformedParams.expand = 'location_id,edge_id'
+    
     // Build filter based on params
     const filters = []
     if (params.location_id) {
       filters.push(`location_id="${params.location_id}"`)
     }
     if (params.edge_id) {
-      // For edge filtering, we need to find locations in that edge
       filters.push(`edge_id="${params.edge_id}"`)
     }
-    if (params.thing_type) {
-      filters.push(`thing_type="${params.thing_type}"`)
-    }
-    
-    // Add expand parameter to include location data
-    if (!transformedParams.expand) {
-      transformedParams.expand = 'location'
+    if (params.type) {
+      filters.push(`type="${params.type}"`)
     }
     
     // If we have filters, add them to the params
@@ -42,8 +40,35 @@ export const thingService = {
     
     return apiHelpers.getList(endpoint, transformedParams)
       .then(response => {
-        // Transform the response to match our expected format
-        return { data: transformResponse(response.data) }
+        // Parse metadata and current_state if needed
+        const data = transformResponse(response.data)
+        if (data.items && data.items.length > 0) {
+          data.items = data.items.map(item => {
+            // Parse metadata if it's a string
+            if (item.metadata && typeof item.metadata === 'string') {
+              try {
+                item.metadata = JSON.parse(item.metadata)
+              } catch (e) {
+                console.warn('Failed to parse metadata for thing:', item.code)
+                item.metadata = {}
+              }
+            }
+            
+            // Parse current_state if it's a string
+            if (item.current_state && typeof item.current_state === 'string') {
+              try {
+                item.current_state = JSON.parse(item.current_state)
+              } catch (e) {
+                console.warn('Failed to parse current_state for thing:', item.code)
+                item.current_state = {}
+              }
+            }
+            
+            return item
+          })
+        }
+        
+        return { data }
       })
   },
 
@@ -54,8 +79,32 @@ export const thingService = {
    */
   getThing(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.THINGS, id)
-    // Add expand parameter to include location data
-    return apiHelpers.getList(`${endpoint}?expand=location`)
+    // Add expand parameter to include location and edge data
+    return apiHelpers.getById(`${endpoint}?expand=location_id,edge_id`)
+      .then(response => {
+        // Parse metadata and current_state if needed
+        if (response.data) {
+          if (response.data.metadata && typeof response.data.metadata === 'string') {
+            try {
+              response.data.metadata = JSON.parse(response.data.metadata)
+            } catch (e) {
+              console.warn('Failed to parse metadata for thing:', response.data.thing_code)
+              response.data.metadata = {}
+            }
+          }
+          
+          if (response.data.current_state && typeof response.data.current_state === 'string') {
+            try {
+              response.data.current_state = JSON.parse(response.data.current_state)
+            } catch (e) {
+              console.warn('Failed to parse current_state for thing:', response.data.thing_code)
+              response.data.current_state = {}
+            }
+          }
+        }
+        
+        return response
+      })
   },
 
   /**
@@ -65,7 +114,20 @@ export const thingService = {
    */
   createThing(thing) {
     const endpoint = collectionEndpoint(COLLECTIONS.THINGS)
-    return apiHelpers.create(endpoint, thing)
+    
+    // Process thing data before sending to API
+    const thingData = { ...thing }
+    
+    // Convert JSON objects to strings
+    if (thingData.metadata && typeof thingData.metadata === 'object') {
+      thingData.metadata = JSON.stringify(thingData.metadata)
+    }
+    
+    if (thingData.current_state && typeof thingData.current_state === 'object') {
+      thingData.current_state = JSON.stringify(thingData.current_state)
+    }
+    
+    return apiHelpers.create(endpoint, thingData)
   },
 
   /**
@@ -76,7 +138,20 @@ export const thingService = {
    */
   updateThing(id, thing) {
     const endpoint = collectionEndpoint(COLLECTIONS.THINGS, id)
-    return apiHelpers.update(endpoint, null, thing)
+    
+    // Process thing data before sending to API
+    const thingData = { ...thing }
+    
+    // Convert JSON objects to strings
+    if (thingData.metadata && typeof thingData.metadata === 'object') {
+      thingData.metadata = JSON.stringify(thingData.metadata)
+    }
+    
+    if (thingData.current_state && typeof thingData.current_state === 'object') {
+      thingData.current_state = JSON.stringify(thingData.current_state)
+    }
+    
+    return apiHelpers.update(endpoint, null, thingData)
   },
 
   /**
@@ -100,18 +175,82 @@ export const thingService = {
     
     return apiHelpers.getList(endpoint, { 
       filter,
-      expand: 'location',
+      expand: 'location_id,edge_id',
       sort: 'created'
     })
     .then(response => {
-      // Transform the response to match our expected format
-      return { data: transformResponse(response.data) }
+      // Parse metadata and current_state if needed
+      const data = transformResponse(response.data)
+      if (data.items && data.items.length > 0) {
+        data.items = data.items.map(item => {
+          // Parse metadata if it's a string
+          if (item.metadata && typeof item.metadata === 'string') {
+            try {
+              item.metadata = JSON.parse(item.metadata)
+            } catch (e) {
+              console.warn('Failed to parse metadata for thing:', item.thing_code)
+              item.metadata = {}
+            }
+          }
+          
+          // Parse current_state if it's a string
+          if (item.current_state && typeof item.current_state === 'string') {
+            try {
+              item.current_state = JSON.parse(item.current_state)
+            } catch (e) {
+              console.warn('Failed to parse current_state for thing:', item.thing_code)
+              item.current_state = {}
+            }
+          }
+          
+          return item
+        })
+      }
+      
+      return { data }
+    })
+  },
+  
+  /**
+   * Update thing current state
+   * @param {string} id - Thing ID
+   * @param {Object} state - State object to update or merge
+   * @param {boolean} merge - If true, merge with existing state
+   * @returns {Promise} - Axios promise with updated thing
+   */
+  updateThingState(id, state, merge = true) {
+    const endpoint = collectionEndpoint(COLLECTIONS.THINGS, id)
+    
+    // First get the current thing to access its state
+    return this.getThing(id).then(response => {
+      const thing = response.data
+      let updatedState = state
+      
+      // If merge is true, merge the new state with the existing
+      if (merge && thing.current_state) {
+        updatedState = {
+          ...(typeof thing.current_state === 'object' ? thing.current_state : {}),
+          ...state
+        }
+      }
+      
+      // Convert to string for PocketBase storage
+      const stateString = JSON.stringify(updatedState)
+      
+      // Update the last_seen timestamp
+      const lastSeen = new Date().toISOString()
+      
+      // Only update the current_state and last_seen fields
+      return apiHelpers.update(endpoint, null, { 
+        current_state: stateString,
+        last_seen: lastSeen
+      })
     })
   }
 }
 
 /**
- * Thing types for dropdown options - EXPORT EXPLICITLY ADDED
+ * Thing types for dropdown options
  */
 export const thingTypes = [
   { label: 'Reader', value: 'reader' },

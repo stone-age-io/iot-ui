@@ -16,45 +16,52 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['thing_code', 'name', 'thing_type', 'description']"
+        :searchFields="['code', 'name', 'type', 'expand.location_id.code', 'expand.edge_id.code']"
         title="IoT Things"
         empty-message="No things found"
         @row-click="navigateToDetail"
+        :paginated="true"
+        :rows="10"
       >
         <!-- Code column with custom formatting -->
-        <template #thing_code-body="{ data }">
-          <div class="font-medium text-primary-700">{{ data.thing_code }}</div>
+        <template #code-body="{ data }">
+          <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
         </template>
         
         <!-- Type column with badge -->
-        <template #thing_type-body="{ data }">
+        <template #type-body="{ data }">
           <span 
             class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getTypeClass(data.thing_type)"
+            :class="getTypeClass(data.type)"
           >
-            {{ getTypeName(data.thing_type) }}
+            {{ getTypeName(data.type) }}
           </span>
         </template>
         
-        <!-- Location column with reference -->
+        <!-- Location column with code -->
         <template #location_id-body="{ data }">
           <router-link 
+            v-if="data.expand && data.expand.location_id"
             :to="{ name: 'location-detail', params: { id: data.location_id } }"
             class="text-primary-600 hover:underline flex items-center"
             @click.stop
           >
-            {{ data.location?.code || data.location_id }}
+            {{ data.expand.location_id.code }}
           </router-link>
+          <span v-else class="text-gray-500">Unknown Location</span>
         </template>
         
-        <!-- Status column with badge -->
-        <template #active-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+        <!-- Edge column with code -->
+        <template #edge_id-body="{ data }">
+          <router-link 
+            v-if="data.expand && data.expand.edge_id"
+            :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
+            class="text-primary-600 hover:underline flex items-center"
+            @click.stop
           >
-            {{ data.active ? 'Active' : 'Inactive' }}
-          </span>
+            {{ data.expand.edge_id.code }}
+          </router-link>
+          <span v-else class="text-gray-500">Unknown Edge</span>
         </template>
         
         <!-- Actions column -->
@@ -94,7 +101,7 @@
       confirm-label="Delete"
       confirm-icon="pi pi-trash"
       :loading="deleteDialog.loading"
-      :message="`Are you sure you want to delete thing '${deleteDialog.item?.thing_code || ''}'?`"
+      :message="`Are you sure you want to delete thing '${deleteDialog.item?.code || ''}'?`"
       details="This action cannot be undone. All associated data will be deleted as well."
       @confirm="deleteThing"
     />
@@ -108,6 +115,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import dayjs from 'dayjs'
 import { thingService, thingTypes } from '../../../services/thing'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
@@ -128,14 +136,13 @@ const deleteDialog = ref({
   item: null
 })
 
-// Table columns definition
+// Table columns definition - updated to match PocketBase fields and remove last_seen, active
 const columns = [
-  { field: 'thing_code', header: 'Code', sortable: true },
+  { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'thing_type', header: 'Type', sortable: true },
+  { field: 'type', header: 'Type', sortable: true },
   { field: 'location_id', header: 'Location', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'description', header: 'Description', sortable: false }
+  { field: 'edge_id', header: 'Edge', sortable: true }
 ]
 
 // Fetch things on component mount
@@ -156,8 +163,14 @@ const fetchThings = async () => {
       params.location_id = route.query.location
     }
     
+    // Add sorting and pagination
+    params.sort = '-created'
+    
     const response = await thingService.getThings(params)
     things.value = response.data.items || []
+    
+    // Debug log to verify expanded data structure
+    console.log('First thing expand data:', things.value[0]?.expand)
   } catch (error) {
     console.error('Error fetching things:', error)
     toast.add({
@@ -172,7 +185,7 @@ const fetchThings = async () => {
 }
 
 const navigateToCreate = () => {
-  // Pass edge_id or location_id as query parameters if they were in the original request
+  // Pass query parameters if they were in the original request
   const query = {}
   if (route.query.edge) query.edge_id = route.query.edge
   if (route.query.location) query.location_id = route.query.location
@@ -206,7 +219,7 @@ const deleteThing = async () => {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: `Thing ${deleteDialog.value.item.thing_code} has been deleted`,
+      detail: `Thing ${deleteDialog.value.item.code} has been deleted`,
       life: 3000
     })
     
