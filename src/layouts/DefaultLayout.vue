@@ -1,4 +1,4 @@
-<!-- src/layouts/DefaultLayout.vue - Updated with proper organization -->
+<!-- src/layouts/DefaultLayout.vue - Fixed initialization error -->
 <template>
   <div class="min-h-screen flex flex-col">
     <!-- Header -->
@@ -64,10 +64,31 @@ const route = useRoute()
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const windowWidth = ref(window.innerWidth)
+const previousWindowWidth = ref(window.innerWidth) // Track previous window width
 
-// Provide sidebar state to child components
+// Methods - Define these before providing them
+// Close sidebar with a specific method to ensure consistent behavior
+const closeSidebar = () => {
+  // Ensure this doesn't trigger immediately with other transitions
+  setTimeout(() => {
+    sidebarOpen.value = false;
+  }, 50);
+}
+
+// Toggle sidebar collapse state
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  // You might want to persist this setting in localStorage
+  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+}
+
+// Now provide the state and methods to child components
 provide('sidebarOpen', sidebarOpen)
 provide('sidebarCollapsed', sidebarCollapsed)
+provide('toggleSidebar', () => {
+  sidebarOpen.value = !sidebarOpen.value
+})
+provide('closeSidebar', closeSidebar)
 
 // Computed properties
 // Responsive breakpoints
@@ -97,30 +118,15 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// Methods
-// Window resize handler
+// Window resize handler - FIXED to only auto-close when transitioning from desktop to mobile
 const handleResize = () => {
+  previousWindowWidth.value = windowWidth.value
   windowWidth.value = window.innerWidth
   
-  // Auto-close sidebar on small screens
-  if (windowWidth.value < 1024 && sidebarOpen.value) {
+  // Only auto-close sidebar when transitioning from desktop to mobile
+  if (previousWindowWidth.value >= 1024 && windowWidth.value < 1024 && sidebarOpen.value) {
     sidebarOpen.value = false
   }
-}
-
-// Toggle sidebar collapse state
-const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  // You might want to persist this setting in localStorage
-  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
-}
-
-// Close sidebar with a specific method to ensure consistent behavior
-const closeSidebar = () => {
-  // Ensure this doesn't trigger immediately with other transitions
-  setTimeout(() => {
-    sidebarOpen.value = false;
-  }, 50);
 }
 </script>
 

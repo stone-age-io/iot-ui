@@ -1,4 +1,4 @@
-<!-- src/views/MapView.vue - Improved version -->
+<!-- src/views/MapView.vue - Fixed inject() usage -->
 <template>
   <div>
     <PageHeader 
@@ -63,7 +63,7 @@
       </div>
       
       <!-- Global Map -->
-      <div v-else class="global-map-container" :class="{'sidebar-open': sidebarOpen}">
+      <div v-else class="global-map-container" :class="{'sidebar-open': injectedSidebarOpen}">
         <GlobalMap
           :locations="filteredLocations"
           :edges="edges"
@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onBeforeUnmount, provide, inject } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { locationService, locationTypes } from '../services/location'
 import { edgeService } from '../services/edge'
@@ -154,37 +154,30 @@ const selectedEdge = ref(null)
 const selectedLocationType = ref(null)
 const resizeObserver = ref(null)
 
-// Check if sidebar is open (from parent layout)
-// Try to inject from parent (DefaultLayout)
-const sidebarOpen = ref(false)
-try {
-  const injectedSidebarOpen = inject('sidebarOpen', ref(false))
-  if (injectedSidebarOpen) {
-    // Create a local copy to avoid modifying the parent state directly
-    sidebarOpen.value = injectedSidebarOpen.value
-    
-    watch(injectedSidebarOpen, (newValue) => {
-      sidebarOpen.value = newValue
-      
-      // Handle map resize when sidebar state changes, with a delay
-      if (mapRef.value) {
-        setTimeout(() => {
-          if (mapRef.value.$el) {
-            // Force redraw of map when sidebar changes
-            try {
-              const event = new Event('resize')
-              window.dispatchEvent(event)
-            } catch (err) {
-              console.warn('Error dispatching resize event:', err)
-            }
-          }
-        }, 400) // Wait for animation to complete
+// FIXED: Properly inject sidebar state (call inject directly in setup)
+// First inject the sidebarOpen state
+const injectedSidebarOpen = inject('sidebarOpen', ref(false))
+// Then inject the methods
+const toggleSidebar = inject('toggleSidebar', () => {})
+const closeSidebar = inject('closeSidebar', () => {})
+
+// Watch for sidebar state changes to update the map
+watch(injectedSidebarOpen, () => {
+  if (mapRef.value) {
+    // Handle map resize when sidebar state changes, with a delay
+    setTimeout(() => {
+      if (mapRef.value.$el) {
+        // Force redraw of map when sidebar changes
+        try {
+          const event = new Event('resize')
+          window.dispatchEvent(event)
+        } catch (err) {
+          console.warn('Error dispatching resize event:', err)
+        }
       }
-    })
+    }, 400) // Wait for animation to complete
   }
-} catch (e) {
-  console.warn('Unable to inject sidebarOpen state', e)
-}
+})
 
 // Table columns definition
 const columns = [
@@ -230,15 +223,6 @@ const isMobile = ref(false)
 // Update mobile status 
 const updateMobileStatus = () => {
   isMobile.value = window.innerWidth < 1024;
-}
-
-// Method to close sidebar explicitly
-const closeSidebar = () => {
-  const injectedSidebarOpen = inject('sidebarOpen', ref(false))
-  if (injectedSidebarOpen) {
-    injectedSidebarOpen.value = false
-    sidebarOpen.value = false
-  }
 }
 
 // Check initial mobile status
