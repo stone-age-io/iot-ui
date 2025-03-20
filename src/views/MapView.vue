@@ -1,4 +1,4 @@
-<!-- src/views/MapView.vue -->
+<!-- src/views/MapView.vue - Improved version -->
 <template>
   <div>
     <PageHeader 
@@ -6,7 +6,7 @@
       subtitle="Global view of all edge installations and locations"
     />
     
-    <div class="card">
+    <div class="card map-container">
       <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 class="text-xl font-semibold">Map Filters</h2>
         
@@ -63,11 +63,12 @@
       </div>
       
       <!-- Global Map -->
-      <div v-else class="global-map-container" style="height: 600px; position: relative;">
+      <div v-else class="global-map-container" :class="{'sidebar-open': sidebarOpen}">
         <GlobalMap
           :locations="filteredLocations"
           :edges="edges"
           @location-click="navigateToLocation"
+          ref="mapRef"
         />
       </div>
       
@@ -131,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount, provide, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { locationService, locationTypes } from '../services/location'
 import { edgeService } from '../services/edge'
@@ -143,6 +144,7 @@ import Dropdown from 'primevue/dropdown'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const router = useRouter()
+const mapRef = ref(null);
 
 // Data
 const locations = ref([])
@@ -150,6 +152,39 @@ const edges = ref([])
 const loading = ref(true)
 const selectedEdge = ref(null)
 const selectedLocationType = ref(null)
+const resizeObserver = ref(null)
+
+// Check if sidebar is open (from parent layout)
+// Try to inject from parent (DefaultLayout)
+const sidebarOpen = ref(false)
+try {
+  const injectedSidebarOpen = inject('sidebarOpen', ref(false))
+  if (injectedSidebarOpen) {
+    // Create a local copy to avoid modifying the parent state directly
+    sidebarOpen.value = injectedSidebarOpen.value
+    
+    watch(injectedSidebarOpen, (newValue) => {
+      sidebarOpen.value = newValue
+      
+      // Handle map resize when sidebar state changes, with a delay
+      if (mapRef.value) {
+        setTimeout(() => {
+          if (mapRef.value.$el) {
+            // Force redraw of map when sidebar changes
+            try {
+              const event = new Event('resize')
+              window.dispatchEvent(event)
+            } catch (err) {
+              console.warn('Error dispatching resize event:', err)
+            }
+          }
+        }, 400) // Wait for animation to complete
+      }
+    })
+  }
+} catch (e) {
+  console.warn('Unable to inject sidebarOpen state', e)
+}
 
 // Table columns definition
 const columns = [
@@ -184,7 +219,71 @@ onMounted(async () => {
     fetchEdges()
   ])
   loading.value = false
+  
+  // Set up resize observer to handle container resizing
+  setupResizeObserver()
 })
+
+// Detect mobile device
+const isMobile = ref(false)
+
+// Update mobile status 
+const updateMobileStatus = () => {
+  isMobile.value = window.innerWidth < 1024;
+}
+
+// Method to close sidebar explicitly
+const closeSidebar = () => {
+  const injectedSidebarOpen = inject('sidebarOpen', ref(false))
+  if (injectedSidebarOpen) {
+    injectedSidebarOpen.value = false
+    sidebarOpen.value = false
+  }
+}
+
+// Check initial mobile status
+onMounted(() => {
+  updateMobileStatus()
+  window.addEventListener('resize', updateMobileStatus)
+})
+
+// Clean up
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateMobileStatus)
+})
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  if (resizeObserver.value) {
+    resizeObserver.value.disconnect();
+  }
+  
+  // Remove any global event listeners
+  window.removeEventListener('resize', () => {
+    if (mapRef.value && mapRef.value.$el) {
+      mapRef.value.$el.dispatchEvent(new Event('resize'));
+    }
+  });
+})
+
+// Set up resize observer
+const setupResizeObserver = () => {
+  // If ResizeObserver is available, use it to detect container size changes
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver.value = new ResizeObserver(() => {
+      if (mapRef.value && mapRef.value.$el) {
+        const event = new Event('resize')
+        window.dispatchEvent(event)
+      }
+    })
+    
+    // Start observing container
+    const container = document.querySelector('.map-container')
+    if (container) {
+      resizeObserver.value.observe(container)
+    }
+  }
+}
 
 // Methods
 const fetchLocations = async () => {
@@ -270,3 +369,23 @@ const getTypeClass = (typeCode) => {
   }
 }
 </script>
+
+<style scoped>
+.global-map-container {
+  height: 600px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  transition: width 0.3s ease-in-out;
+}
+
+/* Add specific styling to handle sidebar interactions */
+@media (max-width: 1023px) {
+  .global-map-container.sidebar-open {
+    /* Ensure the map stays within its container when sidebar is open */
+    width: 100%;
+    max-width: 100%;
+  }
+}
+</style>

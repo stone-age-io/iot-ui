@@ -1,4 +1,4 @@
-<!-- src/layouts/DefaultLayout.vue -->
+<!-- src/layouts/DefaultLayout.vue - Updated with proper organization -->
 <template>
   <div class="min-h-screen flex flex-col">
     <!-- Header -->
@@ -11,17 +11,17 @@
       <!-- Mobile Overlay -->
       <div 
         v-if="sidebarOpen" 
-        class="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-        @click="sidebarOpen = false"
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        @click="closeSidebar"
       ></div>
       
       <!-- Sidebar - Off-canvas on mobile, sidebar on desktop -->
       <AppSidebar 
         :open="sidebarOpen"
-        @close="sidebarOpen = false"
+        @close="closeSidebar"
         :collapsed="sidebarCollapsed"
         @toggle-collapse="toggleSidebar"
-        class="fixed z-30 lg:relative"
+        class="fixed z-50 lg:relative"
       />
       
       <!-- Main Content -->
@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRoute } from 'vue-router'
 import AppHeader from '../components/common/AppHeader.vue'
@@ -58,12 +58,18 @@ import MobileNavBar from '../components/common/MobileNavBar.vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 
+// State
 const authStore = useAuthStore()
 const route = useRoute()
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const windowWidth = ref(window.innerWidth)
 
+// Provide sidebar state to child components
+provide('sidebarOpen', sidebarOpen)
+provide('sidebarCollapsed', sidebarCollapsed)
+
+// Computed properties
 // Responsive breakpoints
 const isMobileView = computed(() => windowWidth.value < 1024)
 
@@ -72,24 +78,7 @@ const showMobileNav = computed(() => {
   return route.path !== '/' && route.name !== 'dashboard';
 })
 
-// Window resize handler
-const handleResize = () => {
-  windowWidth.value = window.innerWidth
-  
-  // Auto-close sidebar on small screens
-  if (windowWidth.value < 1024 && sidebarOpen.value) {
-    sidebarOpen.value = false
-  }
-}
-
-// Toggle sidebar collapse state
-const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  // You might want to persist this setting in localStorage
-  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
-}
-
-// Check authentication on component mount
+// Lifecycle hooks
 onMounted(() => {
   authStore.checkToken()
   window.addEventListener('resize', handleResize)
@@ -107,6 +96,32 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
+
+// Methods
+// Window resize handler
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+  
+  // Auto-close sidebar on small screens
+  if (windowWidth.value < 1024 && sidebarOpen.value) {
+    sidebarOpen.value = false
+  }
+}
+
+// Toggle sidebar collapse state
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  // You might want to persist this setting in localStorage
+  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+}
+
+// Close sidebar with a specific method to ensure consistent behavior
+const closeSidebar = () => {
+  // Ensure this doesn't trigger immediately with other transitions
+  setTimeout(() => {
+    sidebarOpen.value = false;
+  }, 50);
+}
 </script>
 
 <style scoped>
@@ -118,5 +133,16 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Improve z-index management for map-related views */
+main {
+  z-index: 1;
+}
+
+@media (max-width: 1023px) {
+  .fixed.z-50 {
+    z-index: 50 !important; /* Ensure sidebar is always on top */
+  }
 }
 </style>
