@@ -180,14 +180,15 @@
         </div>
       </div>
       
-      <!-- Floor Plan Map (replaces global map) -->
+      <!-- Floor Plan Map Card -->
       <div class="card mt-6">
         <h2 class="text-xl font-semibold mb-4">Floor Plan</h2>
         <FloorPlanMap
           :location="location"
           :things="things"
-          height="500px"
+          height="550px"
           :editable="true"
+          legendPosition="left"
           @update-thing-position="updateThingPosition"
           @upload-floor-plan="uploadFloorPlan"
           @thing-click="navigateToThingDetail"

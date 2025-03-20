@@ -33,6 +33,32 @@
         display: hasFloorPlan && !loading ? 'block' : 'none' 
       }"></div>
       
+      <!-- Legend panel -->
+      <div 
+        v-if="showLegend && mapInitialized" 
+        class="legend-panel bg-white rounded-md shadow-md p-3"
+        :class="legendPosition === 'left' ? 'legend-left' : 'legend-right'"
+      >
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-semibold">Legend</h3>
+          <Button
+            icon="pi pi-times"
+            class="p-button-rounded p-button-text p-button-sm"
+            @click="showLegend = false"
+          />
+        </div>
+        
+        <div class="space-y-2">
+          <div v-for="(typeObj, index) in uniqueThingTypes" :key="index" class="flex items-center">
+            <span 
+              class="h-3 w-3 rounded-full mr-2"
+              :style="{ backgroundColor: getMarkerColor(typeObj.type) }"
+            ></span>
+            <span class="text-xs">{{ typeObj.label }} ({{ typeObj.count }})</span>
+          </div>
+        </div>
+      </div>
+      
       <!-- Fallback message when floor plan load fails but hasFloorPlan is true -->
       <div 
         v-if="hasFloorPlan && initAttempted && !mapInitialized && !loading" 
@@ -57,57 +83,6 @@
               />
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Map Controls section (will be hidden when map is not initialized) -->
-    <div v-if="mapInitialized" class="map-controls absolute top-3 right-3 z-50 bg-white rounded-md shadow-md p-2">
-      <!-- Map legend -->
-      <Button
-        icon="pi pi-list"
-        class="p-button-rounded p-button-text p-button-sm"
-        @click="showLegend = !showLegend"
-        tooltip="Toggle Legend"
-        tooltipOptions="{ position: 'left' }"
-      />
-      
-      <!-- Edit mode toggle -->
-      <Button
-        v-if="editable"
-        :icon="editMode ? 'pi pi-check' : 'pi pi-pencil'"
-        :class="[
-          'p-button-rounded p-button-text p-button-sm ml-1',
-          editMode ? 'p-button-success' : ''
-        ]"
-        @click="toggleEditMode"
-        :tooltip="editMode ? 'Save Positions' : 'Edit Positions'"
-        tooltipOptions="{ position: 'left' }"
-      />
-    </div>
-    
-    <!-- Legend panel -->
-    <div 
-      v-if="showLegend && mapInitialized" 
-      class="legend-panel absolute left-3 top-3 z-50 bg-white rounded-md shadow-md p-3"
-      style="max-width: 250px; max-height: 80%; overflow-y: auto;"
-    >
-      <div class="flex justify-between items-center mb-2">
-        <h3 class="text-sm font-semibold">Legend</h3>
-        <Button
-          icon="pi pi-times"
-          class="p-button-rounded p-button-text p-button-sm"
-          @click="showLegend = false"
-        />
-      </div>
-      
-      <div class="space-y-2">
-        <div v-for="(typeObj, index) in uniqueThingTypes" :key="index" class="flex items-center">
-          <span 
-            class="h-3 w-3 rounded-full mr-2"
-            :style="{ backgroundColor: getMarkerColor(typeObj.type) }"
-          ></span>
-          <span class="text-xs">{{ typeObj.label }} ({{ typeObj.count }})</span>
         </div>
       </div>
     </div>
@@ -172,6 +147,11 @@ const props = defineProps({
   showUpload: {
     type: Boolean,
     default: true
+  },
+  // Position for legend (left or right)
+  legendPosition: {
+    type: String,
+    default: 'right'
   }
 })
 
@@ -188,6 +168,7 @@ const mapInitialized = ref(false)
 const initAttempted = ref(false)
 const initTimer = ref(null)
 const imageUrl = ref(null) // Direct image URL
+const savedMapState = ref(null) // For saving map state during edit mode
 
 // Check if the location has a floor plan
 const hasFloorPlan = computed(() => {
@@ -327,12 +308,18 @@ const initMap = async () => {
     // Fix Leaflet icon paths
     fixLeafletIconPaths();
     
-    // Create a simple CRS to use pixel coordinates
+    // Improved map options with better zoom levels
     const mapOptions = {
       crs: L.CRS.Simple,
-      minZoom: -2,
-      maxZoom: 3,
-      zoomControl: true
+      minZoom: -3,  // Allow zooming out further
+      maxZoom: 4,   // Allow more zoom in for detail
+      zoomControl: true,
+      attributionControl: false, // Remove attribution control for cleaner UI
+      center: [0, 0], // Default center (will be overridden)
+      zoom: 0,        // Default zoom (will be overridden)
+      maxBoundsViscosity: 0.9, // Makes bounds "sticky" but still navigable
+      zoomSnap: 0.1,   // Allow finer zoom levels
+      wheelPxPerZoomLevel: 120 // Adjust mouse wheel sensitivity
     };
     
     // Create map with the element
@@ -340,6 +327,9 @@ const initMap = async () => {
     
     // Load the floor plan image
     await loadFloorPlanImage();
+    
+    // Add custom controls for legend and editing
+    addMapControls();
     
     // Mark map as initialized
     mapInitialized.value = true;
@@ -359,6 +349,93 @@ const initMap = async () => {
     loading.value = false;
     return false;
   }
+}
+
+// Add custom Leaflet controls to the map
+const addMapControls = () => {
+  // Create legend control
+  const legendControl = L.control({ position: 'topright' });
+  legendControl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+    const button = L.DomUtil.create('a', '', div);
+    button.href = '#';
+    button.title = 'Toggle Legend';
+    button.innerHTML = '<i class="pi pi-list"></i>';
+    button.role = 'button';
+    button.style.display = 'flex';
+    button.style.alignItems = 'center';
+    button.style.justifyContent = 'center';
+    button.style.fontWeight = 'bold';
+    
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.on(button, 'click', (e) => {
+      L.DomEvent.preventDefault(e);
+      showLegend.value = !showLegend.value;
+    });
+    
+    return div;
+  };
+  legendControl.addTo(map.value);
+  
+  // Create edit mode control if editable
+  if (props.editable) {
+    const editControl = L.control({ position: 'topright' });
+    editControl.onAdd = function() {
+      const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+      const button = L.DomUtil.create('a', '', div);
+      button.href = '#';
+      button.title = 'Toggle Edit Mode';
+      button.innerHTML = '<i class="pi pi-pencil"></i>';
+      button.role = 'button';
+      button.style.display = 'flex';
+      button.style.alignItems = 'center';
+      button.style.justifyContent = 'center';
+      button.setAttribute('data-edit-button', 'true');
+      
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.on(button, 'click', (e) => {
+        L.DomEvent.preventDefault(e);
+        toggleEditMode();
+        
+        // Update button appearance based on edit mode
+        if (editMode.value) {
+          button.innerHTML = '<i class="pi pi-check"></i>';
+          button.style.backgroundColor = '#4ade80'; // Green background
+          button.style.color = 'white';
+        } else {
+          button.innerHTML = '<i class="pi pi-pencil"></i>';
+          button.style.backgroundColor = '';
+          button.style.color = '';
+        }
+      });
+      
+      return div;
+    };
+    editControl.addTo(map.value);
+  }
+  
+  // Add locate button for quick center
+  const locateControl = L.control({ position: 'topleft' });
+  locateControl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+    const button = L.DomUtil.create('a', '', div);
+    button.href = '#';
+    button.title = 'Center Floor Plan';
+    button.innerHTML = '<i class="pi pi-home"></i>';
+    button.role = 'button';
+    button.style.display = 'flex';
+    button.style.alignItems = 'center';
+    button.style.justifyContent = 'center';
+    
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.on(button, 'click', (e) => {
+      L.DomEvent.preventDefault(e);
+      centerFloorPlan();
+    });
+    
+    return div;
+  };
+  locateControl.addTo(map.value);
 }
 
 // Load the floor plan image and set up the map using direct URL approach
@@ -389,13 +466,47 @@ const loadFloorPlanImage = () => {
         const height = img.height;
         console.log("Image loaded successfully, dimensions:", width, "x", height);
         
+        // Set bounds correctly - using the image's pixel coordinates
         const bounds = [[0, 0], [height, width]];
         
         // Add the floor plan as an image overlay using the direct URL
         L.imageOverlay(imageUrl.value, bounds).addTo(map.value);
         
-        // Set the view to show the entire floor plan
-        map.value.fitBounds(bounds);
+        // Get the container size to determine the best fitting zoom level
+        const container = map.value.getContainer();
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Calculate image and container aspect ratios to determine appropriate padding
+        const imageRatio = width / height;
+        
+        // Calculate proper max bounds with enough space for UI elements
+        const maxBounds = L.latLngBounds(bounds).pad(0.75); // Add 75% padding
+        map.value.setMaxBounds(maxBounds);
+        
+        // Save the initial view information for later reference
+        savedMapState.value = {
+          bounds: bounds,
+          containerSize: { width: containerWidth, height: containerHeight },
+          imageRatio: imageRatio
+        };
+        
+        // Apply a minimal fitBounds to set the stage, but don't worry about perfect centering yet
+        map.value.fitBounds(bounds, {
+          padding: [20, 20], // Minimal padding, just to ensure bounds are set
+          animate: false
+        });
+        
+        // Use centerFloorPlan which has the optimized centering logic,
+        // with a slight delay to ensure the map has fully initialized
+        setTimeout(() => {
+          centerFloorPlan();
+          
+          // Now that everything is properly positioned, finish the setup
+          // Save proper view state after centering
+          savedMapState.value.center = map.value.getCenter();
+          savedMapState.value.zoom = map.value.getZoom();
+        }, 150);
         
         resolve();
       } catch (error) {
@@ -419,8 +530,38 @@ const loadFloorPlanImage = () => {
         // Add the floor plan as an image overlay directly with the URL
         L.imageOverlay(imageUrl.value, bounds).addTo(map.value);
         
-        // Set the view to show the entire floor plan
-        map.value.fitBounds(bounds);
+        // Get the container size
+        const container = map.value.getContainer();
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Calculate aspect ratios for fallback
+        const imageRatio = estimatedWidth / estimatedHeight;
+        
+        // Set max bounds
+        map.value.setMaxBounds(L.latLngBounds(bounds).pad(0.75));
+        
+        // Save initial state
+        savedMapState.value = {
+          bounds: bounds,
+          containerSize: { width: containerWidth, height: containerHeight },
+          imageRatio: imageRatio
+        };
+        
+        // Apply minimal bounds, then use the centerFloorPlan function
+        map.value.fitBounds(bounds, {
+          padding: [20, 20],
+          animate: false
+        });
+        
+        // Use centerFloorPlan for consistent behavior with a slight delay
+        setTimeout(() => {
+          centerFloorPlan();
+          
+          // Save proper view state after centering
+          savedMapState.value.center = map.value.getCenter();
+          savedMapState.value.zoom = map.value.getZoom();
+        }, 150);
         
         resolve();
       } catch (fallbackError) {
@@ -432,6 +573,43 @@ const loadFloorPlanImage = () => {
     // Set crossOrigin if needed based on your server setup
     // img.crossOrigin = "anonymous";
     img.src = imageUrl.value;
+  });
+}
+
+// Center the floor plan in view
+const centerFloorPlan = () => {
+  if (!map.value || !savedMapState.value) return;
+  
+  // Force a map size recalculation to handle any container size changes
+  map.value.invalidateSize({reset: true});
+  
+  // Get current container dimensions
+  const container = map.value.getContainer();
+  const currentWidth = container.clientWidth;
+  const currentHeight = container.clientHeight;
+  
+  // Calculate optimal zoom level based on image and container dimensions
+  const imageRatio = savedMapState.value.imageRatio || 1;
+  const containerRatio = currentWidth / currentHeight;
+  
+  // Use asymmetric padding for better aspect ratio handling
+  let verticalPadding, horizontalPadding;
+  
+  if (imageRatio < containerRatio) {
+    // Image is taller relative to container - use less padding to maximize image size
+    verticalPadding = currentHeight * 0.08;  // 8% vertical padding
+    horizontalPadding = currentWidth * 0.05;  // 5% horizontal padding
+  } else {
+    // Image is wider relative to container - use less padding to maximize image size
+    verticalPadding = currentHeight * 0.05;  // 5% vertical padding
+    horizontalPadding = currentWidth * 0.08;  // 8% horizontal padding
+  }
+  
+  // Reset to the ideal view showing the entire floor plan with optimized padding
+  map.value.fitBounds(savedMapState.value.bounds, {
+    padding: [verticalPadding, horizontalPadding],
+    maxZoom: 1.2, // Allow slightly higher zoom to make better use of space
+    animate: true // Use animation for a smoother experience when manually centering
   });
 }
 
@@ -459,11 +637,28 @@ const renderThingMarkers = () => {
         thing.metadata.coordinates.x
       ];
     } else if (editMode.value) {
-      // In edit mode, place things without coordinates at the center
+      // In edit mode, place things without coordinates at the center but spread them out slightly
+      // This helps prevent markers from stacking directly on top of each other
       const bounds = map.value.getBounds();
+      const centerY = (bounds.getNorth() + bounds.getSouth()) / 2;
+      const centerX = (bounds.getEast() + bounds.getWest()) / 2;
+      
+      // Add a small random offset to spread out markers
+      // Use the thing's ID hash to create a consistent offset for the same thing
+      const hashCode = (s) => {
+        return s.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+      };
+      
+      const hash = hashCode(thing.id);
+      const offsetX = (hash % 20) / 100; // Small percentage of the map width
+      const offsetY = ((hash >> 5) % 20) / 100; // Different offset for Y
+      
       position = [
-        (bounds.getNorth() + bounds.getSouth()) / 2,
-        (bounds.getEast() + bounds.getWest()) / 2
+        centerY + offsetY,
+        centerX + offsetX
       ];
     } else {
       // Skip things without coordinates in view mode
@@ -484,7 +679,9 @@ const renderThingMarkers = () => {
     const marker = L.marker(position, {
       icon: icon,
       draggable: editMode.value,
-      title: thing.name
+      title: thing.name,
+      autoPan: false, // Disable automatic panning when dragging to edges
+      zIndexOffset: hasCoords ? 1000 : 500 // Place positioned markers on top
     });
     
     // Bind popup
@@ -497,11 +694,44 @@ const renderThingMarkers = () => {
       </div>
     `);
     
-    // Setup dragging events for edit mode
+    // Setup dragging events for edit mode with improved behavior
     if (editMode.value) {
+      // Store original map state when drag starts
+      marker.on('dragstart', () => {
+        marker._originalMapCenter = map.value.getCenter();
+        marker._originalZoom = map.value.getZoom();
+        
+        // Disable other map interactions during drag
+        if (map.value.scrollWheelZoom.enabled()) {
+          marker._scrollWheelEnabled = true;
+          map.value.scrollWheelZoom.disable();
+        }
+      });
+      
+      marker.on('drag', (event) => {
+        // Keep the map view steady during drag
+      });
+      
       marker.on('dragend', (event) => {
         const newPos = event.target.getLatLng();
         updateThingPosition(thing, newPos.lng, newPos.lat);
+        
+        // Re-enable map interactions
+        if (marker._scrollWheelEnabled) {
+          map.value.scrollWheelZoom.enable();
+        }
+        
+        // Restore original map view
+        if (marker._originalMapCenter) {
+          map.value.setView(
+            marker._originalMapCenter, 
+            marker._originalZoom, 
+            { animate: false, duration: 0 }
+          );
+          delete marker._originalMapCenter;
+          delete marker._originalZoom;
+          delete marker._scrollWheelEnabled;
+        }
       });
     }
     
@@ -521,6 +751,37 @@ const renderThingMarkers = () => {
     marker.addTo(markerLayer.value);
     thingMarkers.value[thing.id] = marker;
   });
+  
+  // If we have markers with coordinates, ensure they're visible by adjusting the view if needed
+  // But only do this initial centering if we're not in edit mode
+  if (!editMode.value && Object.keys(thingMarkers.value).length > 0) {
+    const positionedMarkers = Object.values(thingMarkers.value).filter(m => {
+      // Find markers that were placed using actual coordinates
+      const id = Object.keys(thingMarkers.value).find(key => thingMarkers.value[key] === m);
+      const thing = props.things.find(t => t.id === id);
+      return thing && thing.metadata && thing.metadata.coordinates;
+    });
+    
+    if (positionedMarkers.length > 0) {
+      // Create a feature group to get bounds of all positioned markers
+      const group = L.featureGroup(positionedMarkers);
+      
+      // Check if all markers are visible in current view
+      const currentBounds = map.value.getBounds();
+      const markerBounds = group.getBounds();
+      
+      // Only adjust view if some markers are outside current view
+      if (!currentBounds.contains(markerBounds)) {
+        // Extend current bounds to include marker bounds with padding
+        const extendedBounds = currentBounds.extend(markerBounds);
+        map.value.fitBounds(extendedBounds, {
+          padding: [50, 50],
+          maxZoom: map.value.getZoom(), // Don't zoom in further than current level
+          animate: true
+        });
+      }
+    }
+  }
 }
 
 // Update thing position (x,y coordinates)
@@ -531,9 +792,50 @@ const updateThingPosition = (thing, x, y) => {
   });
 }
 
-// Toggle edit mode
+// Toggle edit mode with improved state management
 const toggleEditMode = () => {
   editMode.value = !editMode.value;
+  
+  if (editMode.value) {
+    // Entering edit mode - save current state
+    savedMapState.value = {
+      center: map.value.getCenter(),
+      zoom: map.value.getZoom(),
+      bounds: map.value.getBounds()
+    };
+    
+    // Restrict panning during edit mode
+    const currentBounds = map.value.getBounds();
+    const maxBounds = L.latLngBounds(currentBounds).pad(0.2); // Tighter restrictions during edit
+    map.value.setMaxBounds(maxBounds);
+    
+    // Disable zoom during edit to prevent losing markers
+    map.value.touchZoom.disable();
+    map.value.doubleClickZoom.disable();
+    map.value.scrollWheelZoom.disable();
+    map.value.boxZoom.disable();
+    map.value.keyboard.disable();
+  } else {
+    // Exiting edit mode - restore previous view
+    if (savedMapState.value) {
+      map.value.setView(
+        savedMapState.value.center,
+        savedMapState.value.zoom,
+        { animate: false }
+      );
+      
+      // Reset max bounds to original padding
+      const maxBounds = L.latLngBounds(savedMapState.value.bounds).pad(0.5);
+      map.value.setMaxBounds(maxBounds);
+    }
+    
+    // Re-enable zoom controls
+    map.value.touchZoom.enable();
+    map.value.doubleClickZoom.enable();
+    map.value.scrollWheelZoom.enable();
+    map.value.boxZoom.enable();
+    map.value.keyboard.enable();
+  }
   
   // Re-render markers with/without draggable property
   renderThingMarkers();
@@ -647,6 +949,30 @@ const getThingTypeName = (type) => {
   border-bottom-right-radius: 6px;
 }
 
+/* Legend positioning */
+.legend-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 250px;
+  max-height: 60%; 
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.legend-left {
+  position: absolute;
+  left: 10px;
+  bottom: 30px;
+}
+
+.legend-right {
+  position: absolute;
+  right: 10px;
+  bottom: 30px;
+}
+
+/* Marker styling */
 :deep(.custom-marker-icon) {
   background: none;
   border: none;
@@ -680,6 +1006,7 @@ const getThingTypeName = (type) => {
   text-overflow: ellipsis;
 }
 
+/* Popup styling */
 :deep(.thing-popup) {
   min-width: 180px;
   padding: 6px;
@@ -724,6 +1051,7 @@ const getThingTypeName = (type) => {
   background-color: #2563eb;
 }
 
+/* Badge colors */
 :deep(.badge-reader) { background-color: #dbeafe; color: #1e40af; }
 :deep(.badge-controller) { background-color: #ede9fe; color: #5b21b6; }
 :deep(.badge-lock) { background-color: #ffedd5; color: #9a3412; }
@@ -734,4 +1062,28 @@ const getThingTypeName = (type) => {
 :deep(.badge-camera) { background-color: #fee2e2; color: #b91c1c; }
 :deep(.badge-motion-sensor) { background-color: #e0e7ff; color: #3730a3; }
 :deep(.badge-occupancy-sensor) { background-color: #ffedd5; color: #9a3412; }
+
+/* Custom control styling overrides */
+:deep(.leaflet-control a) {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  font-size: 16px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Make marker layer higher z-index than map controls */
+:deep(.leaflet-marker-pane) {
+  z-index: 1000 !important;
+}
+
+:deep(.leaflet-popup-pane) {
+  z-index: 1001 !important;
+}
+
+:deep(.leaflet-tooltip-pane) {
+  z-index: 1001 !important;
+}
 </style>
