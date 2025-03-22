@@ -53,12 +53,15 @@
         
         <!-- Clients Using column -->
         <template #clients_using-body="{ data }">
-          <Button
-            icon="pi pi-users"
-            class="p-button-text p-button-sm"
-            @click.stop="viewClientsUsingRole(data)"
-            label="View Clients"
-          />
+          <!-- FIX: Added div wrapper with event.stopPropagation() to ensure events don't bubble up -->
+          <div @click.stop>
+            <Button
+              icon="pi pi-users"
+              class="p-button-text p-button-sm"
+              @click="viewClientsUsingRole(data)"
+              label="View Clients"
+            />
+          </div>
         </template>
         
         <!-- Actions column -->
@@ -118,13 +121,16 @@
           No clients are using this role.
         </div>
         <div v-else>
-          <DataTable
-            :value="clientsDialog.clients"
-            :paginator="true"
-            :rows="5"
-          >
-            <Column field="username" header="Username">
-              <template #body="{ data }">
+          <!-- FIX: Using the correct DataTable props - our custom component uses 'items' not 'value' -->
+          <div class="overflow-x-auto">
+            <DataTable
+              :items="clientsDialog.clients"
+              :paginator="true"
+              :rows="5"
+              :columns="clientColumns"
+            >
+              <!-- Username column with link to client detail -->
+              <template #username-body="{ data }">
                 <router-link
                   :to="{ name: 'client-detail', params: { id: data.id } }"
                   class="text-primary-600 hover:underline"
@@ -133,9 +139,9 @@
                   {{ data.username }}
                 </router-link>
               </template>
-            </Column>
-            <Column field="active" header="Status">
-              <template #body="{ data }">
+              
+              <!-- Status column with styled badge -->
+              <template #active-body="{ data }">
                 <span 
                   class="px-2 py-1 text-xs rounded-full font-medium inline-block"
                   :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
@@ -143,8 +149,8 @@
                   {{ data.active ? 'Active' : 'Inactive' }}
                 </span>
               </template>
-            </Column>
-          </DataTable>
+            </DataTable>
+          </div>
         </div>
       </div>
       
@@ -173,7 +179,8 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
-import Column from 'primevue/column'
+// No need to import Column anymore as we're using our custom DataTable
+// import Column from 'primevue/column'
 
 const router = useRouter()
 const toast = useToast()
@@ -195,6 +202,12 @@ const clientsDialog = ref({
   roleId: null,
   clients: []
 })
+
+// Columns definition for the clients table in the dialog
+const clientColumns = [
+  { field: 'username', header: 'Username', sortable: true },
+  { field: 'active', header: 'Status', sortable: true }
+]
 
 // Table columns definition - updated to match actual schema
 const columns = [
@@ -278,6 +291,9 @@ const deletePermission = async () => {
 
 // View clients using a role
 const viewClientsUsingRole = async (role) => {
+  // FIX: Prevent event bubbling to parent row click
+  event?.stopPropagation?.()
+  
   clientsDialog.value.visible = true
   clientsDialog.value.loading = true
   clientsDialog.value.roleName = role.name

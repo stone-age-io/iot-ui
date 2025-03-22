@@ -72,7 +72,7 @@
                   <div class="flex-grow">
                     <InputText
                       v-model="newPublishTopic"
-                      placeholder="Enter a topic pattern (e.g., device/+/status)"
+                      placeholder="Enter a topic pattern (e.g., acme.device.*.status)"
                       class="w-full"
                       :class="{ 'p-invalid': !isValidTopic(newPublishTopic) && newPublishTopic !== '' }"
                     />
@@ -122,7 +122,7 @@
                   <div class="flex-grow">
                     <InputText
                       v-model="newSubscribeTopic"
-                      placeholder="Enter a topic pattern (e.g., events/#)"
+                      placeholder="Enter a topic pattern (e.g., acme.events.>)"
                       class="w-full"
                       :class="{ 'p-invalid': !isValidTopic(newSubscribeTopic) && newSubscribeTopic !== '' }"
                     />
@@ -172,27 +172,27 @@
                   Use specific topic paths for exact matching.
                 </p>
                 <div class="mt-2 bg-gray-100 p-2 rounded text-xs font-mono">
-                  acme/bld-na-001/reader/rdr-main-001/event
+                  acme.bld.na.001.reader.status
                 </div>
               </div>
               
               <div>
-                <h4 class="font-medium text-sm mb-1">Single-Level Wildcard (+)</h4>
+                <h4 class="font-medium text-sm mb-1">Single-Level Wildcard (*)</h4>
                 <p class="text-sm text-gray-600">
-                  The + wildcard matches exactly one level in the topic path.
+                  The * wildcard matches exactly one token in the topic path.
                 </p>
                 <div class="mt-2 bg-gray-100 p-2 rounded text-xs font-mono">
-                  acme/+/reader/+/event
+                  acme.*.reader.*.event
                 </div>
               </div>
               
               <div>
-                <h4 class="font-medium text-sm mb-1">Multi-Level Wildcard (#)</h4>
+                <h4 class="font-medium text-sm mb-1">Multi-Level Wildcard (>)</h4>
                 <p class="text-sm text-gray-600">
-                  The # wildcard matches multiple levels and must be at the end.
+                  The > wildcard matches multiple tokens and must be at the end.
                 </p>
                 <div class="mt-2 bg-gray-100 p-2 rounded text-xs font-mono">
-                  acme/bld-na-001/#
+                  acme.bld.na.001.>
                 </div>
               </div>
             </div>
