@@ -7,6 +7,18 @@ import {
   transformPaginationParams 
 } from './pocketbase-config'
 
+/**
+ * Client Schema Documentation
+ * 
+ * This service interacts with the 'clients' collection in PocketBase.
+ * The schema consists of:
+ * - id: Unique identifier (auto-generated)
+ * - username: Authentication username for NATS
+ * - password: Bcrypt hashed password for NATS authentication
+ * - role_id: Relation field pointing to a single record in topic_permissions
+ * - active: Boolean indicating if the client is enabled
+ */
+
 // Client service with CRUD operations
 export const clientService = {
   /**
@@ -17,6 +29,11 @@ export const clientService = {
   getClients(params = {}) {
     const endpoint = collectionEndpoint(COLLECTIONS.CLIENTS)
     const transformedParams = transformPaginationParams(params)
+    
+    // Add expand parameter to include role data if not already specified
+    if (!transformedParams.expand) {
+      transformedParams.expand = 'role_id'
+    }
     
     return apiHelpers.getList(endpoint, transformedParams)
       .then(response => {
@@ -31,7 +48,9 @@ export const clientService = {
    */
   getClient(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.CLIENTS, id)
-    return apiHelpers.getById(endpoint)
+    
+    // Add expand parameter to include role data
+    return apiHelpers.getList(`${endpoint}?expand=role_id`)
   },
 
   /**
@@ -41,7 +60,16 @@ export const clientService = {
    */
   createClient(client) {
     const endpoint = collectionEndpoint(COLLECTIONS.CLIENTS)
-    return apiHelpers.create(endpoint, client)
+    
+    // Extract only the fields that match the PocketBase schema
+    const clientData = {
+      username: client.username,
+      password: client.password, // Should be already hashed
+      role_id: client.role_id,
+      active: client.active
+    }
+    
+    return apiHelpers.create(endpoint, clientData)
   },
 
   /**
@@ -52,7 +80,17 @@ export const clientService = {
    */
   updateClient(id, client) {
     const endpoint = collectionEndpoint(COLLECTIONS.CLIENTS, id)
-    return apiHelpers.update(endpoint, null, client)
+    
+    // Extract only the fields that match the PocketBase schema
+    const clientData = {}
+    
+    // Only include fields that were provided in the update
+    if (client.username !== undefined) clientData.username = client.username
+    if (client.password !== undefined) clientData.password = client.password
+    if (client.role_id !== undefined) clientData.role_id = client.role_id
+    if (client.active !== undefined) clientData.active = client.active
+    
+    return apiHelpers.update(endpoint, null, clientData)
   },
 
   /**
@@ -63,34 +101,33 @@ export const clientService = {
   deleteClient(id) {
     const endpoint = collectionEndpoint(COLLECTIONS.CLIENTS, id)
     return apiHelpers.delete(endpoint)
+  },
+
+  /**
+   * Hash a password using bcrypt (via server API)
+   * @param {string} password - Plain text password to hash
+   * @returns {Promise<string>} - Hashed password
+   */
+  hashPassword(password) {
+    return apiHelpers.axiosInstance.post('/api/hash-password', {
+      password
+    })
+    .then(response => {
+      return response.data.hash
+    })
+    .catch(error => {
+      console.error('Error hashing password:', error)
+      throw new Error('Failed to hash password')
+    })
   }
 }
 
 /**
- * Client types for dropdown options
- */
-export const clientTypes = [
-  { label: 'Device', value: 'device' },
-  { label: 'Service', value: 'service' },
-  { label: 'User', value: 'user' },
-  { label: 'Integration', value: 'integration' },
-  { label: 'System', value: 'system' }
-]
-
-/**
- * Access levels for dropdown options
- */
-export const accessLevels = [
-  { label: 'Read Only', value: 'read' },
-  { label: 'Write Only', value: 'write' },
-  { label: 'Read/Write', value: 'readwrite' },
-  { label: 'Admin', value: 'admin' }
-]
-
-/**
- * Generate a client username based on clientType and name
- * @param {string} clientType - Type of client
- * @param {string} name - Client name or identifier
+ * Generate a client username based on client type and name
+ * This is a helper for the UI only and doesn't reflect database fields
+ * 
+ * @param {string} clientType - Type of client (UI categorization)
+ * @param {string} name - Descriptive name (UI only)
  * @returns {string} - Generated username
  */
 export const generateClientUsername = (clientType, name) => {

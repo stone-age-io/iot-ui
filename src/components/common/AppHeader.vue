@@ -1,11 +1,12 @@
-<!-- src/components/common/AppHeader.vue -->
+<!-- src/components/common/AppHeader.vue - Updated for fixed positioning -->
 <template>
-  <header class="bg-white border-b border-gray-200 shadow-sm">
-    <div class="flex items-center justify-between px-4 py-3">
+  <header class="bg-white border-b border-gray-200 h-16 flex items-center">
+    <div class="flex items-center justify-between px-4 py-3 w-full">
       <!-- Mobile menu button -->
       <button 
         @click="$emit('toggle-sidebar')"
         class="p-2 rounded-md text-gray-500 lg:hidden touch-target"
+        aria-label="Toggle navigation menu"
       >
         <i class="pi pi-bars"></i>
       </button>
@@ -28,6 +29,8 @@
           class="p-button-text p-button-rounded hidden sm:block"
           aria-label="Notifications"
           @click="notificationsVisible = !notificationsVisible"
+          badge="0"
+          badgeClass="p-badge-danger"
         />
         
         <!-- User Menu -->
@@ -106,3 +109,7 @@ const toggleUserMenu = (event) => {
   userMenu.value.toggle(event)
 }
 </script>
+
+<style scoped>
+/* Any additional styles for fixed header */
+</style>

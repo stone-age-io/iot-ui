@@ -1,4 +1,4 @@
-<!-- src/components/common/MobileNavBar.vue -->
+<!-- src/components/common/MobileNavBar.vue - Enhanced with active state -->
 <template>
   <nav 
     class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30"
@@ -9,7 +9,7 @@
         v-for="item in navItems" 
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center p-2"
+        class="flex flex-col items-center p-2 touch-target"
         :class="{ 'text-primary-600': isActive(item.to), 'text-gray-500': !isActive(item.to) }"
       >
         <i :class="[item.icon, 'text-lg']"></i>
@@ -33,6 +33,7 @@ const showMobileNav = computed(() => {
 // Primary navigation items for mobile
 const navItems = [
   { label: 'Dashboard', icon: 'pi pi-home', to: '/' },
+  { label: 'Map', icon: 'pi pi-map', to: '/map' },
   { label: 'Edges', icon: 'pi pi-server', to: '/edges' },
   { label: 'Locations', icon: 'pi pi-map-marker', to: '/locations' },
   { label: 'Things', icon: 'pi pi-wifi', to: '/things' }
@@ -46,3 +47,27 @@ const isActive = (path) => {
   return route.path.startsWith(path)
 }
 </script>
+
+<style scoped>
+.touch-target {
+  min-height: 44px;
+  min-width: 56px;
+}
+
+/* Add subtle animation for active state */
+.text-primary-600 {
+  position: relative;
+}
+
+.text-primary-600::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--primary-color, #3B82F6);
+}
+</style>

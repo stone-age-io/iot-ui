@@ -1,7 +1,7 @@
 <!-- src/views/Messaging/Clients/ClientListView.vue -->
 <template>
   <div>
-    <PageHeader title="Messaging Clients" subtitle="Manage access to messaging system">
+    <PageHeader title="Messaging Clients" subtitle="Manage NATS authentication clients">
       <template #actions>
         <Button 
           label="Create Client" 
@@ -17,7 +17,7 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['username', 'name', 'description', 'client_type']"
+        :searchFields="['username', 'expand.role_id.name']"
         title="Messaging Clients"
         empty-message="No clients found"
         @row-click="navigateToDetail"
@@ -27,24 +27,18 @@
           <div class="font-medium text-primary-700">{{ data.username }}</div>
         </template>
         
-        <!-- Client Type column with badge -->
-        <template #client_type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getTypeClass(data.client_type)"
-          >
-            {{ getTypeName(data.client_type) }}
-          </span>
-        </template>
-        
-        <!-- Access Level column with badge -->
-        <template #access_level-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getAccessLevelClass(data.access_level)"
-          >
-            {{ getAccessLevelName(data.access_level) }}
-          </span>
+        <!-- Role column with reference -->
+        <template #role_id-body="{ data }">
+          <div v-if="data.expand && data.expand.role_id">
+            <router-link 
+              :to="{ name: 'topic-permission-detail', params: { id: data.role_id } }"
+              class="text-primary-600 hover:underline"
+              @click.stop
+            >
+              {{ data.expand.role_id.name }}
+            </router-link>
+          </div>
+          <span v-else class="text-gray-500">No role assigned</span>
         </template>
         
         <!-- Status column with badge -->
@@ -95,7 +89,7 @@
       confirm-icon="pi pi-trash"
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete client '${deleteDialog.item?.username || ''}'?`"
-      details="This action cannot be undone. All topic permissions associated with this client will be deleted as well."
+      details="This action cannot be undone."
       @confirm="deleteClient"
     />
     
@@ -108,7 +102,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { clientService, clientTypes, accessLevels } from '../../../services/client'
+import { clientService } from '../../../services/client'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
@@ -127,14 +121,11 @@ const deleteDialog = ref({
   item: null
 })
 
-// Table columns definition
+// Table columns definition - updated to match actual schema
 const columns = [
   { field: 'username', header: 'Username', sortable: true },
-  { field: 'name', header: 'Name', sortable: true },
-  { field: 'client_type', header: 'Type', sortable: true },
-  { field: 'access_level', header: 'Access Level', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'description', header: 'Description', sortable: false }
+  { field: 'role_id', header: 'Role', sortable: true },
+  { field: 'active', header: 'Status', sortable: true }
 ]
 
 // Fetch clients on component mount
@@ -206,38 +197,6 @@ const deleteClient = async () => {
     })
   } finally {
     deleteDialog.value.loading = false
-  }
-}
-
-// Helper methods for formatting
-const getTypeName = (clientType) => {
-  const type = clientTypes.find(t => t.value === clientType)
-  return type ? type.label : clientType
-}
-
-const getAccessLevelName = (accessLevel) => {
-  const level = accessLevels.find(l => l.value === accessLevel)
-  return level ? level.label : accessLevel
-}
-
-const getTypeClass = (clientType) => {
-  switch (clientType) {
-    case 'device': return 'bg-blue-100 text-blue-800'
-    case 'service': return 'bg-purple-100 text-purple-800'
-    case 'user': return 'bg-green-100 text-green-800'
-    case 'integration': return 'bg-amber-100 text-amber-800'
-    case 'system': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getAccessLevelClass = (accessLevel) => {
-  switch (accessLevel) {
-    case 'read': return 'bg-green-100 text-green-800'
-    case 'write': return 'bg-blue-100 text-blue-800'
-    case 'readwrite': return 'bg-purple-100 text-purple-800'
-    case 'admin': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
   }
 }
 </script>

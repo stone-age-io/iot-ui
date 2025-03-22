@@ -40,73 +40,19 @@
           @cancel="$router.back()"
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Username (readonly) -->
+            <!-- Username -->
             <FormField
               id="username"
               label="Username"
               :required="true"
-              hint="Not editable after creation"
+              :error-message="v$.username.$errors[0]?.$message"
+              class="md:col-span-2"
             >
               <InputText
                 id="username"
                 v-model="client.username"
                 class="w-full font-mono"
-                readonly
-                disabled
-              />
-            </FormField>
-            
-            <!-- Client Type (readonly) -->
-            <FormField
-              id="client_type"
-              label="Type"
-              hint="Not editable after creation"
-            >
-              <Dropdown
-                id="client_type"
-                v-model="client.client_type"
-                :options="clientTypes"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-                disabled
-              />
-            </FormField>
-            
-            <!-- Name -->
-            <FormField
-              id="name"
-              label="Name"
-              :required="true"
-              :error-message="v$.name.$errors[0]?.$message"
-              class="md:col-span-2"
-            >
-              <InputText
-                id="name"
-                v-model="client.name"
-                placeholder="Sensor Gateway"
-                class="w-full"
-                :class="{ 'p-invalid': v$.name.$error }"
-              />
-            </FormField>
-            
-            <!-- Access Level -->
-            <FormField
-              id="access_level"
-              label="Access Level"
-              :required="true"
-              :error-message="v$.access_level.$errors[0]?.$message"
-              help-text="Default access rights for the client"
-            >
-              <Dropdown
-                id="access_level"
-                v-model="client.access_level"
-                :options="accessLevels"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select Access Level"
-                class="w-full"
-                :class="{ 'p-invalid': v$.access_level.$error }"
+                :class="{ 'p-invalid': v$.username.$error }"
               />
             </FormField>
             
@@ -115,35 +61,56 @@
               id="password_section"
               label="Password"
               help-text="Use the reset button to generate a new password"
+              class="md:col-span-2"
             >
               <div class="flex items-center">
                 <div class="text-gray-500 italic flex-1">
                   Password not displayed for security
                 </div>
                 <Button
-                  label="Reset"
+                  label="Reset Password"
                   icon="pi pi-refresh"
-                  class="p-button-outlined p-button-sm"
+                  class="p-button-outlined"
                   @click="showResetPasswordDialog"
                 />
               </div>
             </FormField>
             
-            <!-- Description -->
+            <!-- Role selection -->
             <FormField
-              id="description"
-              label="Description"
-              :error-message="v$.description.$errors[0]?.$message"
+              id="role_id"
+              label="Role"
+              :required="true"
+              :error-message="v$.role_id.$errors[0]?.$message"
+              help-text="Permissions for this client"
               class="md:col-span-2"
             >
-              <Textarea
-                id="description"
-                v-model="client.description"
-                rows="3"
-                placeholder="Enter a description for this client"
+              <Dropdown
+                id="role_id"
+                v-model="client.role_id"
+                :options="roles"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Select Role"
                 class="w-full"
-                :class="{ 'p-invalid': v$.description.$error }"
-              />
+                :class="{ 'p-invalid': v$.role_id.$error }"
+                :loading="rolesLoading"
+                :filter="true"
+              >
+                <template #option="slotProps">
+                  <div>
+                    <div class="font-medium">{{ slotProps.option.name }}</div>
+                  </div>
+                </template>
+              </Dropdown>
+              <div class="mt-2 flex items-center">
+                <Button
+                  label="Create New Role"
+                  icon="pi pi-plus"
+                  class="p-button-text p-button-sm"
+                  @click="navigateToCreateRole"
+                />
+              </div>
             </FormField>
             
             <!-- Active Status -->
@@ -162,17 +129,6 @@
                 </label>
               </div>
             </FormField>
-          </div>
-          
-          <!-- Edit notes -->
-          <div class="mt-6 bg-gray-50 p-4 rounded-md text-gray-600 text-sm">
-            <div class="flex items-start">
-              <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500"></i>
-              <div>
-                <p><strong>Note:</strong> The client username and type cannot be changed after creation.</p>
-                <p class="mt-1">If you need to change these values, please create a new client and delete this one.</p>
-              </div>
-            </div>
           </div>
         </EntityForm>
       </div>
@@ -242,14 +198,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
-import { clientService, clientTypes, accessLevels, generateSecurePassword } from '../../../services/client'
+import { clientService, generateSecurePassword } from '../../../services/client'
+import { topicPermissionService } from '../../../services/topicPermission'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
-import Textarea from 'primevue/textarea'
 import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -260,14 +216,15 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
-// Client form data
+// Roles for the dropdown
+const roles = ref([])
+const rolesLoading = ref(false)
+
+// Client form data - simplified to match schema
 const client = ref({
   id: '',
   username: '',
-  client_type: '',
-  name: '',
-  access_level: '',
-  description: '',
+  role_id: '',
   active: true
 })
 
@@ -285,22 +242,24 @@ const resetPasswordDialog = ref({
 
 // Form validation rules
 const rules = {
-  name: { 
-    required: helpers.withMessage('Name is required', required),
-    minLength: helpers.withMessage('Name must be at least 3 characters', minLength(3))
+  username: { 
+    required: helpers.withMessage('Username is required', required),
+    minLength: helpers.withMessage('Username must be at least 3 characters', minLength(3))
   },
-  access_level: { 
-    required: helpers.withMessage('Access level is required', required)
-  },
-  description: {}
+  role_id: { 
+    required: helpers.withMessage('Role is required', required)
+  }
 }
 
 // Initialize Vuelidate
 const v$ = useVuelidate(rules, client)
 
-// Fetch client data on component mount
+// Fetch client data and roles on component mount
 onMounted(async () => {
-  await fetchClient()
+  await Promise.all([
+    fetchClient(),
+    fetchRoles()
+  ])
 })
 
 // Methods
@@ -318,14 +277,11 @@ const fetchClient = async () => {
   try {
     const response = await clientService.getClient(id)
     
-    // Set form data
+    // Set form data using only schema fields
     client.value = {
       id: response.data.id,
       username: response.data.username,
-      client_type: response.data.client_type,
-      name: response.data.name,
-      access_level: response.data.access_level,
-      description: response.data.description,
+      role_id: response.data.role_id,
       active: response.data.active
     }
   } catch (err) {
@@ -334,6 +290,30 @@ const fetchClient = async () => {
   } finally {
     initialLoading.value = false
   }
+}
+
+// Fetch topic permission roles for the dropdown
+const fetchRoles = async () => {
+  rolesLoading.value = true
+  try {
+    const response = await topicPermissionService.getTopicPermissions()
+    roles.value = response.data.items || []
+  } catch (error) {
+    console.error('Error fetching roles:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load roles',
+      life: 3000
+    })
+  } finally {
+    rolesLoading.value = false
+  }
+}
+
+// Navigate to create new role
+const navigateToCreateRole = () => {
+  router.push({ name: 'create-topic-permission' })
 }
 
 // Form submission
@@ -347,9 +327,8 @@ const handleSubmit = async () => {
   try {
     // Prepare data for API
     const clientData = {
-      name: client.value.name,
-      access_level: client.value.access_level,
-      description: client.value.description,
+      username: client.value.username,
+      role_id: client.value.role_id,
       active: client.value.active
     }
     
@@ -387,7 +366,7 @@ const showResetPasswordDialog = () => {
   resetPasswordDialog.value.newPassword = null
 }
 
-// Reset password
+// Reset password with hashing
 const resetPassword = async () => {
   resetPasswordDialog.value.loading = true
   
@@ -395,12 +374,15 @@ const resetPassword = async () => {
     // Generate new password
     const newPassword = generateSecurePassword(12)
     
-    // Update client with new password
+    // Hash the password before sending to PocketBase
+    const hashedPassword = await clientService.hashPassword(newPassword)
+    
+    // Update client with new hashed password
     await clientService.updateClient(client.value.id, {
-      password: newPassword
+      password: hashedPassword
     })
     
-    // Show the password in the dialog
+    // Show the PLAIN TEXT password in the dialog (this is the only time the user will see it)
     resetPasswordDialog.value.newPassword = newPassword
     
     toast.add({

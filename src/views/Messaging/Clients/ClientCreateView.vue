@@ -2,7 +2,7 @@
   <div>
     <PageHeader 
       title="Create Client" 
-      subtitle="Add a new messaging client for device or service access"
+      subtitle="Add a new NATS authentication client"
     >
       <template #actions>
         <Button 
@@ -23,83 +23,33 @@
         @cancel="$router.back()"
       >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Client Type -->
-          <FormField
-            id="client_type"
-            label="Type"
-            :required="true"
-            :error-message="v$.client_type.$errors[0]?.$message"
-            help-text="Type of client accessing the messaging system"
-          >
-            <Dropdown
-              id="client_type"
-              v-model="client.client_type"
-              :options="clientTypes"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select Client Type"
-              class="w-full"
-              :class="{ 'p-invalid': v$.client_type.$error }"
-              @change="updateUsername"
-            />
-          </FormField>
-          
-          <!-- Access Level -->
-          <FormField
-            id="access_level"
-            label="Access Level"
-            :required="true"
-            :error-message="v$.access_level.$errors[0]?.$message"
-            help-text="Default access rights for the client"
-          >
-            <Dropdown
-              id="access_level"
-              v-model="client.access_level"
-              :options="accessLevels"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select Access Level"
-              class="w-full"
-              :class="{ 'p-invalid': v$.access_level.$error }"
-            />
-          </FormField>
-          
-          <!-- Name -->
-          <FormField
-            id="name"
-            label="Name"
-            :required="true"
-            :error-message="v$.name.$errors[0]?.$message"
-            class="md:col-span-2"
-          >
-            <InputText
-              id="name"
-              v-model="client.name"
-              placeholder="Sensor Gateway"
-              class="w-full"
-              :class="{ 'p-invalid': v$.name.$error }"
-              @input="updateUsername"
-            />
-          </FormField>
-          
-          <!-- Username -->
+          <!-- Username - required field -->
           <FormField
             id="username"
             label="Username"
             :required="true"
             :error-message="v$.username.$errors[0]?.$message"
-            hint="Auto-generated but can be modified"
+            help-text="Unique identifier for NATS authentication"
+            class="md:col-span-2"
           >
-            <InputText
-              id="username"
-              v-model="client.username"
-              placeholder="dev_sensor_gateway"
-              class="w-full font-mono"
-              :class="{ 'p-invalid': v$.username.$error }"
-            />
+            <div class="flex items-center space-x-2">
+              <InputText
+                id="username"
+                v-model="client.username"
+                placeholder="device_gateway_001"
+                class="w-full font-mono"
+                :class="{ 'p-invalid': v$.username.$error }"
+              />
+              <Button
+                icon="pi pi-magic"
+                class="p-button-outlined"
+                @click="showGenerateUsernameDialog"
+                tooltip="Generate Username"
+              />
+            </div>
           </FormField>
           
-          <!-- Password -->
+          <!-- Password field - required field -->
           <FormField
             id="password"
             label="Password"
@@ -123,24 +73,54 @@
                 @click="generateRandomPassword"
                 tooltip="Generate Password"
               />
+              <Button
+                icon="pi pi-copy"
+                class="ml-2"
+                @click="copyPasswordToClipboard"
+                tooltip="Copy Password"
+              />
+            </div>
+            <div class="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded flex items-start">
+              <i class="pi pi-exclamation-triangle mr-2 mt-0.5"></i>
+              <span>Make sure to save this password securely. You won't be able to view it again after creation.</span>
             </div>
           </FormField>
           
-          <!-- Description -->
+          <!-- Role selection - required field -->
           <FormField
-            id="description"
-            label="Description"
-            :error-message="v$.description.$errors[0]?.$message"
+            id="role_id"
+            label="Role"
+            :required="true"
+            :error-message="v$.role_id.$errors[0]?.$message"
+            help-text="Permissions for this client"
             class="md:col-span-2"
           >
-            <Textarea
-              id="description"
-              v-model="client.description"
-              rows="3"
-              placeholder="Enter a description for this client"
+            <Dropdown
+              id="role_id"
+              v-model="client.role_id"
+              :options="roles"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select Role"
               class="w-full"
-              :class="{ 'p-invalid': v$.description.$error }"
-            />
+              :class="{ 'p-invalid': v$.role_id.$error }"
+              :loading="rolesLoading"
+              :filter="true"
+            >
+              <template #option="slotProps">
+                <div>
+                  <div class="font-medium">{{ slotProps.option.name }}</div>
+                </div>
+              </template>
+            </Dropdown>
+            <div class="mt-2 flex items-center">
+              <Button
+                label="Create New Role"
+                icon="pi pi-plus"
+                class="p-button-text p-button-sm"
+                @click="navigateToCreateRole"
+              />
+            </div>
           </FormField>
           
           <!-- Active Status -->
@@ -160,17 +140,84 @@
             </div>
           </FormField>
         </div>
-        
-        <!-- Topic Permissions Section -->
-        <div class="mt-8">
-          <h3 class="text-lg font-semibold mb-4">Topic Permissions</h3>
-          <p class="text-gray-600 mb-4">
-            You can add topic permissions for this client after creation. By default, the client will have
-            the access level specified above for all topics it is explicitly granted access to.
-          </p>
-        </div>
       </EntityForm>
     </div>
+    
+    <!-- Generate Username Dialog -->
+    <Dialog
+      v-model:visible="generateDialog.visible"
+      header="Generate Username"
+      :style="{ width: '450px' }"
+      :modal="true"
+    >
+      <div class="p-4">
+        <p class="mb-4">Generate a username based on client type and descriptive name.</p>
+        
+        <div class="space-y-3">
+          <div>
+            <label for="gen-client-type" class="block text-sm font-medium text-gray-700 mb-1">Client Type</label>
+            <Dropdown
+              id="gen-client-type"
+              v-model="generateDialog.clientType"
+              :options="clientTypes"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select Type"
+              class="w-full"
+            />
+          </div>
+          
+          <div>
+            <label for="gen-name" class="block text-sm font-medium text-gray-700 mb-1">Descriptive Name</label>
+            <InputText
+              id="gen-name"
+              v-model="generateDialog.name"
+              placeholder="Temperature Sensor Gateway"
+              class="w-full"
+            />
+          </div>
+          
+          <div v-if="generatedUsername">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Generated Username</label>
+            <div class="flex items-center">
+              <InputText
+                v-model="generatedUsername"
+                class="w-full font-mono"
+                readonly
+              />
+              <Button
+                icon="pi pi-copy"
+                class="p-button-text ml-2"
+                @click="copyGeneratedUsername"
+                tooltip="Copy"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <Button
+          label="Generate"
+          icon="pi pi-refresh"
+          @click="generateUsername"
+          :disabled="!generateDialog.clientType || !generateDialog.name"
+        />
+        <Button
+          v-if="generatedUsername"
+          label="Use This"
+          icon="pi pi-check"
+          class="ml-2"
+          @click="useGeneratedUsername"
+        />
+        <Button
+          label="Close"
+          icon="pi pi-times"
+          class="p-button-text ml-2"
+          @click="generateDialog.visible = false"
+        />
+      </template>
+    </Dialog>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -178,18 +225,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
 import { 
   clientService, 
-  clientTypes, 
-  accessLevels, 
   generateClientUsername,
   generateSecurePassword
 } from '../../../services/client'
+import { topicPermissionService } from '../../../services/topicPermission'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -197,22 +243,23 @@ import FormField from '../../../components/common/FormField.vue'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Dropdown from 'primevue/dropdown'
-import Textarea from 'primevue/textarea'
 import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 
 const router = useRouter()
 const toast = useToast()
 
-// Client form data
+// Roles for the dropdown
+const roles = ref([])
+const rolesLoading = ref(false)
+
+// Client form data - simplified to match schema
 const client = ref({
-  client_type: '',
-  access_level: 'read',
-  name: '',
   username: '',
   password: generateSecurePassword(12),
-  description: '',
+  role_id: '',
   active: true
 })
 
@@ -221,12 +268,6 @@ const loading = ref(false)
 
 // Form validation rules
 const rules = {
-  client_type: { required: helpers.withMessage('Client type is required', required) },
-  access_level: { required: helpers.withMessage('Access level is required', required) },
-  name: { 
-    required: helpers.withMessage('Name is required', required),
-    minLength: helpers.withMessage('Name must be at least 3 characters', minLength(3))
-  },
   username: { 
     required: helpers.withMessage('Username is required', required),
     minLength: helpers.withMessage('Username must be at least 3 characters', minLength(3))
@@ -235,19 +276,53 @@ const rules = {
     required: helpers.withMessage('Password is required', required),
     minLength: helpers.withMessage('Password must be at least 8 characters', minLength(8))
   },
-  description: {}
+  role_id: { 
+    required: helpers.withMessage('Role is required', required)
+  }
 }
 
 // Initialize Vuelidate
 const v$ = useVuelidate(rules, client)
 
-// Generate client username based on type and name
-const updateUsername = () => {
-  if (client.value.client_type && client.value.name) {
-    client.value.username = generateClientUsername(
-      client.value.client_type,
-      client.value.name
-    )
+// Username generation dialog
+const generateDialog = ref({
+  visible: false,
+  clientType: '',
+  name: ''
+})
+
+// Client types for username generation
+const clientTypes = [
+  { label: 'Device', value: 'device' },
+  { label: 'Service', value: 'service' },
+  { label: 'User', value: 'user' },
+  { label: 'Integration', value: 'integration' },
+  { label: 'System', value: 'system' }
+]
+
+const generatedUsername = ref('')
+
+// Fetch roles on component mount
+onMounted(async () => {
+  await fetchRoles()
+})
+
+// Fetch topic permission roles for the dropdown
+const fetchRoles = async () => {
+  rolesLoading.value = true
+  try {
+    const response = await topicPermissionService.getTopicPermissions()
+    roles.value = response.data.items || []
+  } catch (error) {
+    console.error('Error fetching roles:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load roles',
+      life: 3000
+    })
+  } finally {
+    rolesLoading.value = false
   }
 }
 
@@ -256,7 +331,72 @@ const generateRandomPassword = () => {
   client.value.password = generateSecurePassword(12)
 }
 
-// Form submission
+// Copy password to clipboard
+const copyPasswordToClipboard = () => {
+  navigator.clipboard.writeText(client.value.password)
+    .then(() => {
+      toast.add({
+        severity: 'info',
+        summary: 'Password Copied',
+        detail: 'Password has been copied to clipboard',
+        life: 2000
+      })
+    })
+    .catch(err => {
+      console.error('Failed to copy password: ', err)
+      toast.add({
+        severity: 'error',
+        summary: 'Copy Failed',
+        detail: 'Failed to copy password to clipboard',
+        life: 3000
+      })
+    })
+}
+
+// Show username generation dialog
+const showGenerateUsernameDialog = () => {
+  generateDialog.value.visible = true
+  generateDialog.value.clientType = ''
+  generateDialog.value.name = ''
+  generatedUsername.value = ''
+}
+
+// Generate username based on type and name
+const generateUsername = () => {
+  generatedUsername.value = generateClientUsername(
+    generateDialog.value.clientType,
+    generateDialog.value.name
+  )
+}
+
+// Copy generated username to clipboard
+const copyGeneratedUsername = () => {
+  navigator.clipboard.writeText(generatedUsername.value)
+    .then(() => {
+      toast.add({
+        severity: 'info',
+        summary: 'Username Copied',
+        detail: 'Username has been copied to clipboard',
+        life: 2000
+      })
+    })
+    .catch(err => {
+      console.error('Failed to copy username: ', err)
+    })
+}
+
+// Use the generated username
+const useGeneratedUsername = () => {
+  client.value.username = generatedUsername.value
+  generateDialog.value.visible = false
+}
+
+// Navigate to create new role
+const navigateToCreateRole = () => {
+  router.push({ name: 'create-topic-permission' })
+}
+
+// Form submission with password hashing
 const handleSubmit = async () => {
   // Validate form
   const isValid = await v$.value.$validate()
@@ -265,14 +405,17 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
-    // Prepare data for API
+    // Hash the password before sending to PocketBase
+    const hashedPassword = await clientService.hashPassword(client.value.password)
+    
+    // Remember the original password to display to the user
+    const plainPassword = client.value.password
+    
+    // Prepare data for API using only schema fields with hashed password
     const clientData = {
-      client_type: client.value.client_type,
-      access_level: client.value.access_level,
-      name: client.value.name,
       username: client.value.username,
-      password: client.value.password,
-      description: client.value.description,
+      password: hashedPassword, // Now using the hashed password
+      role_id: client.value.role_id,
       active: client.value.active
     }
     
@@ -284,6 +427,14 @@ const handleSubmit = async () => {
       summary: 'Success',
       detail: `Client ${clientData.username} has been created`,
       life: 3000
+    })
+    
+    // Show a confirmation with the plain password
+    toast.add({
+      severity: 'info',
+      summary: 'Password Information',
+      detail: `Remember to securely store the password: ${plainPassword}`,
+      life: 10000 // Leave this up longer
     })
     
     // Navigate to client detail view

@@ -1,9 +1,10 @@
+<!-- src/views/Messaging/TopicPermissions/TopicPermissionListView.vue -->
 <template>
   <div>
-    <PageHeader title="Topic Permissions" subtitle="Manage MQTT topic access control">
+    <PageHeader title="Topic Permissions" subtitle="Manage NATS topic access control roles">
       <template #actions>
         <Button 
-          label="Create Permission" 
+          label="Create Role" 
           icon="pi pi-plus" 
           @click="navigateToCreate"
         />
@@ -16,9 +17,9 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['name', 'topic_pattern', 'client.username']"
-        title="Topic Permissions"
-        empty-message="No permissions found"
+        :searchFields="['name']"
+        title="Permission Roles"
+        empty-message="No permission roles found"
         @row-click="navigateToDetail"
       >
         <!-- Name column with custom formatting -->
@@ -26,42 +27,38 @@
           <div class="font-medium text-primary-700">{{ data.name }}</div>
         </template>
         
-        <!-- Topic Pattern column with monospace -->
-        <template #topic_pattern-body="{ data }">
-          <div class="font-mono">{{ data.topic_pattern }}</div>
+        <!-- Publish Permissions column -->
+        <template #publish_permissions-body="{ data }">
+          <div class="flex items-center">
+            <span class="bg-blue-100 text-blue-800 px-2 py-1 text-xs rounded-full">
+              {{ getTopicCount(data.publish_permissions) }}
+            </span>
+            <span v-if="getTopicCount(data.publish_permissions) > 0" class="ml-2 text-sm text-gray-600">
+              {{ getTopicSample(data.publish_permissions) }}
+            </span>
+          </div>
         </template>
         
-        <!-- Client column with reference -->
-        <template #client_id-body="{ data }">
-          <router-link 
-            v-if="data.client && data.client.id"
-            :to="{ name: 'client-detail', params: { id: data.client.id } }"
-            class="text-primary-600 hover:underline flex items-center"
-            @click.stop
-          >
-            {{ data.client.username }}
-          </router-link>
-          <span v-else class="text-gray-500">{{ data.client_id }}</span>
+        <!-- Subscribe Permissions column -->
+        <template #subscribe_permissions-body="{ data }">
+          <div class="flex items-center">
+            <span class="bg-green-100 text-green-800 px-2 py-1 text-xs rounded-full">
+              {{ getTopicCount(data.subscribe_permissions) }}
+            </span>
+            <span v-if="getTopicCount(data.subscribe_permissions) > 0" class="ml-2 text-sm text-gray-600">
+              {{ getTopicSample(data.subscribe_permissions) }}
+            </span>
+          </div>
         </template>
         
-        <!-- Pattern Type column with badge -->
-        <template #pattern_type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getPatternTypeClass(data.pattern_type)"
-          >
-            {{ formatPatternType(data.pattern_type) }}
-          </span>
-        </template>
-        
-        <!-- Permission Type column with badge -->
-        <template #permission_type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getPermissionTypeClass(data.permission_type)"
-          >
-            {{ formatPermissionType(data.permission_type) }}
-          </span>
+        <!-- Clients Using column -->
+        <template #clients_using-body="{ data }">
+          <Button
+            icon="pi pi-users"
+            class="p-button-text p-button-sm"
+            @click.stop="viewClientsUsingRole(data)"
+            label="View Clients"
+          />
         </template>
         
         <!-- Actions column -->
@@ -96,15 +93,68 @@
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
       v-model:visible="deleteDialog.visible"
-      title="Delete Permission"
+      title="Delete Permission Role"
       type="danger"
       confirm-label="Delete"
       confirm-icon="pi pi-trash"
       :loading="deleteDialog.loading"
-      :message="`Are you sure you want to delete permission '${deleteDialog.item?.name || ''}'?`"
-      details="This action cannot be undone."
+      :message="`Are you sure you want to delete the '${deleteDialog.item?.name || ''}' role?`"
+      details="This action cannot be undone. Clients using this permission role will lose their access."
       @confirm="deletePermission"
     />
+    
+    <!-- Clients Using Role Dialog -->
+    <Dialog
+      v-model:visible="clientsDialog.visible"
+      :header="`Clients Using '${clientsDialog.roleName}' Role`"
+      :style="{ width: '80%', maxWidth: '800px' }"
+      :modal="true"
+    >
+      <div class="p-4">
+        <div v-if="clientsDialog.loading" class="flex justify-center py-4">
+          <ProgressSpinner />
+        </div>
+        <div v-else-if="clientsDialog.clients.length === 0" class="py-4 text-center text-gray-500">
+          No clients are using this role.
+        </div>
+        <div v-else>
+          <DataTable
+            :value="clientsDialog.clients"
+            :paginator="true"
+            :rows="5"
+          >
+            <Column field="username" header="Username">
+              <template #body="{ data }">
+                <router-link
+                  :to="{ name: 'client-detail', params: { id: data.id } }"
+                  class="text-primary-600 hover:underline"
+                  @click="clientsDialog.visible = false"
+                >
+                  {{ data.username }}
+                </router-link>
+              </template>
+            </Column>
+            <Column field="active" header="Status">
+              <template #body="{ data }">
+                <span 
+                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+                  :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                >
+                  {{ data.active ? 'Active' : 'Inactive' }}
+                </span>
+              </template>
+            </Column>
+          </DataTable>
+        </div>
+      </div>
+      
+      <template #footer>
+        <Button
+          label="Close"
+          @click="clientsDialog.visible = false"
+        />
+      </template>
+    </Dialog>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -113,21 +163,19 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { 
-  topicPermissionService, 
-  formatPermissionType, 
-  formatPatternType 
-} from '../../../services/topicPermission'
+import { topicPermissionService } from '../../../services/topicPermission'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
+import Dialog from 'primevue/dialog'
+import ProgressSpinner from 'primevue/progressspinner'
+import Column from 'primevue/column'
 
 const router = useRouter()
-const route = useRoute()
 const toast = useToast()
 
 // Data
@@ -139,13 +187,21 @@ const deleteDialog = ref({
   item: null
 })
 
-// Table columns definition
+// Clients dialog state
+const clientsDialog = ref({
+  visible: false,
+  loading: false,
+  roleName: '',
+  roleId: null,
+  clients: []
+})
+
+// Table columns definition - updated to match actual schema
 const columns = [
-  { field: 'name', header: 'Name', sortable: true },
-  { field: 'topic_pattern', header: 'Topic Pattern', sortable: true },
-  { field: 'pattern_type', header: 'Pattern Type', sortable: true },
-  { field: 'permission_type', header: 'Permission', sortable: true },
-  { field: 'client_id', header: 'Client', sortable: true },
+  { field: 'name', header: 'Role Name', sortable: true },
+  { field: 'publish_permissions', header: 'Publish Permissions', sortable: false },
+  { field: 'subscribe_permissions', header: 'Subscribe Permissions', sortable: false },
+  { field: 'clients_using', header: 'Clients', sortable: false },
 ]
 
 // Fetch permissions on component mount
@@ -157,16 +213,10 @@ onMounted(async () => {
 const fetchPermissions = async () => {
   loading.value = true
   try {
-    // Check if filtering by client_id from query params
-    const params = {}
-    if (route.query.client) {
-      params.client_id = route.query.client
-    }
-    
-    const response = await topicPermissionService.getTopicPermissions(params)
+    const response = await topicPermissionService.getTopicPermissions()
     permissions.value = response.data.items || []
   } catch (error) {
-    console.error('Error fetching permissions:', error)
+    console.error('Error fetching topic permissions:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -179,9 +229,7 @@ const fetchPermissions = async () => {
 }
 
 const navigateToCreate = () => {
-  // Pass client_id as a query parameter if it was in the original request
-  const query = route.query.client ? { client_id: route.query.client } : {}
-  router.push({ name: 'create-topic-permission', query })
+  router.push({ name: 'create-topic-permission' })
 }
 
 const navigateToDetail = (data) => {
@@ -210,7 +258,7 @@ const deletePermission = async () => {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: `Permission ${deleteDialog.value.item.name} has been deleted`,
+      detail: `Permission role '${deleteDialog.value.item.name}' has been deleted`,
       life: 3000
     })
     
@@ -228,22 +276,45 @@ const deletePermission = async () => {
   }
 }
 
-// Helper methods for formatting
-const getPermissionTypeClass = (permissionType) => {
-  switch (permissionType) {
-    case 'read': return 'bg-green-100 text-green-800'
-    case 'write': return 'bg-blue-100 text-blue-800'
-    case 'readwrite': return 'bg-purple-100 text-purple-800'
-    default: return 'bg-gray-100 text-gray-800'
+// View clients using a role
+const viewClientsUsingRole = async (role) => {
+  clientsDialog.value.visible = true
+  clientsDialog.value.loading = true
+  clientsDialog.value.roleName = role.name
+  clientsDialog.value.roleId = role.id
+  clientsDialog.value.clients = []
+  
+  try {
+    const response = await topicPermissionService.getClientsByPermission(role.id)
+    clientsDialog.value.clients = response.data.items || []
+  } catch (error) {
+    console.error('Error fetching clients:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load clients using this role',
+      life: 3000
+    })
+  } finally {
+    clientsDialog.value.loading = false
   }
 }
 
-const getPatternTypeClass = (patternType) => {
-  switch (patternType) {
-    case 'exact': return 'bg-blue-100 text-blue-800'
-    case 'prefix': return 'bg-yellow-100 text-yellow-800'
-    case 'pattern': return 'bg-purple-100 text-purple-800'
-    default: return 'bg-gray-100 text-gray-800'
+// Helper methods
+const getTopicCount = (topics) => {
+  if (!topics) return 0
+  return Array.isArray(topics) ? topics.length : 0
+}
+
+const getTopicSample = (topics) => {
+  if (!topics || !Array.isArray(topics) || topics.length === 0) {
+    return 'No topics'
   }
+  
+  if (topics.length === 1) {
+    return topics[0]
+  }
+  
+  return `${topics[0]} and ${topics.length - 1} more`
 }
 </script>

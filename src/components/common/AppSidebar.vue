@@ -1,9 +1,9 @@
-<!-- src/components/common/AppSidebar.vue -->
+<!-- src/components/common/AppSidebar.vue - Updated for scrollable content -->
 <template>
   <aside
     :class="[
-      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 h-full overflow-hidden flex flex-col',
-      open ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0',
+      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col h-full',
+      open ? 'w-64' : 'w-64 -translate-x-full lg:translate-x-0',
       collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
     ]"
     style="max-width: 100%;"
@@ -28,7 +28,7 @@
       />
     </div>
     
-    <!-- Main navigation sections: flex-1 makes it take available space -->
+    <!-- Main navigation sections: flex-1 makes it take available space and allows scrolling -->
     <div class="flex-1 overflow-y-auto">
       <!-- Sidebar content -->
       <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
@@ -189,5 +189,38 @@ const menuSections = [
 </script>
 
 <style scoped>
-/* Additional sidebar styles as needed */
+/* Custom scrollbar styling for better appearance */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Active link highlight animation */
+a.bg-primary-50 {
+  position: relative;
+  overflow: hidden;
+}
+
+a.bg-primary-50::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: var(--primary-color, #3B82F6);
+}
 </style>

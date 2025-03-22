@@ -1,33 +1,46 @@
-<!-- src/layouts/DefaultLayout.vue - Fixed initialization error -->
+<!-- src/layouts/DefaultLayout.vue - Both header and sidebar fixed -->
 <template>
   <div class="min-h-screen flex flex-col">
-    <!-- Header -->
+    <!-- Fixed Header -->
     <AppHeader 
       @toggle-sidebar="sidebarOpen = !sidebarOpen" 
       :sidebar-open="sidebarOpen"
+      class="fixed top-0 left-0 right-0 z-40 shadow-sm"
     />
     
-    <div class="flex flex-1 relative">
+    <!-- Content area with offset for fixed header -->
+    <div class="pt-16 flex flex-1">
       <!-- Mobile Overlay -->
       <div 
         v-if="sidebarOpen" 
-        class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
         @click="closeSidebar"
       ></div>
       
-      <!-- Sidebar - Off-canvas on mobile, sidebar on desktop -->
-      <AppSidebar 
-        :open="sidebarOpen"
-        @close="closeSidebar"
-        :collapsed="sidebarCollapsed"
-        @toggle-collapse="toggleSidebar"
-        class="fixed z-50 lg:relative"
-      />
+      <!-- Fixed Sidebar -->
+      <div 
+        :class="[
+          'fixed top-16 left-0 z-40 h-[calc(100vh-4rem)]',
+          'transition-all duration-300 ease-in-out',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0', 
+          sidebarCollapsed && !isMobileView ? 'w-16' : 'w-64'
+        ]"
+      >
+        <AppSidebar 
+          :open="sidebarOpen"
+          @close="closeSidebar"
+          :collapsed="sidebarCollapsed"
+          @toggle-collapse="toggleSidebar"
+          class="h-full w-full overflow-y-auto bg-white border-r border-gray-200"
+        />
+      </div>
       
-      <!-- Main Content -->
+      <!-- Main Content - with margin to account for the fixed sidebar -->
       <main 
-        class="flex-1 bg-gray-50 p-4 sm:p-6 w-full overflow-x-hidden"
+        class="w-full min-h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-gray-50 p-4 sm:p-6"
         :class="{ 
+          'lg:ml-64': !sidebarCollapsed && !isMobileView,
+          'lg:ml-16': sidebarCollapsed && !isMobileView,
           'pb-20': isMobileView && showMobileNav // Add padding at bottom for mobile nav when visible
         }"
       >
@@ -39,8 +52,8 @@
       </main>
     </div>
     
-    <!-- Mobile Bottom Navigation - only show when not on dashboard 
-    <MobileNavBar v-if="isMobileView && showMobileNav" /> -->
+    <!-- Mobile Bottom Navigation -->
+    <MobileNavBar v-if="isMobileView && showMobileNav" />
     
     <!-- Notifications -->
     <Toast position="bottom-right" />
@@ -77,9 +90,9 @@ const closeSidebar = () => {
 
 // Toggle sidebar collapse state
 const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  // You might want to persist this setting in localStorage
-  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+  // Persist this setting in localStorage
+  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString());
 }
 
 // Now provide the state and methods to child components
@@ -141,14 +154,8 @@ const handleResize = () => {
   opacity: 0;
 }
 
-/* Improve z-index management for map-related views */
+/* Additional styles for shadow on scroll */
 main {
   z-index: 1;
-}
-
-@media (max-width: 1023px) {
-  .fixed.z-50 {
-    z-index: 50 !important; /* Ensure sidebar is always on top */
-  }
 }
 </style>

@@ -233,7 +233,7 @@
             </div>
           </template>
           
-          <!-- Actions column -->
+	  <!-- Actions column --> 
           <template #actions="{ data }">
             <div class="flex gap-1 justify-center">
               <Button 
@@ -241,7 +241,7 @@
                 class="p-button-rounded p-button-text p-button-sm" 
                 @click.stop="navigateToThingDetail(data)"
                 tooltip="View"
-                tooltipOptions="{ position: 'top' }"
+		tooltipOptions="{ position: 'top' }" 
               />
             </div>
           </template>
@@ -317,8 +317,7 @@ const thingColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
-  { field: 'position', header: 'Indoor Position', sortable: false },
-  { field: 'actions', header: 'Actions', sortable: false }
+  { field: 'position', header: 'Indoor Position', sortable: false }
 ]
 
 // Fetch location data on component mount

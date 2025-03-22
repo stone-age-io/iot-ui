@@ -20,9 +20,9 @@
       <div class="flex justify-between items-start mb-6">
         <div>
           <div class="text-sm text-gray-500 mb-1">Messaging Client</div>
-          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ client.name }}</h1>
-          <div class="text-gray-600">
-            <span class="font-mono">{{ client.username }}</span>
+          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ client.username }}</h1>
+          <div class="text-gray-600" v-if="client.expand && client.expand.role_id">
+            <span>{{ client.expand.role_id.name }}</span>
           </div>
         </div>
         
@@ -54,35 +54,18 @@
               <div class="font-mono text-lg">{{ client.username }}</div>
             </div>
             
-            <!-- Name -->
+            <!-- Role -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Name</div>
-              <div class="text-lg">{{ client.name }}</div>
-            </div>
-            
-            <!-- Type -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Type</div>
+              <div class="text-sm text-gray-500 mb-1">Role</div>
               <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="getTypeClass(client.client_type)"
+                <router-link 
+                  v-if="client.expand && client.expand.role_id"
+                  :to="{ name: 'topic-permission-detail', params: { id: client.role_id } }"
+                  class="text-primary-600 hover:underline flex items-center"
                 >
-                  {{ getTypeName(client.client_type) }}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Access Level -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Access Level</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="getAccessLevelClass(client.access_level)"
-                >
-                  {{ getAccessLevelName(client.access_level) }}
-                </span>
+                  {{ client.expand.role_id.name }}
+                </router-link>
+                <span v-else class="text-gray-500">No role assigned</span>
               </div>
             </div>
             
@@ -98,59 +81,25 @@
                 </span>
               </div>
             </div>
-            
-            <!-- Description -->
-            <div class="md:col-span-2">
-              <div class="text-sm text-gray-500 mb-1">Description</div>
-              <div class="text-gray-700">{{ client.description || 'No description provided' }}</div>
-            </div>
           </div>
         </div>
         
-        <!-- Permissions/Quick Info Card -->
+        <!-- Information Card -->
         <div class="card">
-          <h2 class="text-xl font-semibold mb-4">Permissions</h2>
+          <h2 class="text-xl font-semibold mb-4">Information</h2>
           
           <div class="space-y-6">
-            <!-- Permissions Count -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Topic Permissions</div>
-              <div class="flex items-center">
-                <i class="pi pi-key text-purple-600 mr-2"></i>
-                <div class="text-2xl font-semibold">{{ permissions.length }}</div>
-              </div>
-              <Button
-                label="Manage Permissions"
-                icon="pi pi-arrow-right"
-                class="p-button-text p-button-sm mt-2"
-                @click="navigateToPermissions"
-              />
-            </div>
-            
-            <!-- Permission List Preview -->
-            <div v-if="permissions.length > 0">
-              <div class="text-sm text-gray-500 mb-2">Permission Topics</div>
-              <ul class="space-y-2">
-                <li 
-                  v-for="(permission, index) in displayedPermissions" 
-                  :key="index"
-                  class="text-sm"
-                >
-                  <div class="flex items-center">
-                    <span 
-                      class="w-2 h-2 rounded-full mr-2"
-                      :class="getPermissionTypeColor(permission.permission_type)"
-                    ></span>
-                    <span class="font-mono truncate">{{ permission.topic_pattern }}</span>
-                  </div>
-                  <div class="text-xs text-gray-500 ml-4">
-                    {{ formatPermissionType(permission.permission_type) }}
-                  </div>
-                </li>
-              </ul>
-              
-              <div v-if="permissions.length > maxDisplayedPermissions" class="text-center text-xs text-gray-500 mt-2">
-                + {{ permissions.length - maxDisplayedPermissions }} more permissions
+            <!-- Role Details -->
+            <div v-if="client.expand && client.expand.role_id">
+              <div class="text-sm text-gray-500 mb-1">Role Details</div>
+              <div class="text-gray-700">
+                <p>Role: {{ client.expand.role_id.name }}</p>
+                <Button
+                  label="View Role Details"
+                  icon="pi pi-arrow-right"
+                  class="p-button-text p-button-sm mt-2"
+                  @click="navigateToRole"
+                />
               </div>
             </div>
             
@@ -165,16 +114,6 @@
               <div class="text-sm text-gray-500 mb-1">Last Updated</div>
               <div class="text-gray-700">{{ formatDate(client.updated) }}</div>
             </div>
-          </div>
-          
-          <!-- Add Permission Button -->
-          <div class="mt-6">
-            <Button
-              label="Add Permission"
-              icon="pi pi-plus"
-              @click="navigateToCreatePermission"
-              class="w-full"
-            />
           </div>
         </div>
       </div>
@@ -241,7 +180,7 @@
       confirm-icon="pi pi-trash"
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete client '${client?.username || ''}'?`"
-      details="This action cannot be undone. All permissions associated with this client will be deleted as well."
+      details="This action cannot be undone."
       @confirm="deleteClient"
     />
     
@@ -308,8 +247,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
-import { clientService, clientTypes, accessLevels, generateSecurePassword } from '../../../services/client'
-import { topicPermissionService, formatPermissionType } from '../../../services/topicPermission'
+import { clientService, generateSecurePassword } from '../../../services/client'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -322,17 +260,14 @@ const toast = useToast()
 
 // Data
 const client = ref(null)
-const permissions = ref([])
 const loading = ref(true)
 const error = ref(null)
-const maxDisplayedPermissions = 3
-
-// Dialog states
 const deleteDialog = ref({
   visible: false,
   loading: false
 })
 
+// Reset password dialog
 const resetPasswordDialog = ref({
   visible: false,
   loading: false,
@@ -340,10 +275,6 @@ const resetPasswordDialog = ref({
 })
 
 // Computed properties
-const displayedPermissions = computed(() => {
-  return permissions.value.slice(0, maxDisplayedPermissions)
-})
-
 const connectionUrl = computed(() => {
   return import.meta.env.VITE_MQTT_HOST || 'mqtt://localhost:1883'
 })
@@ -368,9 +299,6 @@ const fetchClient = async () => {
   try {
     const response = await clientService.getClient(id)
     client.value = response.data
-    
-    // Fetch permissions for this client
-    await fetchPermissions()
   } catch (err) {
     console.error('Error fetching client:', err)
     error.value = 'Failed to load client details. Please try again.'
@@ -379,30 +307,14 @@ const fetchClient = async () => {
   }
 }
 
-const fetchPermissions = async () => {
-  try {
-    const response = await topicPermissionService.getPermissionsByClient(client.value.id)
-    permissions.value = response.data.items || []
-  } catch (err) {
-    console.error('Error fetching permissions:', err)
-  }
-}
-
 const navigateToEdit = () => {
   router.push({ name: 'edit-client', params: { id: client.value.id } })
 }
 
-const navigateToPermissions = () => {
+const navigateToRole = () => {
   router.push({ 
-    name: 'topic-permissions', 
-    query: { client: client.value.id } 
-  })
-}
-
-const navigateToCreatePermission = () => {
-  router.push({ 
-    name: 'create-topic-permission', 
-    query: { client_id: client.value.id } 
+    name: 'topic-permission-detail', 
+    params: { id: client.value.role_id } 
   })
 }
 
@@ -447,14 +359,17 @@ const resetPassword = async () => {
   
   try {
     // Generate new password
-    const newPassword = generateSecurePassword()
+    const newPassword = generateSecurePassword(12)
     
-    // Update client with new password
+    // Hash the password before sending to PocketBase
+    const hashedPassword = await clientService.hashPassword(newPassword)
+    
+    // Update client with new hashed password
     await clientService.updateClient(client.value.id, {
-      password: newPassword
+      password: hashedPassword
     })
     
-    // Show the password in the dialog
+    // Show the PLAIN TEXT password in the dialog (this is the only time the user will see it)
     resetPasswordDialog.value.newPassword = newPassword
     
     toast.add({
@@ -495,45 +410,5 @@ const copyToClipboard = (text) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return dayjs(dateString).format('MMM D, YYYY HH:mm')
-}
-
-const getTypeName = (clientType) => {
-  const type = clientTypes.find(t => t.value === clientType)
-  return type ? type.label : clientType
-}
-
-const getAccessLevelName = (accessLevel) => {
-  const level = accessLevels.find(l => l.value === accessLevel)
-  return level ? level.label : accessLevel
-}
-
-const getTypeClass = (clientType) => {
-  switch (clientType) {
-    case 'device': return 'bg-blue-100 text-blue-800'
-    case 'service': return 'bg-purple-100 text-purple-800'
-    case 'user': return 'bg-green-100 text-green-800'
-    case 'integration': return 'bg-amber-100 text-amber-800'
-    case 'system': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getAccessLevelClass = (accessLevel) => {
-  switch (accessLevel) {
-    case 'read': return 'bg-green-100 text-green-800'
-    case 'write': return 'bg-blue-100 text-blue-800'
-    case 'readwrite': return 'bg-purple-100 text-purple-800'
-    case 'admin': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getPermissionTypeColor = (permissionType) => {
-  switch (permissionType) {
-    case 'read': return 'bg-green-500'
-    case 'write': return 'bg-blue-500'
-    case 'readwrite': return 'bg-purple-500'
-    default: return 'bg-gray-500'
-  }
 }
 </script>
