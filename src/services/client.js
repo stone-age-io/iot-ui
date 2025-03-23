@@ -1,5 +1,6 @@
 // src/services/client.js
 import { apiHelpers } from './api'
+import axios from 'axios'
 import { 
   COLLECTIONS, 
   collectionEndpoint, 
@@ -109,16 +110,29 @@ export const clientService = {
    * @returns {Promise<string>} - Hashed password
    */
   hashPassword(password) {
-    return apiHelpers.axiosInstance.post('/api/hash-password', {
-      password
+    return fetch('http://100.98.139.111:9000/sec/api/hash-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
     })
     .then(response => {
-      return response.data.hash
+      if (!response.ok) {
+        throw new Error(`Hash password request failed with status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(responseData => {
+      if (!responseData.hash) {
+        throw new Error('Invalid response format: missing hash property');
+      }
+      return responseData.hash;
     })
     .catch(error => {
-      console.error('Error hashing password:', error)
-      throw new Error('Failed to hash password')
-    })
+      console.error('Error hashing password:', error);
+      throw new Error('Failed to hash password: ' + error.message);
+    });
   }
 }
 
