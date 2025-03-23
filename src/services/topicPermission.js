@@ -173,42 +173,55 @@ export const topicPermissionService = {
 }
 
 /**
- * Validate MQTT topic format
+ * Validate NATS topic format
  * @param {string} topic - Topic to validate
  * @returns {boolean} - True if valid
  */
 export const validateTopic = (topic) => {
-  if (!topic) return false
+  if (!topic) return false;
   
-  // Basic MQTT topic validation
-  // Allow alphanumeric, /, #, +, -, _
-  const validChars = /^[a-zA-Z0-9\/#+\-_]+$/
+  // Basic NATS topic validation rules:
+  // - Uses dot notation: acme.device.temp
+  // - Valid characters are alphanumeric, dot, underscore, dash
+  // - Single-level wildcard is * (matches exactly one token)
+  // - Multi-level wildcard is > (must be the last token)
   
-  // Check if topic contains only valid characters
-  if (!validChars.test(topic)) {
-    return false
+  // Check for invalid characters
+  const validCharsRegex = /^[a-zA-Z0-9_.>*-]+$/;
+  if (!validCharsRegex.test(topic)) {
+    return false;
   }
   
-  // Check if # is only used as the last character in a topic level
-  const levels = topic.split('/')
-  for (let i = 0; i < levels.length; i++) {
-    const level = levels[i]
+  // Split into tokens
+  const tokens = topic.split('.');
+  
+  // Check if > wildcard is used correctly (only as the last token)
+  const hasMultiLevelWildcard = tokens.includes('>');
+  if (hasMultiLevelWildcard && tokens[tokens.length - 1] !== '>') {
+    return false;
+  }
+  
+  // Check that each token:
+  // - Isn't empty
+  // - Only contains * as a standalone token, not part of another word
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
     
-    // Check if # is used and not as a single character
-    if (level.includes('#') && level !== '#') {
-      return false
+    // Empty tokens not allowed
+    if (token.length === 0) {
+      return false;
     }
     
-    // Check if # is used in a level other than the last one
-    if (level === '#' && i !== levels.length - 1) {
-      return false
+    // * must be a standalone token, not within a token like "prefix*suffix"
+    if (token.includes('*') && token !== '*') {
+      return false;
     }
     
-    // Check if + is used as part of another string
-    if (level.includes('+') && level !== '+') {
-      return false
+    // > must be a standalone token, not within a token like "prefix>suffix"
+    if (token.includes('>') && token !== '>') {
+      return false;
     }
   }
   
-  return true
+  return true;
 }
