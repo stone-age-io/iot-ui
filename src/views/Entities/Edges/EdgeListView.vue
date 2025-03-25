@@ -1,4 +1,3 @@
-<!-- Updated src/views/Entities/Edges/EdgeListView.vue -->
 <template>
   <div>
     <PageHeader title="Edges" subtitle="Manage your edge installations">
@@ -6,7 +5,7 @@
         <Button 
           label="Create Edge" 
           icon="pi pi-plus" 
-          @click="navigateToCreate"
+          @click="navigateToEdgeCreate" 
         />
       </template>
     </PageHeader>
@@ -20,7 +19,7 @@
         :searchFields="['code', 'name', 'description', 'type', 'region']"
         title="Edge Installations"
         empty-message="No edges found"
-        @row-click="navigateToDetail"
+        @row-click="navigateToEdgeDetail"
         :paginated="true"
         :rows="10"
       >
@@ -83,21 +82,21 @@
             <Button 
               icon="pi pi-eye" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToDetail(data)"
+              @click.stop="navigateToEdgeDetail(data.id)"
               tooltip="View"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-pencil" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdit(data)"
+              @click.stop="navigateToEdgeEdit(data.id)"
               tooltip="Edit"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-trash" 
               class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-              @click.stop="confirmDelete(data)"
+              @click.stop="handleDeleteClick(data)"
               tooltip="Delete"
               tooltipOptions="{ position: 'top' }"
             />
@@ -109,14 +108,14 @@
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
       v-model:visible="deleteDialog.visible"
-      title="Delete Edge"
-      type="danger"
-      confirm-label="Delete"
-      confirm-icon="pi pi-trash"
+      :title="deleteDialog.title"
+      :type="deleteDialog.type"
+      :confirm-label="deleteDialog.confirmLabel"
+      :confirm-icon="deleteDialog.confirmIcon"
       :loading="deleteDialog.loading"
-      :message="`Are you sure you want to delete edge '${deleteDialog.item?.code || ''}'?`"
-      details="This action cannot be undone. All associated locations and things will be deleted as well."
-      @confirm="deleteEdge"
+      :message="deleteDialog.message"
+      :details="deleteDialog.details"
+      @confirm="handleDeleteConfirm"
     />
     
     <!-- Toast for success/error messages -->
@@ -125,30 +124,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import dayjs from 'dayjs'
-import { edgeService, edgeTypes, edgeRegions } from '../../../services/edge'
+import { onMounted } from 'vue'
+import { useEdge } from '../../../composables/useEdge'
+import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
-const toast = useToast()
+// Get edge functionality from composable
+const { 
+  edges,
+  loading,
+  fetchEdges,
+  formatDate,
+  getTypeName,
+  getRegionName,
+  getTypeClass,
+  getRegionClass,
+  getMetadataSummary,
+  deleteEdge,
+  navigateToEdgeCreate,
+  navigateToEdgeDetail,
+  navigateToEdgeEdit
+} = useEdge()
 
-// Data
-const edges = ref([])
-const loading = ref(false)
-const deleteDialog = ref({
-  visible: false,
-  loading: false,
-  item: null
-})
+// Get delete confirmation functionality
+const { 
+  deleteDialog,
+  confirmDelete,
+  updateDeleteDialog,
+  resetDeleteDialog 
+} = useDeleteConfirmation()
 
-// Table columns definition - updated to include all relevant fields
+// Table columns definition
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
@@ -157,6 +167,7 @@ const columns = [
   { field: 'active', header: 'Status', sortable: true },
   { field: 'metadata', header: 'Metadata', sortable: false },
   { field: 'created', header: 'Created', sortable: true },
+  { field: 'actions', header: 'Actions', sortable: false }
 ]
 
 // Fetch edges on component mount
@@ -164,131 +175,31 @@ onMounted(async () => {
   await fetchEdges()
 })
 
-// Methods
-const fetchEdges = async () => {
-  loading.value = true
-  try {
-    const response = await edgeService.getEdges({ 
-      withMetadata: true,
-      sort: '-created' // Sort by newest first
-    })
-    edges.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching edges:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load edges',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
+// Handle delete button click
+const handleDeleteClick = (edge) => {
+  confirmDelete(edge, 'edge')
 }
 
-// Format date for display
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return dayjs(dateString).format('MMM D, YYYY')
-}
-
-// Get a summary of metadata for display
-const getMetadataSummary = (metadata) => {
-  if (!metadata || typeof metadata !== 'object') {
-    return 'No metadata'
-  }
-  
-  const keys = Object.keys(metadata)
-  if (keys.length === 0) {
-    return 'Empty metadata'
-  }
-  
-  // Display a summary of the first few keys
-  const displayKeys = keys.slice(0, 2)
-  const summary = displayKeys.map(key => `${key}: ${typeof metadata[key] === 'object' ? '{...}' : metadata[key]}`).join(', ')
-  
-  return keys.length > 2 ? `${summary}, +${keys.length - 2} more` : summary
-}
-
-const navigateToCreate = () => {
-  router.push({ name: 'create-edge' })
-}
-
-const navigateToDetail = (data) => {
-  router.push({ name: 'edge-detail', params: { id: data.id } })
-}
-
-const navigateToEdit = (data) => {
-  router.push({ name: 'edit-edge', params: { id: data.id } })
-}
-
-const confirmDelete = (data) => {
-  deleteDialog.value.item = data
-  deleteDialog.value.visible = true
-}
-
-const deleteEdge = async () => {
+// Handle delete confirmation
+const handleDeleteConfirm = async () => {
   if (!deleteDialog.value.item) return
   
-  deleteDialog.value.loading = true
-  try {
-    await edgeService.deleteEdge(deleteDialog.value.item.id)
-    
+  updateDeleteDialog({ loading: true })
+  
+  const success = await deleteEdge(
+    deleteDialog.value.item.id, 
+    deleteDialog.value.item.code
+  )
+  
+  if (success) {
     // Remove the deleted item from the list
-    edges.value = edges.value.filter(item => item.id !== deleteDialog.value.item.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Edge ${deleteDialog.value.item.code} has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-  } catch (error) {
-    console.error('Error deleting edge:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete edge',
-      life: 3000
-    })
-  } finally {
-    deleteDialog.value.loading = false
-  }
-}
-
-// Helper methods for formatting
-const getTypeName = (typeCode) => {
-  const type = edgeTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
-}
-
-const getRegionName = (regionCode) => {
-  const region = edgeRegions.find(r => r.value === regionCode)
-  return region ? region.label : regionCode
-}
-
-const getTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'bld': return 'bg-blue-100 text-blue-800'
-    case 'dc': return 'bg-purple-100 text-purple-800'
-    case 'wh': return 'bg-amber-100 text-amber-800'
-    case 'camp': return 'bg-green-100 text-green-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getRegionClass = (regionCode) => {
-  switch (regionCode) {
-    case 'na': return 'bg-red-100 text-red-800'
-    case 'eu': return 'bg-blue-100 text-blue-800'
-    case 'ap': return 'bg-green-100 text-green-800'
-    case 'sa': return 'bg-yellow-100 text-yellow-800'
-    case 'af': return 'bg-orange-100 text-orange-800'
-    case 'me': return 'bg-purple-100 text-purple-800'
-    case 'aus': return 'bg-teal-100 text-teal-800'
-    default: return 'bg-gray-100 text-gray-800'
+    const index = edges.value.findIndex(e => e.id === deleteDialog.value.item.id)
+    if (index !== -1) {
+      edges.value.splice(index, 1)
+    }
+    resetDeleteDialog()
+  } else {
+    updateDeleteDialog({ loading: false })
   }
 }
 </script>

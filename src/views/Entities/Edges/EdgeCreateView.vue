@@ -19,7 +19,7 @@
         title="Edge Information"
         :loading="loading"
         submit-label="Create Edge"
-        @submit="handleSubmit"
+        @submit="submitForm"
         @cancel="$router.back()"
       >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -161,13 +161,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useVuelidate } from '@vuelidate/core'
-import { required, minLength, helpers } from '@vuelidate/validators'
-import { edgeService, edgeRegions, edgeTypes, generateEdgeCode, validateEdgeCode } from '../../../services/edge'
-
+import { useEdge } from '../../../composables/useEdge'
+import { useEdgeForm } from '../../../composables/useEdgeForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -179,105 +174,9 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
-const toast = useToast()
+// Get edge type and region options
+const { edgeTypes, edgeRegions } = useEdge()
 
-// Edge form data
-const edge = ref({
-  type: '',
-  region: '',
-  number: null,
-  code: '',
-  name: '',
-  description: '',
-  active: true
-})
-
-// Loading state
-const loading = ref(false)
-
-// Form validation rules
-const rules = {
-  type: { required: helpers.withMessage('Type is required', required) },
-  region: { required: helpers.withMessage('Region is required', required) },
-  number: { 
-    required: helpers.withMessage('Number is required', required),
-  },
-  code: { 
-    required: helpers.withMessage('Code is required', required),
-    validFormat: helpers.withMessage(
-      'Code must follow format: [type]-[region]-[number]', 
-      (value) => validateEdgeCode(value)
-    )
-  },
-  name: { 
-    required: helpers.withMessage('Name is required', required),
-    minLength: helpers.withMessage(
-      'Name must be at least 3 characters', 
-      minLength(3)
-    )
-  },
-  description: {}
-}
-
-// Initialize Vuelidate
-const v$ = useVuelidate(rules, edge)
-
-// Generate edge code when type, region, or number changes
-const updateCode = () => {
-  if (edge.value.type && edge.value.region && edge.value.number) {
-    edge.value.code = generateEdgeCode(
-      edge.value.type,
-      edge.value.region,
-      edge.value.number
-    )
-  }
-}
-
-// Form submission
-const handleSubmit = async () => {
-  // Validate form
-  const isValid = await v$.value.$validate()
-  if (!isValid) return
-  
-  loading.value = true
-  
-  try {
-    // Prepare data for API
-    const edgeData = {
-      code: edge.value.code,
-      type: edge.value.type,
-      region: edge.value.region,
-      name: edge.value.name,
-      description: edge.value.description,
-      active: edge.value.active
-    }
-    
-    // Submit to API
-    const response = await edgeService.createEdge(edgeData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Edge ${edgeData.code} has been created`,
-      life: 3000
-    })
-    
-    // Navigate to edge detail view
-    router.push({ 
-      name: 'edge-detail', 
-      params: { id: response.data.id } 
-    })
-  } catch (error) {
-    console.error('Error creating edge:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to create edge. Please try again.',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
-}
+// Use the edge form composable in create mode
+const { edge, v$, loading, updateCode, submitForm } = useEdgeForm('create')
 </script>

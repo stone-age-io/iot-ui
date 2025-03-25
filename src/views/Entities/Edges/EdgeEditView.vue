@@ -34,9 +34,9 @@
       <div class="card">
         <EntityForm
           title="Edge Information"
-          :loading="saving"
+          :loading="loading"
           submit-label="Save Changes"
-          @submit="handleSubmit"
+          @submit="submitForm"
           @cancel="$router.back()"
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,12 +164,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useVuelidate } from '@vuelidate/core'
-import { required, minLength, helpers } from '@vuelidate/validators'
-import { edgeService, edgeRegions, edgeTypes } from '../../../services/edge'
-
+import { useRoute } from 'vue-router'
+import { useEdge } from '../../../composables/useEdge'
+import { useEdgeForm } from '../../../composables/useEdgeForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -182,119 +179,31 @@ import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
-const router = useRouter()
-const toast = useToast()
 
-// Edge form data
-const edge = ref({
-  id: '',
-  code: '',
-  type: '',
-  region: '',
-  name: '',
-  description: '',
-  active: true
-})
+// Get edge type and region options
+const { edgeTypes, edgeRegions, fetchEdge, error } = useEdge()
 
-// Loading states
+// Use the edge form composable in edit mode
+const { edge, v$, loading, loadEdge, submitForm } = useEdgeForm('edit')
+
+// Initial loading state
 const initialLoading = ref(true)
-const saving = ref(false)
-const error = ref(null)
-
-// Form validation rules
-const rules = {
-  name: { 
-    required: helpers.withMessage('Name is required', required),
-    minLength: helpers.withMessage(
-      'Name must be at least 3 characters', 
-      minLength(3)
-    )
-  },
-  description: {}
-}
-
-// Initialize Vuelidate
-const v$ = useVuelidate(rules, edge)
 
 // Fetch edge data on component mount
 onMounted(async () => {
-  await fetchEdge()
-})
-
-// Methods
-const fetchEdge = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid edge ID'
-    initialLoading.value = false
-    return
-  }
-  
-  initialLoading.value = true
-  error.value = null
+  if (!id) return
   
   try {
-    const response = await edgeService.getEdge(id)
+    // Fetch edge data
+    const edgeData = await fetchEdge(id)
     
-    // Set form data
-    edge.value = {
-      id: response.data.id,
-      code: response.data.code,
-      type: response.data.type,
-      region: response.data.region,
-      name: response.data.name,
-      description: response.data.description,
-      active: response.data.active
+    // Load data into form
+    if (edgeData) {
+      loadEdge(edgeData)
     }
-  } catch (err) {
-    console.error('Error fetching edge:', err)
-    error.value = 'Failed to load edge details. Please try again.'
   } finally {
     initialLoading.value = false
   }
-}
-
-// Form submission
-const handleSubmit = async () => {
-  // Validate form
-  const isValid = await v$.value.$validate()
-  if (!isValid) return
-  
-  saving.value = true
-  
-  try {
-    // Prepare data for API
-    const edgeData = {
-      name: edge.value.name,
-      description: edge.value.description,
-      active: edge.value.active
-    }
-    
-    // Submit to API
-    await edgeService.updateEdge(edge.value.id, edgeData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Edge ${edge.value.code} has been updated`,
-      life: 3000
-    })
-    
-    // Navigate back to edge detail view
-    router.push({ 
-      name: 'edge-detail', 
-      params: { id: edge.value.id } 
-    })
-  } catch (error) {
-    console.error('Error updating edge:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update edge. Please try again.',
-      life: 3000
-    })
-  } finally {
-    saving.value = false
-  }
-}
+})
 </script>
