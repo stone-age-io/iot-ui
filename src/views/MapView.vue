@@ -1,208 +1,312 @@
-<!-- src/views/MapView.vue - Fixed inject() usage -->
+<!-- src/views/MapView.vue -->
 <template>
-  <div>
-    <PageHeader 
-      title="Locations Map" 
-      subtitle="Global view of all edge installations and locations"
-    />
-    
-    <div class="card map-container">
-      <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 class="text-xl font-semibold">Map Filters</h2>
+  <div class="map-view p-4">
+    <!-- Header with Filters -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2 sm:gap-0">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Locations Map</h1>
+        <p class="text-gray-600 mt-1">Geographic view of all edges and locations</p>
+      </div>
+      
+      <div class="flex flex-wrap gap-2 items-center">
+        <!-- Edge Filter -->
+        <Dropdown
+          v-model="selectedEdge"
+          :options="edgeOptions"
+          optionLabel="label"
+          placeholder="All Edges"
+          class="w-full sm:w-auto"
+          :disabled="loading"
+          @change="filterByEdge"
+        />
         
-        <div class="flex flex-col sm:flex-row gap-2">
-          <!-- Edge Filter -->
-          <Dropdown
-            v-model="selectedEdge"
-            :options="edges"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="All Edges"
-            class="w-full sm:w-auto"
-            @change="filterLocations"
-          >
-            <template #value="slotProps">
-              <div v-if="slotProps.value">
-                {{ getEdgeName(slotProps.value) }}
-              </div>
-              <div v-else>All Edges</div>
-            </template>
-          </Dropdown>
-          
-          <!-- Location Type Filter -->
-          <Dropdown
-            v-model="selectedLocationType"
-            :options="locationTypes"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All Types"
-            class="w-full sm:w-auto"
-            @change="filterLocations"
-          >
-            <template #value="slotProps">
-              <div v-if="slotProps.value">
-                {{ getLocationTypeName(slotProps.value) }}
-              </div>
-              <div v-else>All Types</div>
-            </template>
-          </Dropdown>
-          
-          <!-- Reset Filters Button -->
-          <Button
-            label="Reset Filters"
-            icon="pi pi-filter-slash"
-            class="p-button-outlined"
-            @click="resetFilters"
-          />
-        </div>
-      </div>
-      
-      <!-- Loading Spinner -->
-      <div v-if="loading" class="flex justify-center items-center py-12">
-        <ProgressSpinner strokeWidth="4" />
-      </div>
-      
-      <!-- Global Map -->
-      <div v-else class="global-map-container" :class="{'sidebar-open': injectedSidebarOpen}">
-        <GlobalMap
-          :locations="filteredLocations"
-          :edges="edges"
-          @location-click="navigateToLocation"
-          ref="mapRef"
+        <!-- Type Filter -->
+        <Dropdown
+          v-model="selectedType"
+          :options="locationTypeOptions"
+          optionLabel="label"
+          placeholder="All Types"
+          class="w-full sm:w-auto"
+          :disabled="loading"
+          @change="filterByType"
         />
       </div>
-      
-      <!-- Location Listing -->
-      <div class="mt-6">
-        <h2 class="text-xl font-semibold mb-4">Locations ({{ filteredLocations.length }})</h2>
-        <DataTable
-          :items="filteredLocations"
-          :columns="columns"
-          :searchable="true"
-          :searchFields="['code', 'name', 'path', 'expand.edge_id.code']"
-          empty-message="No locations found"
-          @row-click="navigateToLocation"
-          :paginated="true"
-          :rows="5"
-        >
-          <!-- Code column with custom formatting -->
-          <template #code-body="{ data }">
-            <div class="font-medium text-primary-700">{{ data.code }}</div>
+    </div>
+    
+    <!-- Map Card -->
+    <DashboardCard class="mb-6" no-padding>
+      <div class="map-container relative" :style="{ height: '70vh' }">
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10">
+          <ProgressSpinner strokeWidth="4" />
+        </div>
+        
+        <!-- Global Map Component -->
+        <GlobalMap
+          ref="globalMapRef"
+          :locations="filteredLocations"
+          :edges="edges"
+          @location-click="handleLocationClick"
+        />
+      </div>
+    </DashboardCard>
+    
+    <!-- Location List -->
+    <DashboardCard title="Locations">
+      <DataTable
+        :value="filteredLocations"
+        :loading="loading"
+        paginator
+        :rows="10"
+        :rowsPerPageOptions="[5, 10, 20, 50]"
+        responsiveLayout="scroll"
+        class="p-datatable-sm"
+        stripedRows
+        :globalFilterFields="['name', 'code', 'expand.edge_id.name', 'type']"
+        v-model:filters="filters"
+        filterDisplay="menu"
+        :totalRecords="filteredLocations.length"
+      >
+        <!-- Search Filter -->
+        <template #header>
+          <div class="flex justify-between items-center flex-wrap gap-2">
+            <span class="p-input-icon-left">
+              <i class="pi pi-search" />
+              <InputText v-model="filters['global'].value" placeholder="Search..." class="p-inputtext-sm" />
+            </span>
+            
+            <!-- Location Count -->
+            <div class="text-sm text-gray-500">
+              {{ filteredLocations.length }} locations
+            </div>
+          </div>
+        </template>
+        
+        <!-- Column: Name -->
+        <Column field="name" header="Name" sortable style="min-width: 14rem">
+          <template #body="slotProps">
+            <div class="flex items-center">
+              <i 
+                class="pi pi-map-marker mr-2"
+                :class="[
+                  getIconColorClass(slotProps.data.type),
+                  'text-lg'
+                ]"
+              ></i>
+              <div>
+                <div class="font-medium text-sm">{{ slotProps.data.name }}</div>
+                <div class="text-xs text-gray-500">{{ slotProps.data.code }}</div>
+              </div>
+            </div>
           </template>
-          
-          <!-- Type column with badge -->
-          <template #type-body="{ data }">
+        </Column>
+        
+        <!-- Column: Type -->
+        <Column field="type" header="Type" sortable style="min-width: 10rem">
+          <template #body="slotProps">
             <span 
-              class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="getTypeClass(data.type)"
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="getTypeClass(slotProps.data.type)"
             >
-              {{ getTypeName(data.type) }}
+              {{ getTypeName(slotProps.data.type) }}
             </span>
           </template>
-          
-          <!-- Edge column with code -->
-          <template #edge_id-body="{ data }">
-            <router-link 
-              v-if="data.expand && data.expand.edge_id"
-              :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
-              class="text-primary-600 hover:underline flex items-center"
-              @click.stop
-            >
-              {{ data.expand.edge_id.code }}
-            </router-link>
-            <span v-else class="text-gray-500">Unknown Edge</span>
+        </Column>
+        
+        <!-- Column: Edge -->
+        <Column field="expand.edge_id.name" header="Edge" sortable style="min-width: 10rem">
+          <template #body="slotProps">
+            <div v-if="slotProps.data.expand && slotProps.data.expand.edge_id">
+              <div class="text-sm">{{ slotProps.data.expand.edge_id.name }}</div>
+              <div class="text-xs text-gray-500">{{ slotProps.data.expand.edge_id.code }}</div>
+            </div>
+            <div v-else class="text-gray-400 text-sm">No edge</div>
           </template>
-          
-          <!-- Actions column -->
-          <template #actions="{ data }">
-            <div class="flex gap-1 justify-center">
+        </Column>
+        
+        <!-- Column: Path -->
+        <Column field="path" header="Path" sortable style="min-width: 12rem">
+          <template #body="slotProps">
+            <div class="text-sm">{{ formatPath(slotProps.data.path) }}</div>
+          </template>
+        </Column>
+        
+        <!-- Column: Coordinates -->
+        <Column header="Coordinates" style="min-width: 10rem">
+          <template #body="slotProps">
+            <div v-if="hasCoordinates(slotProps.data)" class="text-sm">
+              {{ formatCoordinates(slotProps.data) }}
+            </div>
+            <div v-else class="text-gray-400 text-sm">No coordinates</div>
+          </template>
+        </Column>
+        
+        <!-- Column: Actions -->
+        <Column header="Actions" style="min-width: 8rem">
+          <template #body="slotProps">
+            <div class="flex gap-2 justify-center">
               <Button 
-                icon="pi pi-eye" 
-                class="p-button-rounded p-button-text p-button-sm" 
-                @click.stop="navigateToLocation(data)"
-                tooltip="View"
-                tooltipOptions="{ position: 'top' }"
+                icon="pi pi-search"
+                class="p-button-rounded p-button-text p-button-sm"
+                @click="locateOnMap(slotProps.data)"
+                v-tooltip.top="'Locate on map'"
+              />
+              <Button 
+                icon="pi pi-pencil"
+                class="p-button-rounded p-button-text p-button-sm"
+                @click="navigateToEdit(slotProps.data.id)"
+                v-tooltip.top="'Edit location'"
+              />
+              <Button 
+                icon="pi pi-external-link"
+                class="p-button-rounded p-button-text p-button-sm"
+                @click="navigateToDetail(slotProps.data.id)"
+                v-tooltip.top="'View details'"
               />
             </div>
           </template>
-        </DataTable>
+        </Column>
+        
+        <!-- Empty state -->
+        <template #empty>
+          <div class="text-center p-4 text-gray-500">
+            No locations found. Try adjusting your filters.
+          </div>
+        </template>
+      </DataTable>
+    </DashboardCard>
+    
+    <!-- Location Detail Dialog -->
+    <Dialog
+      v-model:visible="locationDialog.visible"
+      :header="locationDialog.title"
+      :style="{ width: '90%', maxWidth: '600px' }"
+      :modal="true"
+      :closable="true"
+      :closeOnEscape="true"
+    >
+      <div v-if="locationDialog.location">
+        <div class="mb-4">
+          <span 
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2"
+            :class="getTypeClass(locationDialog.location.type)"
+          >
+            {{ getTypeName(locationDialog.location.type) }}
+          </span>
+          <p class="text-sm text-gray-500 mb-1">{{ locationDialog.location.code }}</p>
+          <p class="text-sm text-gray-600 mb-3">{{ formatPath(locationDialog.location.path) }}</p>
+          
+          <div v-if="locationDialog.location.description" class="text-sm mt-2 text-gray-700">
+            {{ locationDialog.location.description }}
+          </div>
+          
+          <div v-if="getEdgeName(locationDialog.location)" class="mt-4 p-3 bg-gray-50 rounded">
+            <p class="text-sm font-medium text-gray-700">Edge</p>
+            <p class="text-sm text-gray-600">{{ getEdgeName(locationDialog.location) }}</p>
+          </div>
+        </div>
+        
+        <template v-if="hasCoordinates(locationDialog.location)">
+          <h3 class="font-medium text-gray-700 mb-2 mt-4">Coordinates</h3>
+          <p class="text-sm text-gray-600">{{ formatCoordinates(locationDialog.location) }}</p>
+        </template>
+        
+        <div class="flex justify-end gap-2 mt-6">
+          <Button
+            label="Edit Location"
+            class="p-button-outlined"
+            icon="pi pi-pencil"
+            @click="navigateToEdit(locationDialog.location.id)"
+          />
+          <Button
+            label="View Details"
+            icon="pi pi-external-link"
+            @click="navigateToDetail(locationDialog.location.id)"
+          />
+        </div>
       </div>
-    </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onBeforeUnmount, inject } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { locationService, locationTypes } from '../services/location'
-import { edgeService } from '../services/edge'
-import PageHeader from '../components/common/PageHeader.vue'
-import GlobalMap from '../components/map/GlobalMap.vue'
-import DataTable from '../components/common/DataTable.vue'
+import { FilterMatchMode } from 'primevue/api'
 import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
+// Import from new service structure
+import { 
+  locationService, 
+  locationTypes, 
+  edgeService
+} from '../services'
+
+// Import components
+import DashboardCard from '../components/dashboard/DashboardCard.vue'
+import GlobalMap from '../components/map/GlobalMap.vue'
+
 const router = useRouter()
-const mapRef = ref(null);
+const globalMapRef = ref(null)
 
 // Data
 const locations = ref([])
 const edges = ref([])
 const loading = ref(true)
+
+// Filters
 const selectedEdge = ref(null)
-const selectedLocationType = ref(null)
-const resizeObserver = ref(null)
-
-// FIXED: Properly inject sidebar state (call inject directly in setup)
-// First inject the sidebarOpen state
-const injectedSidebarOpen = inject('sidebarOpen', ref(false))
-// Then inject the methods
-const toggleSidebar = inject('toggleSidebar', () => {})
-const closeSidebar = inject('closeSidebar', () => {})
-
-// Watch for sidebar state changes to update the map
-watch(injectedSidebarOpen, () => {
-  if (mapRef.value) {
-    // Handle map resize when sidebar state changes, with a delay
-    setTimeout(() => {
-      if (mapRef.value.$el) {
-        // Force redraw of map when sidebar changes
-        try {
-          const event = new Event('resize')
-          window.dispatchEvent(event)
-        } catch (err) {
-          console.warn('Error dispatching resize event:', err)
-        }
-      }
-    }, 400) // Wait for animation to complete
-  }
+const selectedType = ref(null)
+const filters = ref({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 })
 
-// Table columns definition
-const columns = [
-  { field: 'code', header: 'Code', sortable: true },
-  { field: 'name', header: 'Name', sortable: true },
-  { field: 'type', header: 'Type', sortable: true },
-  { field: 'edge_id', header: 'Edge', sortable: true },
-  { field: 'actions', header: 'Actions', sortable: false }
-]
+// Location dialog
+const locationDialog = ref({
+  visible: false,
+  location: null,
+  title: 'Location Details'
+})
 
-// Filtered locations based on selected filters
+// Computed properties
+const edgeOptions = computed(() => {
+  return [
+    { label: 'All Edges', value: null },
+    ...edges.value.map(edge => ({
+      label: edge.name,
+      value: edge.id
+    }))
+  ]
+})
+
+const locationTypeOptions = computed(() => {
+  return [
+    { label: 'All Types', value: null },
+    ...locationTypes.map(type => ({
+      label: type.label,
+      value: type.value
+    }))
+  ]
+})
+
 const filteredLocations = computed(() => {
   let result = [...locations.value]
   
-  // Filter by edge
   if (selectedEdge.value) {
-    result = result.filter(location => location.edge_id === selectedEdge.value)
+    result = result.filter(loc => loc.edge_id === selectedEdge.value.value)
   }
   
-  // Filter by location type
-  if (selectedLocationType.value) {
-    result = result.filter(location => location.type === selectedLocationType.value)
+  if (selectedType.value) {
+    result = result.filter(loc => loc.type === selectedType.value.value)
   }
   
-  return result.filter(location => hasValidCoordinates(location))
+  return result
 })
 
 // Fetch data on component mount
@@ -211,165 +315,185 @@ onMounted(async () => {
     fetchLocations(),
     fetchEdges()
   ])
-  loading.value = false
-  
-  // Set up resize observer to handle container resizing
-  setupResizeObserver()
 })
 
-// Detect mobile device
-const isMobile = ref(false)
-
-// Update mobile status 
-const updateMobileStatus = () => {
-  isMobile.value = window.innerWidth < 1024;
-}
-
-// Check initial mobile status
-onMounted(() => {
-  updateMobileStatus()
-  window.addEventListener('resize', updateMobileStatus)
-})
-
-// Clean up
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateMobileStatus)
-})
-
-// Cleanup on unmount
-onBeforeUnmount(() => {
-  if (resizeObserver.value) {
-    resizeObserver.value.disconnect();
+// Watch for filter changes
+watch([selectedEdge, selectedType], () => {
+  // Refresh the map markers when filters change
+  if (globalMapRef.value) {
+    // Allow time for computed to update
+    setTimeout(() => {
+      globalMapRef.value.centerMapToAllLocations()
+    }, 100)
   }
-  
-  // Remove any global event listeners
-  window.removeEventListener('resize', () => {
-    if (mapRef.value && mapRef.value.$el) {
-      mapRef.value.$el.dispatchEvent(new Event('resize'));
-    }
-  });
 })
 
-// Set up resize observer
-const setupResizeObserver = () => {
-  // If ResizeObserver is available, use it to detect container size changes
-  if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver.value = new ResizeObserver(() => {
-      if (mapRef.value && mapRef.value.$el) {
-        const event = new Event('resize')
-        window.dispatchEvent(event)
-      }
-    })
-    
-    // Start observing container
-    const container = document.querySelector('.map-container')
-    if (container) {
-      resizeObserver.value.observe(container)
-    }
-  }
-}
-
-// Methods
+// Fetch location data
 const fetchLocations = async () => {
+  loading.value = true
   try {
-    const response = await locationService.getLocations({ sort: 'name', perPage: 100 })
-    locations.value = response.data.items || []
-    
-    // Parse metadata for each location
-    locations.value.forEach(location => {
-      if (location.metadata && typeof location.metadata === 'string') {
-        try {
-          location.metadata = JSON.parse(location.metadata)
-        } catch (e) {
-          console.warn('Failed to parse metadata for location:', location.code)
-          location.metadata = {}
-        }
-      }
+    const response = await locationService.getLocations({
+      expand: 'edge_id',
+      sort: 'name',
+      limit: 100 // Get more items for the map view
     })
+    
+    locations.value = response.data.items || []
   } catch (error) {
     console.error('Error fetching locations:', error)
+  } finally {
+    loading.value = false
   }
 }
 
+// Fetch edge data
 const fetchEdges = async () => {
   try {
-    const response = await edgeService.getEdges({ sort: 'name' })
+    const response = await edgeService.getEdges({
+      sort: 'name'
+    })
+    
     edges.value = response.data.items || []
   } catch (error) {
     console.error('Error fetching edges:', error)
   }
 }
 
-const hasValidCoordinates = (location) => {
-  return location.metadata && 
+// Filter handlers
+const filterByEdge = () => {
+  // Filter is applied via computed property
+}
+
+const filterByType = () => {
+  // Filter is applied via computed property
+}
+
+// Map event handlers
+const handleLocationClick = (location) => {
+  locationDialog.value.location = location
+  locationDialog.value.title = location.name
+  locationDialog.value.visible = true
+}
+
+const locateOnMap = (location) => {
+  if (globalMapRef.value && hasCoordinates(location)) {
+    // Center map on the location
+    const coordinates = getCoordinates(location)
+    globalMapRef.value.centerMapToLocation(coordinates)
+    
+    // Simulate a click to show the marker popup
+    setTimeout(() => {
+      const marker = globalMapRef.value.findMarkerById(location.id)
+      if (marker) {
+        marker.openPopup()
+      }
+    }, 300)
+  }
+}
+
+// Helper functions
+const hasCoordinates = (location) => {
+  return location && 
+         location.metadata && 
          location.metadata.coordinates && 
          location.metadata.coordinates.lat && 
          (location.metadata.coordinates.lng || location.metadata.coordinates.long)
 }
 
-const navigateToLocation = (location) => {
-  router.push({ name: 'location-detail', params: { id: location.id } })
+const getCoordinates = (location) => {
+  if (!hasCoordinates(location)) return null
+  
+  return {
+    lat: location.metadata.coordinates.lat,
+    lng: location.metadata.coordinates.lng || location.metadata.coordinates.long
+  }
 }
 
-const filterLocations = () => {
-  // This function is called when filters change
-  // The filtering is handled by the computed property
+const formatCoordinates = (location) => {
+  if (!hasCoordinates(location)) return 'N/A'
+  
+  const coords = location.metadata.coordinates
+  const lat = coords.lat.toFixed(6)
+  const lng = (coords.lng || coords.long).toFixed(6)
+  
+  return `${lat}, ${lng}`
 }
 
-const resetFilters = () => {
-  selectedEdge.value = null
-  selectedLocationType.value = null
+const formatPath = (path) => {
+  if (!path) return ''
+  return path.split('/').join(' > ')
 }
 
-// Helper functions
-const getEdgeName = (edgeId) => {
-  const edge = edges.value.find(e => e.id === edgeId)
+const getTypeName = (type) => {
+  const locationType = locationTypes.find(t => t.value === type)
+  return locationType ? locationType.label : type
+}
+
+const getTypeClass = (type) => {
+  const classes = {
+    'entrance': 'bg-blue-100 text-blue-800',
+    'work-area': 'bg-green-100 text-green-800',
+    'meeting-room': 'bg-purple-100 text-purple-800',
+    'break-area': 'bg-amber-100 text-amber-800',
+    'reception': 'bg-indigo-100 text-indigo-800',
+    'security': 'bg-red-100 text-red-800',
+    'server-room': 'bg-cyan-100 text-cyan-800',
+    'utility-room': 'bg-teal-100 text-teal-800',
+    'storage': 'bg-gray-100 text-gray-800',
+    'entrance-hall': 'bg-blue-100 text-blue-800'
+  }
+  
+  return classes[type] || 'bg-gray-100 text-gray-800'
+}
+
+const getIconColorClass = (type) => {
+  const classes = {
+    'entrance': 'text-blue-600',
+    'work-area': 'text-green-600',
+    'meeting-room': 'text-purple-600',
+    'break-area': 'text-amber-600',
+    'reception': 'text-indigo-600',
+    'security': 'text-red-600',
+    'server-room': 'text-cyan-600',
+    'utility-room': 'text-teal-600',
+    'storage': 'text-gray-600',
+    'entrance-hall': 'text-blue-600'
+  }
+  
+  return classes[type] || 'text-gray-600'
+}
+
+const getEdgeName = (location) => {
+  if (!location.edge_id) return null
+  
+  if (location.expand && location.expand.edge_id) {
+    return location.expand.edge_id.name
+  }
+  
+  const edge = edges.value.find(e => e.id === location.edge_id)
   return edge ? edge.name : 'Unknown Edge'
 }
 
-const getTypeName = (typeCode) => {
-  const type = locationTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
+// Navigation helpers
+const navigateToDetail = (id) => {
+  locationDialog.value.visible = false
+  router.push({ name: 'location-detail', params: { id } })
 }
 
-const getLocationTypeName = (typeCode) => {
-  const type = locationTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
-}
-
-const getTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'entrance': return 'bg-blue-100 text-blue-800'
-    case 'work-area': return 'bg-green-100 text-green-800'
-    case 'meeting-room': return 'bg-purple-100 text-purple-800'
-    case 'break-area': return 'bg-amber-100 text-amber-800'
-    case 'reception': return 'bg-indigo-100 text-indigo-800'
-    case 'security': return 'bg-red-100 text-red-800'
-    case 'server-room': return 'bg-cyan-100 text-cyan-800'
-    case 'utility-room': return 'bg-teal-100 text-teal-800'
-    case 'storage': return 'bg-gray-100 text-gray-800'
-    case 'entrance-hall': return 'bg-blue-100 text-blue-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
+const navigateToEdit = (id) => {
+  locationDialog.value.visible = false
+  router.push({ name: 'edit-location', params: { id } })
 }
 </script>
 
 <style scoped>
-.global-map-container {
-  height: 600px;
-  border-radius: 6px;
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-  transition: width 0.3s ease-in-out;
+.map-view {
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-/* Add specific styling to handle sidebar interactions */
-@media (max-width: 1023px) {
-  .global-map-container.sidebar-open {
-    /* Ensure the map stays within its container when sidebar is open */
-    width: 100%;
-    max-width: 100%;
-  }
+:deep(.map-container) {
+  overflow: hidden;
+  border-radius: 0.5rem;
 }
 </style>

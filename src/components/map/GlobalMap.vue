@@ -1,4 +1,4 @@
-<!-- src/components/map/GlobalMap.vue - Improved version -->
+<!-- src/components/map/GlobalMap.vue (Updated) -->
 <template>
   <div :id="mapId" class="global-map" style="height: 100%; width: 100%"></div>
 </template>
@@ -10,6 +10,9 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/leaflet.markercluster.js'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+
+// Import from the new service layer
+import { locationService } from '../../services'
 
 const props = defineProps({
   locations: {
@@ -364,6 +367,25 @@ const centerMapToAllLocations = () => {
   }
 }
 
+// Center to a specific location
+const centerMapToLocation = (coordinates) => {
+  if (!map.value || !coordinates) return;
+  
+  try {
+    map.value.setView([coordinates.lat, coordinates.lng], 14, {
+      animate: true,
+      duration: 0.5
+    });
+  } catch (err) {
+    console.error('Error centering map to location:', err);
+  }
+}
+
+// Find a marker by location ID
+const findMarkerById = (locationId) => {
+  return locationMarkers.value[locationId];
+}
+
 // Create custom icon based on location type
 const createCustomIcon = (locationType) => {
   // Pick color based on location type
@@ -427,6 +449,13 @@ const getLocationTypeName = (typeCode) => {
   
   return types[typeCode] || typeCode;
 }
+
+// Expose methods for parent components
+defineExpose({
+  centerMapToAllLocations,
+  centerMapToLocation,
+  findMarkerById
+});
 </script>
 
 <style scoped>
