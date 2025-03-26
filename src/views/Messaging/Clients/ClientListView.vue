@@ -20,7 +20,7 @@
         :searchFields="['username', 'expand.role_id.name']"
         title="Messaging Clients"
         empty-message="No clients found"
-        @row-click="navigateToClientDetail"
+        @row-click="(data) => navigateToClientDetail(data.id)"
       >
         <!-- Username column with custom formatting -->
         <template #username-body="{ data }">
@@ -101,7 +101,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useClient } from '../../../composables/useClient'
-import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
@@ -123,8 +122,7 @@ const {
 const columns = [
   { field: 'username', header: 'Username', sortable: true },
   { field: 'role_id', header: 'Role', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'actions', header: 'Actions', sortable: false }
+  { field: 'active', header: 'Status', sortable: true }
 ]
 
 // Delete confirmation dialog
