@@ -300,7 +300,11 @@ const {
 } = useLocation()
 
 // Get thing functionality from composable
-const { getThingTypeName, getThingTypeClass } = useThing()
+// FIX 1: Correctly map function names from the useThing composable
+const { 
+  getTypeName: getThingTypeName, 
+  getTypeClass: getThingTypeClass 
+} = useThing()
 
 // Local state
 const location = ref(null)
@@ -349,7 +353,7 @@ const loadLocationDetail = async () => {
   }
 }
 
-// Fetch things for this location
+// FIX 2: Improved fetchThings method to handle field name differences
 const fetchThings = async () => {
   if (!location.value) return
   
@@ -357,9 +361,24 @@ const fetchThings = async () => {
   try {
     const { thingService } = await import('../../../services')
     const response = await thingService.getThingsByLocation(location.value.id)
-    things.value = response.data.items || []
+    
+    if (response.data && response.data.items) {
+      // Map the returned fields back to what our view expects
+      things.value = response.data.items.map(item => {
+        // Ensure we have consistent field names for the view
+        // If the response has thing_code/thing_type fields, use their values for code/type
+        return {
+          ...item,
+          code: item.code || item.thing_code,
+          type: item.type || item.thing_type
+        }
+      });
+    } else {
+      things.value = [];
+    }
   } catch (err) {
     console.error('Error fetching things:', err)
+    things.value = [];
   } finally {
     thingsLoading.value = false
   }
