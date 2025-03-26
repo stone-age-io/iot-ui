@@ -19,10 +19,19 @@
         :searchFields="['code', 'name', 'description', 'type', 'region']"
         title="Edge Installations"
         empty-message="No edges found"
-        @row-click="navigateToEdgeDetail"
+        @row-click="(data) => navigateToEdgeDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
+        <!-- Table action buttons -->
+        <template #table-actions>
+          <Button 
+            label="Create Edge" 
+            icon="pi pi-plus" 
+            @click="navigateToEdgeCreate" 
+          />
+        </template>
+        
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
           <div class="font-medium text-primary-700">{{ data.code }}</div>
@@ -76,8 +85,8 @@
           </div>
         </template>
         
-        <!-- Actions column -->
-        <template #actions="{ data }">
+        <!-- Row actions -->
+        <template #row-actions="{ data }">
           <div class="flex gap-1 justify-center">
             <Button 
               icon="pi pi-eye" 
@@ -166,8 +175,7 @@ const columns = [
   { field: 'region', header: 'Region', sortable: true },
   { field: 'active', header: 'Status', sortable: true },
   { field: 'metadata', header: 'Metadata', sortable: false },
-  { field: 'created', header: 'Created', sortable: true },
-  { field: 'actions', header: 'Actions', sortable: false }
+  { field: 'created', header: 'Created', sortable: true }
 ]
 
 // Fetch edges on component mount

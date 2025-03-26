@@ -27,6 +27,13 @@ export class ThingService extends BaseService {
    */
   getThings(params = {}) {
     return this.getList(params)
+      .then(response => {
+        // Ensure thing_code and thing_type fields exist for forms
+        if (response.data && response.data.items) {
+          response.data.items = response.data.items.map(item => this.mapApiToFormFields(item))
+        }
+        return response
+      })
   }
   
   /**
@@ -36,6 +43,13 @@ export class ThingService extends BaseService {
    */
   getThing(id) {
     return this.getById(id)
+      .then(response => {
+        // Ensure thing_code and thing_type fields exist for forms
+        if (response.data) {
+          response.data = this.mapApiToFormFields(response.data)
+        }
+        return response
+      })
   }
   
   /**
@@ -44,7 +58,16 @@ export class ThingService extends BaseService {
    * @returns {Promise} - Axios promise with created thing
    */
   createThing(thing) {
-    return this.create(thing)
+    // Map form fields to API fields before creating
+    const apiData = this.mapFormToApiFields(thing)
+    return this.create(apiData)
+      .then(response => {
+        // Map back to form fields for consistency
+        if (response.data) {
+          response.data = this.mapApiToFormFields(response.data)
+        }
+        return response
+      })
   }
   
   /**
@@ -54,7 +77,16 @@ export class ThingService extends BaseService {
    * @returns {Promise} - Axios promise with updated thing
    */
   updateThing(id, thing) {
-    return this.update(id, thing)
+    // Map form fields to API fields before updating
+    const apiData = this.mapFormToApiFields(thing)
+    return this.update(id, apiData)
+      .then(response => {
+        // Map back to form fields for consistency
+        if (response.data) {
+          response.data = this.mapApiToFormFields(response.data)
+        }
+        return response
+      })
   }
   
   /**
@@ -75,6 +107,13 @@ export class ThingService extends BaseService {
     return this.getList({ 
       location_id: locationId,
       sort: 'created'
+    })
+    .then(response => {
+      // Ensure thing_code and thing_type fields exist for forms
+      if (response.data && response.data.items) {
+        response.data.items = response.data.items.map(item => this.mapApiToFormFields(item))
+      }
+      return response
     })
   }
   
@@ -133,6 +172,50 @@ export class ThingService extends BaseService {
       // Update thing with new metadata
       return this.updateThing(id, { metadata })
     })
+  }
+  
+  /**
+   * Map form fields to API fields
+   * @param {Object} formData - Form data with thing_code and thing_type
+   * @returns {Object} - API data with code and type
+   */
+  mapFormToApiFields(formData) {
+    const apiData = { ...formData }
+    
+    // Map thing_code to code if present
+    if (formData.thing_code !== undefined) {
+      apiData.code = formData.thing_code
+      delete apiData.thing_code
+    }
+    
+    // Map thing_type to type if present
+    if (formData.thing_type !== undefined) {
+      apiData.type = formData.thing_type
+      delete apiData.thing_type
+    }
+    
+    return apiData
+  }
+  
+  /**
+   * Map API fields to form fields
+   * @param {Object} apiData - API data with code and type
+   * @returns {Object} - Form data with thing_code and thing_type
+   */
+  mapApiToFormFields(apiData) {
+    const formData = { ...apiData }
+    
+    // Map code to thing_code for consistent form handling
+    if (apiData.code !== undefined) {
+      formData.thing_code = apiData.code
+    }
+    
+    // Map type to thing_type for consistent form handling
+    if (apiData.type !== undefined) {
+      formData.thing_type = apiData.type
+    }
+    
+    return formData
   }
   
   /**

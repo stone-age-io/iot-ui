@@ -1,4 +1,3 @@
-// src/views/Entities/Things/ThingEditView.vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -35,9 +34,9 @@
       <div class="card">
         <EntityForm
           title="Thing Information"
-          :loading="saving"
+          :loading="loading"
           submit-label="Save Changes"
-          @submit="handleSubmit"
+          @submit="submitForm"
           @cancel="$router.back()"
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,13 +163,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useVuelidate } from '@vuelidate/core'
-import { required, helpers } from '@vuelidate/validators'
-import { thingService, thingTypes } from '../../../services/thing'
-import { locationService } from '../../../services/location'
-
+import { useRoute } from 'vue-router'
+import { useThing } from '../../../composables/useThing'
+import { useThingForm } from '../../../composables/useThingForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -183,141 +178,45 @@ import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
-const router = useRouter()
-const toast = useToast()
 
-// Data for locations dropdown
-const locations = ref([])
+// Get thing type options
+const { thingTypes, fetchThing, error } = useThing()
 
-// Thing form data
-const thing = ref({
-  id: '',
-  thing_code: '',
-  thing_type: '',
-  location_id: '',
-  name: '',
-  description: '',
-  active: true
-})
+// Use the thing form composable in edit mode
+const { 
+  thing, 
+  v$, 
+  loading, 
+  locations,
+  locationsLoading,
+  fetchLocations,
+  loadThing,
+  getLocationName,
+  getLocationCode,
+  submitForm 
+} = useThingForm('edit')
 
-// Loading states
+// Initial loading state
 const initialLoading = ref(true)
-const saving = ref(false)
-const error = ref(null)
-
-// Form validation rules
-const rules = {
-  name: { 
-    required: helpers.withMessage('Name is required', required),
-  },
-  description: {}
-}
-
-// Initialize Vuelidate
-const v$ = useVuelidate(rules, thing)
 
 // Fetch thing data on component mount
 onMounted(async () => {
-  await fetchThing()
-  await fetchLocations()
-})
-
-// Methods
-const fetchThing = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid thing ID'
-    initialLoading.value = false
-    return
-  }
-  
-  initialLoading.value = true
-  error.value = null
+  if (!id) return
   
   try {
-    const response = await thingService.getThing(id)
+    // Fetch locations for dropdown
+    await fetchLocations()
     
-    // Set form data
-    thing.value = {
-      id: response.data.id,
-      thing_code: response.data.thing_code,
-      thing_type: response.data.thing_type,
-      location_id: response.data.location_id,
-      name: response.data.name,
-      description: response.data.description,
-      active: response.data.active
+    // Fetch thing data
+    const thingData = await fetchThing(id)
+    
+    // Load data into form
+    if (thingData) {
+      loadThing(thingData)
     }
-  } catch (err) {
-    console.error('Error fetching thing:', err)
-    error.value = 'Failed to load thing details. Please try again.'
   } finally {
     initialLoading.value = false
   }
-}
-
-// Fetch locations for the dropdown (even though it's disabled, we need the data for display)
-const fetchLocations = async () => {
-  try {
-    const response = await locationService.getLocations()
-    locations.value = response.data.items || []
-  } catch (err) {
-    console.error('Error fetching locations:', err)
-  }
-}
-
-// Helper for displaying location name in dropdown
-const getLocationName = (locationId) => {
-  const location = locations.value.find(loc => loc.id === locationId)
-  return location ? location.name : locationId
-}
-
-// Helper for displaying location code in dropdown
-const getLocationCode = (locationId) => {
-  const location = locations.value.find(loc => loc.id === locationId)
-  return location ? location.code : ''
-}
-
-// Form submission
-const handleSubmit = async () => {
-  // Validate form
-  const isValid = await v$.value.$validate()
-  if (!isValid) return
-  
-  saving.value = true
-  
-  try {
-    // Prepare data for API
-    const thingData = {
-      name: thing.value.name,
-      description: thing.value.description,
-      active: thing.value.active
-    }
-    
-    // Submit to API
-    await thingService.updateThing(thing.value.id, thingData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Thing ${thing.value.thing_code} has been updated`,
-      life: 3000
-    })
-    
-    // Navigate back to thing detail view
-    router.push({ 
-      name: 'thing-detail', 
-      params: { id: thing.value.id } 
-    })
-  } catch (error) {
-    console.error('Error updating thing:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update thing. Please try again.',
-      life: 3000
-    })
-  } finally {
-    saving.value = false
-  }
-}
+})
 </script>
