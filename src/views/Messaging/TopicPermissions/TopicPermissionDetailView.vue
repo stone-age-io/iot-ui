@@ -32,7 +32,7 @@
             icon="pi pi-pencil"
             label="Edit"
             class="p-button-outlined"
-            @click="navigateToEdit"
+            @click="navigateToPermissionEdit(permission.id)"
           />
           <Button
             icon="pi pi-trash"
@@ -93,7 +93,7 @@
                     label="Add Publish Topics"
                     icon="pi pi-plus"
                     class="p-button-outlined p-button-sm mt-4"
-                    @click="navigateToEdit"
+                    @click="navigateToPermissionEdit(permission.id)"
                   />
                 </div>
               </div>
@@ -143,7 +143,7 @@
                     label="Add Subscribe Topics"
                     icon="pi pi-plus"
                     class="p-button-outlined p-button-sm mt-4"
-                    @click="navigateToEdit"
+                    @click="navigateToPermissionEdit(permission.id)"
                   />
                 </div>
               </div>
@@ -159,6 +159,17 @@
             <ProgressSpinner :style="{width: '30px', height: '30px'}" />
           </div>
           
+          <div v-else-if="clientError" class="bg-red-50 p-4 rounded-md text-center">
+            <i class="pi pi-exclamation-circle text-red-500 text-2xl mb-2 block"></i>
+            <p class="text-red-600">{{ clientError }}</p>
+            <Button
+              label="Try Again"
+              icon="pi pi-refresh"
+              class="p-button-outlined p-button-sm mt-4"
+              @click="loadClients"
+            />
+          </div>
+          
           <div v-else-if="clients.length === 0" class="bg-gray-50 p-6 rounded-md text-center text-gray-500">
             <i class="pi pi-users text-2xl mb-2 block"></i>
             <p>No clients are using this role</p>
@@ -168,7 +179,7 @@
               label="Create Client with This Role"
               icon="pi pi-plus"
               class="p-button-outlined p-button-sm mt-4"
-              @click="navigateToCreateClient"
+              @click="navigateToCreateClient(permission.id)"
             />
           </div>
           
@@ -226,7 +237,7 @@
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete the '${permission?.name || ''}' role?`"
       details="This action cannot be undone. Clients using this permission role will lose their access."
-      @confirm="deletePermission"
+      @confirm="handleDeletePermission"
     />
     
     <!-- Toast for success/error messages -->
@@ -235,11 +246,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import dayjs from 'dayjs'
-import { topicPermissionService } from '../../../services/topicPermission'
+import { useTopicPermission } from '../../../composables/useTopicPermission'
+import { topicPermissionService } from '../../../services'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -248,15 +259,27 @@ import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 
 const route = useRoute()
-const router = useRouter()
 const toast = useToast()
+
+// Use the topic permission composable
+const { 
+  loading, 
+  error,
+  formatDate,
+  getTopicsCount,
+  copyToClipboard,
+  fetchPermission,
+  deletePermission,
+  navigateToPermissionList,
+  navigateToPermissionEdit,
+  navigateToCreateClient
+} = useTopicPermission()
 
 // Data
 const permission = ref(null)
 const clients = ref([])
-const loading = ref(true)
-const loadingClients = ref(true)
-const error = ref(null)
+const loadingClients = ref(false)
+const clientError = ref(null)
 const deleteDialog = ref({
   visible: false,
   loading: false
@@ -264,53 +287,39 @@ const deleteDialog = ref({
 
 // Fetch data on component mount
 onMounted(async () => {
-  await fetchPermission()
+  await loadPermission()
 })
 
-// Methods
-const fetchPermission = async () => {
+// Load permission data
+const loadPermission = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid permission ID'
-    loading.value = false
-    return
-  }
   
-  loading.value = true
-  error.value = null
+  permission.value = await fetchPermission(id)
   
-  try {
-    const response = await topicPermissionService.getTopicPermission(id)
-    permission.value = response.data
-    
-    // Ensure arrays
-    if (!Array.isArray(permission.value.publish_permissions)) {
-      permission.value.publish_permissions = []
-    }
-    if (!Array.isArray(permission.value.subscribe_permissions)) {
-      permission.value.subscribe_permissions = []
-    }
-    
+  if (permission.value) {
     // Fetch clients using this role
-    await fetchClients()
-  } catch (err) {
-    console.error('Error fetching permission:', err)
-    error.value = 'Failed to load permission details. Please try again.'
-  } finally {
-    loading.value = false
+    await loadClients()
   }
 }
 
-const fetchClients = async () => {
+// Load clients using this role
+const loadClients = async () => {
+  if (!permission.value || !permission.value.id) return
+  
   loadingClients.value = true
+  clientError.value = null
+  
   try {
+    // Use topicPermissionService directly rather than through the composable
+    // to ensure we have proper separation of loading states
     const response = await topicPermissionService.getClientsByPermission(permission.value.id)
     clients.value = response.data.items || []
-  } catch (err) {
-    console.error('Error fetching clients:', err)
+  } catch (error) {
+    console.error('Error fetching clients by permission:', error)
+    clientError.value = 'Failed to load clients using this role. Please try again.'
     toast.add({
-      severity: 'warn',
-      summary: 'Warning',
+      severity: 'error',
+      summary: 'Error',
       detail: 'Failed to load clients using this role',
       life: 3000
     })
@@ -319,73 +328,23 @@ const fetchClients = async () => {
   }
 }
 
-const navigateToEdit = () => {
-  router.push({ name: 'edit-topic-permission', params: { id: permission.value.id } })
-}
-
-const navigateToCreateClient = () => {
-  router.push({ 
-    name: 'create-client', 
-    query: { role_id: permission.value.id } 
-  })
-}
-
+// Confirm delete
 const confirmDelete = () => {
   deleteDialog.value.visible = true
 }
 
-const deletePermission = async () => {
+// Handle permission deletion
+const handleDeletePermission = async () => {
   deleteDialog.value.loading = true
   try {
-    await topicPermissionService.deleteTopicPermission(permission.value.id)
+    const success = await deletePermission(permission.value.id, permission.value.name)
     
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Permission role '${permission.value.name}' has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-    router.push({ name: 'topic-permissions' })
-  } catch (error) {
-    console.error('Error deleting permission:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete permission',
-      life: 3000
-    })
+    if (success) {
+      deleteDialog.value.visible = false
+      navigateToPermissionList()
+    }
   } finally {
     deleteDialog.value.loading = false
   }
-}
-
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      toast.add({
-        severity: 'info',
-        summary: 'Copied',
-        detail: 'Topic copied to clipboard',
-        life: 2000
-      })
-    })
-    .catch(err => {
-      console.error('Failed to copy text: ', err)
-    })
-}
-
-// Helper methods
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return dayjs(dateString).format('MMM D, YYYY HH:mm')
-}
-
-const getTopicsCount = (perm) => {
-  if (!perm) return 0
-  const pubCount = Array.isArray(perm.publish_permissions) ? perm.publish_permissions.length : 0
-  const subCount = Array.isArray(perm.subscribe_permissions) ? perm.subscribe_permissions.length : 0
-  return pubCount + subCount
 }
 </script>

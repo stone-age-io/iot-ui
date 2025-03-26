@@ -191,11 +191,9 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
-import { topicPermissionService, validateTopic } from '../../../services/topicPermission'
+import { useTopicPermission } from '../../../composables/useTopicPermission'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -206,8 +204,14 @@ import Toast from 'primevue/toast'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 
-const router = useRouter()
-const toast = useToast()
+// Use the topic permission composable
+const { 
+  loading,
+  error,
+  isValidTopic,
+  createPermission,
+  navigateToPermissionDetail
+} = useTopicPermission()
 
 // Permission data with arrays for topics
 const permission = ref({
@@ -220,9 +224,6 @@ const permission = ref({
 const newPublishTopic = ref('')
 const newSubscribeTopic = ref('')
 
-// Loading state
-const loading = ref(false)
-
 // Form validation rules
 const rules = {
   name: { 
@@ -233,25 +234,15 @@ const rules = {
 // Initialize Vuelidate
 const v$ = useVuelidate(rules, permission)
 
-// Validate topic format
-const isValidTopic = (topic) => {
-  return topic && validateTopic(topic)
-}
-
 // Add a publish topic
 const addPublishTopic = () => {
-  if (!isValidTopic(newPublishTopic)) return
+  if (!isValidTopic(newPublishTopic.value)) return
   
   // Check for duplicates
   if (!permission.value.publish_permissions.includes(newPublishTopic.value)) {
     permission.value.publish_permissions.push(newPublishTopic.value)
   } else {
-    toast.add({
-      severity: 'warn',
-      summary: 'Duplicate Topic',
-      detail: 'This topic already exists in the publish permissions',
-      life: 3000
-    })
+    // Toast is handled by the composable
   }
   
   // Clear input
@@ -265,18 +256,13 @@ const removePublishTopic = (index) => {
 
 // Add a subscribe topic
 const addSubscribeTopic = () => {
-  if (!isValidTopic(newSubscribeTopic)) return
+  if (!isValidTopic(newSubscribeTopic.value)) return
   
   // Check for duplicates
   if (!permission.value.subscribe_permissions.includes(newSubscribeTopic.value)) {
     permission.value.subscribe_permissions.push(newSubscribeTopic.value)
   } else {
-    toast.add({
-      severity: 'warn',
-      summary: 'Duplicate Topic',
-      detail: 'This topic already exists in the subscribe permissions',
-      life: 3000
-    })
+    // Toast is handled by the composable
   }
   
   // Clear input
@@ -294,41 +280,18 @@ const handleSubmit = async () => {
   const isValid = await v$.value.$validate()
   if (!isValid) return
   
-  loading.value = true
+  // Prepare data for API
+  const permissionData = {
+    name: permission.value.name,
+    publish_permissions: permission.value.publish_permissions,
+    subscribe_permissions: permission.value.subscribe_permissions
+  }
   
-  try {
-    // Prepare data for API
-    const permissionData = {
-      name: permission.value.name,
-      publish_permissions: permission.value.publish_permissions,
-      subscribe_permissions: permission.value.subscribe_permissions
-    }
-    
-    // Submit to API
-    const response = await topicPermissionService.createTopicPermission(permissionData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Permission role '${permissionData.name}' has been created`,
-      life: 3000
-    })
-    
-    // Navigate to permission detail view
-    router.push({ 
-      name: 'topic-permission-detail', 
-      params: { id: response.data.id } 
-    })
-  } catch (error) {
-    console.error('Error creating permission:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to create permission. Please try again.',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
+  // Submit to API using composable
+  const result = await createPermission(permissionData)
+  
+  if (result) {
+    navigateToPermissionDetail(result.id)
   }
 }
 </script>

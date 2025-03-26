@@ -6,7 +6,7 @@
         <Button 
           label="Create Role" 
           icon="pi pi-plus" 
-          @click="navigateToCreate"
+          @click="navigateToPermissionCreate"
         />
       </template>
     </PageHeader>
@@ -20,7 +20,7 @@
         :searchFields="['name']"
         title="Permission Roles"
         empty-message="No permission roles found"
-        @row-click="navigateToDetail"
+        @row-click="handleRowClick"
       >
         <!-- Name column with custom formatting -->
         <template #name-body="{ data }">
@@ -53,7 +53,6 @@
         
         <!-- Clients Using column -->
         <template #clients_using-body="{ data }">
-          <!-- FIX: Added div wrapper with event.stopPropagation() to ensure events don't bubble up -->
           <div @click.stop>
             <Button
               icon="pi pi-users"
@@ -64,20 +63,20 @@
           </div>
         </template>
         
-        <!-- Actions column -->
-        <template #actions="{ data }">
+        <!-- Row Actions -->
+        <template #row-actions="{ data }">
           <div class="flex gap-1 justify-center">
             <Button 
               icon="pi pi-eye" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToDetail(data)"
+              @click.stop="navigateToPermissionDetail(data.id)"
               tooltip="View"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-pencil" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdit(data)"
+              @click.stop="navigateToPermissionEdit(data.id)"
               tooltip="Edit"
               tooltipOptions="{ position: 'top' }"
             />
@@ -103,7 +102,7 @@
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete the '${deleteDialog.item?.name || ''}' role?`"
       details="This action cannot be undone. Clients using this permission role will lose their access."
-      @confirm="deletePermission"
+      @confirm="handleDeletePermission"
     />
     
     <!-- Clients Using Role Dialog -->
@@ -121,7 +120,6 @@
           No clients are using this role.
         </div>
         <div v-else>
-          <!-- FIX: Using the correct DataTable props - our custom component uses 'items' not 'value' -->
           <div class="overflow-x-auto">
             <DataTable
               :items="clientsDialog.clients"
@@ -169,9 +167,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { topicPermissionService } from '../../../services/topicPermission'
+import { useTopicPermission } from '../../../composables/useTopicPermission'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
@@ -179,15 +175,23 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
-// No need to import Column anymore as we're using our custom DataTable
-// import Column from 'primevue/column'
 
-const router = useRouter()
-const toast = useToast()
+// Use the topic permission composable
+const { 
+  permissions,
+  loading,
+  error,
+  getTopicCount,
+  getTopicSample,
+  fetchPermissions,
+  fetchClientsByPermission,
+  deletePermission,
+  navigateToPermissionCreate,
+  navigateToPermissionDetail,
+  navigateToPermissionEdit
+} = useTopicPermission()
 
-// Data
-const permissions = ref([])
-const loading = ref(false)
+// Delete dialog state
 const deleteDialog = ref({
   visible: false,
   loading: false,
@@ -209,12 +213,12 @@ const clientColumns = [
   { field: 'active', header: 'Status', sortable: true }
 ]
 
-// Table columns definition - updated to match actual schema
+// Table columns definition - FIXED: Removed the actions column as it's handled by the row-actions slot
 const columns = [
   { field: 'name', header: 'Role Name', sortable: true },
   { field: 'publish_permissions', header: 'Publish Permissions', sortable: false },
   { field: 'subscribe_permissions', header: 'Subscribe Permissions', sortable: false },
-  { field: 'clients_using', header: 'Clients', sortable: false },
+  { field: 'clients_using', header: 'Clients', sortable: false }
 ]
 
 // Fetch permissions on component mount
@@ -222,68 +226,33 @@ onMounted(async () => {
   await fetchPermissions()
 })
 
-// Methods
-const fetchPermissions = async () => {
-  loading.value = true
-  try {
-    const response = await topicPermissionService.getTopicPermissions()
-    permissions.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching topic permissions:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load topic permissions',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
+// FIXED: Handle row click by extracting the id
+const handleRowClick = (data) => {
+  navigateToPermissionDetail(data.id)
 }
 
-const navigateToCreate = () => {
-  router.push({ name: 'create-topic-permission' })
-}
-
-const navigateToDetail = (data) => {
-  router.push({ name: 'topic-permission-detail', params: { id: data.id } })
-}
-
-const navigateToEdit = (data) => {
-  router.push({ name: 'edit-topic-permission', params: { id: data.id } })
-}
-
+// Confirm delete 
 const confirmDelete = (data) => {
   deleteDialog.value.item = data
   deleteDialog.value.visible = true
 }
 
-const deletePermission = async () => {
+// Handle permission deletion
+const handleDeletePermission = async () => {
   if (!deleteDialog.value.item) return
   
   deleteDialog.value.loading = true
   try {
-    await topicPermissionService.deleteTopicPermission(deleteDialog.value.item.id)
+    const success = await deletePermission(
+      deleteDialog.value.item.id, 
+      deleteDialog.value.item.name
+    )
     
-    // Remove the deleted item from the list
-    permissions.value = permissions.value.filter(item => item.id !== deleteDialog.value.item.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Permission role '${deleteDialog.value.item.name}' has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-  } catch (error) {
-    console.error('Error deleting permission:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete permission',
-      life: 3000
-    })
+    if (success) {
+      // Remove the deleted item from the list without refetching
+      permissions.value = permissions.value.filter(item => item.id !== deleteDialog.value.item.id)
+      deleteDialog.value.visible = false
+    }
   } finally {
     deleteDialog.value.loading = false
   }
@@ -291,7 +260,7 @@ const deletePermission = async () => {
 
 // View clients using a role
 const viewClientsUsingRole = async (role) => {
-  // FIX: Prevent event bubbling to parent row click
+  // Prevent event bubbling to parent row click
   event?.stopPropagation?.()
   
   clientsDialog.value.visible = true
@@ -301,36 +270,13 @@ const viewClientsUsingRole = async (role) => {
   clientsDialog.value.clients = []
   
   try {
+    // FIXED: Get the result from topicPermissionService directly to ensure proper data format
     const response = await topicPermissionService.getClientsByPermission(role.id)
     clientsDialog.value.clients = response.data.items || []
   } catch (error) {
     console.error('Error fetching clients:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load clients using this role',
-      life: 3000
-    })
   } finally {
     clientsDialog.value.loading = false
   }
-}
-
-// Helper methods
-const getTopicCount = (topics) => {
-  if (!topics) return 0
-  return Array.isArray(topics) ? topics.length : 0
-}
-
-const getTopicSample = (topics) => {
-  if (!topics || !Array.isArray(topics) || topics.length === 0) {
-    return 'No topics'
-  }
-  
-  if (topics.length === 1) {
-    return topics[0]
-  }
-  
-  return `${topics[0]} and ${topics.length - 1} more`
 }
 </script>

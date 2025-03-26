@@ -35,7 +35,7 @@
       <div class="card">
         <EntityForm
           title="Role Information"
-          :loading="saving"
+          :loading="loading"
           submit-label="Save Changes"
           @submit="handleSubmit"
           @cancel="$router.back()"
@@ -209,11 +209,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
+import { useRoute } from 'vue-router'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
-import { topicPermissionService, validateTopic } from '../../../services/topicPermission'
+import { useTopicPermission } from '../../../composables/useTopicPermission'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -226,8 +225,16 @@ import TabPanel from 'primevue/tabpanel'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
-const router = useRouter()
-const toast = useToast()
+
+// Use the topic permission composable
+const { 
+  loading,
+  error,
+  isValidTopic,
+  fetchPermission,
+  updatePermission,
+  navigateToPermissionDetail
+} = useTopicPermission()
 
 // Permission data with arrays for topics
 const permission = ref({
@@ -241,10 +248,8 @@ const permission = ref({
 const newPublishTopic = ref('')
 const newSubscribeTopic = ref('')
 
-// Loading states
+// Initial loading state
 const initialLoading = ref(true)
-const saving = ref(false)
-const error = ref(null)
 
 // Form validation rules
 const rules = {
@@ -258,46 +263,33 @@ const v$ = useVuelidate(rules, permission)
 
 // Fetch permission data on component mount
 onMounted(async () => {
-  await fetchPermission()
+  await loadPermission()
 })
 
-// Methods
-const fetchPermission = async () => {
+// Load permission data
+const loadPermission = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid permission ID'
-    initialLoading.value = false
-    return
-  }
-  
   initialLoading.value = true
-  error.value = null
   
   try {
-    const response = await topicPermissionService.getTopicPermission(id)
+    const data = await fetchPermission(id)
     
-    // Set form data ensuring arrays
-    permission.value = {
-      id: response.data.id,
-      name: response.data.name,
-      publish_permissions: Array.isArray(response.data.publish_permissions) 
-        ? [...response.data.publish_permissions] 
-        : [],
-      subscribe_permissions: Array.isArray(response.data.subscribe_permissions) 
-        ? [...response.data.subscribe_permissions] 
-        : []
+    if (data) {
+      // Set form data ensuring arrays
+      permission.value = {
+        id: data.id,
+        name: data.name,
+        publish_permissions: Array.isArray(data.publish_permissions) 
+          ? [...data.publish_permissions] 
+          : [],
+        subscribe_permissions: Array.isArray(data.subscribe_permissions) 
+          ? [...data.subscribe_permissions] 
+          : []
+      }
     }
-  } catch (err) {
-    console.error('Error fetching permission:', err)
-    error.value = 'Failed to load permission details. Please try again.'
   } finally {
     initialLoading.value = false
   }
-}
-
-// Validate topic format
-const isValidTopic = (topic) => {
-  return topic && validateTopic(topic)
 }
 
 // Add a publish topic
@@ -307,13 +299,6 @@ const addPublishTopic = () => {
   // Check for duplicates
   if (!permission.value.publish_permissions.includes(newPublishTopic.value)) {
     permission.value.publish_permissions.push(newPublishTopic.value)
-  } else {
-    toast.add({
-      severity: 'warn',
-      summary: 'Duplicate Topic',
-      detail: 'This topic already exists in the publish permissions',
-      life: 3000
-    })
   }
   
   // Clear input
@@ -332,13 +317,6 @@ const addSubscribeTopic = () => {
   // Check for duplicates
   if (!permission.value.subscribe_permissions.includes(newSubscribeTopic.value)) {
     permission.value.subscribe_permissions.push(newSubscribeTopic.value)
-  } else {
-    toast.add({
-      severity: 'warn',
-      summary: 'Duplicate Topic',
-      detail: 'This topic already exists in the subscribe permissions',
-      life: 3000
-    })
   }
   
   // Clear input
@@ -356,41 +334,18 @@ const handleSubmit = async () => {
   const isValid = await v$.value.$validate()
   if (!isValid) return
   
-  saving.value = true
+  // Prepare data for API
+  const permissionData = {
+    name: permission.value.name,
+    publish_permissions: permission.value.publish_permissions,
+    subscribe_permissions: permission.value.subscribe_permissions
+  }
   
-  try {
-    // Prepare data for API
-    const permissionData = {
-      name: permission.value.name,
-      publish_permissions: permission.value.publish_permissions,
-      subscribe_permissions: permission.value.subscribe_permissions
-    }
-    
-    // Submit to API
-    await topicPermissionService.updateTopicPermission(permission.value.id, permissionData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Permission role '${permissionData.name}' has been updated`,
-      life: 3000
-    })
-    
-    // Navigate back to permission detail view
-    router.push({ 
-      name: 'topic-permission-detail', 
-      params: { id: permission.value.id } 
-    })
-  } catch (error) {
-    console.error('Error updating permission:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update permission. Please try again.',
-      life: 3000
-    })
-  } finally {
-    saving.value = false
+  // Submit to API using composable
+  const result = await updatePermission(permission.value.id, permissionData)
+  
+  if (result) {
+    navigateToPermissionDetail(permission.value.id)
   }
 }
 </script>
