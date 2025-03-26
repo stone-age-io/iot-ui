@@ -1,4 +1,3 @@
-<!-- Updated src/views/Entities/Locations/LocationDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -45,13 +44,13 @@
             icon="pi pi-pencil"
             label="Edit"
             class="p-button-outlined"
-            @click="navigateToEdit"
+            @click="navigateToLocationEdit(location.id)"
           />
           <Button
             icon="pi pi-trash"
             label="Delete"
             class="p-button-outlined p-button-danger"
-            @click="confirmDelete"
+            @click="handleDeleteClick"
           />
         </div>
       </div>
@@ -111,7 +110,7 @@
             </div>
             
             <!-- Metadata (if any) -->
-            <div v-if="hasMetadata" class="md:col-span-2">
+            <div v-if="hasMetadata(location)" class="md:col-span-2">
               <div class="text-sm text-gray-500 mb-1">Metadata</div>
               <div class="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
                 <pre>{{ JSON.stringify(location.metadata, null, 2) }}</pre>
@@ -136,7 +135,7 @@
                 label="View Things"
                 icon="pi pi-arrow-right"
                 class="p-button-text p-button-sm mt-2"
-                @click="navigateToThings"
+                @click="navigateToThings(location.id)"
               />
             </div>
             
@@ -173,7 +172,7 @@
             <Button
               label="Add Thing to This Location"
               icon="pi pi-plus"
-              @click="navigateToCreateThing"
+              @click="navigateToCreateThing(location.id)"
               class="w-full"
             />
           </div>
@@ -190,7 +189,7 @@
           :editable="true"
           legendPosition="left"
           @update-thing-position="updateThingPosition"
-          @upload-floor-plan="uploadFloorPlan"
+          @upload-floor-plan="handleUploadFloorPlan"
           @thing-click="navigateToThingDetail"
         />
       </div>
@@ -205,7 +204,7 @@
           :loading="thingsLoading"
           :searchable="true"
           empty-message="No things found for this location"
-          @row-click="navigateToThingDetail"
+          @row-click="(data) => navigateToThingDetail(data)"
         >
           <!-- Code column -->
           <template #code-body="{ data }">
@@ -233,7 +232,7 @@
             </div>
           </template>
           
-	  <!-- Actions column --> 
+          <!-- Actions column --> 
           <template #actions="{ data }">
             <div class="flex gap-1 justify-center">
               <Button 
@@ -241,7 +240,7 @@
                 class="p-button-rounded p-button-text p-button-sm" 
                 @click.stop="navigateToThingDetail(data)"
                 tooltip="View"
-		tooltipOptions="{ position: 'top' }" 
+                tooltipOptions="{ position: 'top' }" 
               />
             </div>
           </template>
@@ -259,7 +258,7 @@
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete location '${location?.code || ''}'?`"
       details="This action cannot be undone. All things associated with this location will be orphaned or deleted."
-      @confirm="deleteLocation"
+      @confirm="handleDeleteConfirm"
     />
     
     <!-- Toast for success/error messages -->
@@ -268,12 +267,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import dayjs from 'dayjs'
-import { locationService, locationTypes, parseLocationPath } from '../../../services/location'
-import { thingService, thingTypes } from '../../../services/thing'
+import { useLocation } from '../../../composables/useLocation'
+import { useThing } from '../../../composables/useThing'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
@@ -283,81 +280,72 @@ import FloorPlanMap from '../../../components/map/FloorPlanMap.vue'
 
 const route = useRoute()
 const router = useRouter()
-const toast = useToast()
 
-// Data
+// Get location functionality from composable
+const { 
+  loading, 
+  error, 
+  formatDate, 
+  getTypeName, 
+  getTypeClass,
+  parseLocationPath,
+  hasMetadata,
+  fetchLocation,
+  deleteLocation,
+  uploadFloorPlan,
+  navigateToLocationEdit,
+  navigateToThings,
+  navigateToCreateThing,
+  navigateToEdgeDetail
+} = useLocation()
+
+// Get thing functionality from composable
+const { getThingTypeName, getThingTypeClass } = useThing()
+
+// Local state
 const location = ref(null)
-const loading = ref(true)
-const error = ref(null)
+const things = ref([])
+const thingsLoading = ref(false)
 const deleteDialog = ref({
   visible: false,
   loading: false
 })
 
-// Things data
-const things = ref([])
-const thingsLoading = ref(false)
-
-// Check if we have metadata
-const hasMetadata = computed(() => {
-  return location.value && 
-         location.value.metadata && 
-         (typeof location.value.metadata === 'object' ? 
-          Object.keys(location.value.metadata).length > 0 : 
-          location.value.metadata !== '{}')
-})
-
-// Get unique thing types - renamed to avoid conflict with imported thingTypes
+// Get unique thing types
 const uniqueThingTypes = computed(() => {
   return [...new Set(things.value.map(thing => thing.type))]
 })
 
-// Thing columns for the table - updated to include indoor position
+// Thing columns for the table
 const thingColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
-  { field: 'position', header: 'Indoor Position', sortable: false }
+  { field: 'position', header: 'Indoor Position', sortable: false },
+  { field: 'actions', header: 'Actions', sortable: false }
 ]
 
 // Fetch location data on component mount
 onMounted(async () => {
-  await fetchLocation()
+  await loadLocationDetail()
 })
 
 // Methods
-const fetchLocation = async () => {
+const loadLocationDetail = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid location ID'
-    loading.value = false
-    return
-  }
-  
-  loading.value = true
-  error.value = null
+  if (!id) return
   
   try {
-    const response = await locationService.getLocation(id)
-    location.value = response.data
-    
-    // Parse metadata if it's a string
-    if (location.value.metadata && typeof location.value.metadata === 'string') {
-      try {
-        location.value.metadata = JSON.parse(location.value.metadata)
-      } catch (e) {
-        console.warn('Failed to parse metadata for location:', location.value.code)
-        location.value.metadata = {}
-      }
+    // Fetch location data
+    const locationData = await fetchLocation(id)
+    if (locationData) {
+      location.value = locationData
+      
+      // Now fetch associated things
+      await fetchThings()
     }
-    
-    // Now fetch things for this location
-    await fetchThings()
   } catch (err) {
-    console.error('Error fetching location:', err)
-    error.value = 'Failed to load location details. Please try again.'
-  } finally {
-    loading.value = false
+    // Error handling is done in the composable
   }
 }
 
@@ -367,16 +355,11 @@ const fetchThings = async () => {
   
   thingsLoading.value = true
   try {
+    const { thingService } = await import('../../../services')
     const response = await thingService.getThingsByLocation(location.value.id)
     things.value = response.data.items || []
   } catch (err) {
     console.error('Error fetching things:', err)
-    toast.add({
-      severity: 'warn',
-      summary: 'Warning',
-      detail: 'Failed to load things for this location',
-      life: 3000
-    })
   } finally {
     thingsLoading.value = false
   }
@@ -389,6 +372,7 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
   
   try {
     // Update thing position using the service
+    const { thingService } = await import('../../../services')
     await thingService.updateThingPosition(thingId, coordinates)
     
     // Update local state
@@ -397,6 +381,8 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
     thing.metadata.coordinates.x = coordinates.x
     thing.metadata.coordinates.y = coordinates.y
     
+    // Show success toast
+    const toast = await import('primevue/usetoast')
     toast.add({
       severity: 'success',
       summary: 'Success',
@@ -405,43 +391,18 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
     })
   } catch (error) {
     console.error('Error updating thing position:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update thing position',
-      life: 3000
-    })
   }
 }
 
-// Upload floor plan image
-const uploadFloorPlan = async (file) => {
-  try {
-    // Create FormData object for file upload
-    const formData = new FormData()
-    formData.append('floorplan', file)
-    
-    // Update location with new floor plan
-    await locationService.uploadFloorPlan(location.value.id, formData)
-    
-    // Refresh location data to get updated floorplan field
-    const response = await locationService.getLocation(location.value.id)
-    location.value = response.data
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Floor plan uploaded successfully',
-      life: 3000
-    })
-  } catch (error) {
-    console.error('Error uploading floor plan:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to upload floor plan',
-      life: 3000
-    })
+// Handle floor plan upload
+const handleUploadFloorPlan = async (file) => {
+  if (!location.value) return
+  await uploadFloorPlan(location.value.id, file)
+  
+  // Refresh location data to get updated floorplan field
+  const locationData = await fetchLocation(location.value.id)
+  if (locationData) {
+    location.value = locationData
   }
 }
 
@@ -462,104 +423,36 @@ const formatPosition = (thing) => {
   return `x: ${x}, y: ${y}`
 }
 
-const navigateToEdit = () => {
-  router.push({ name: 'edit-location', params: { id: location.value.id } })
-}
-
-const navigateToThings = () => {
-  router.push({ 
-    name: 'things', 
-    query: { location: location.value.id } 
-  })
-}
-
-const navigateToCreateThing = () => {
-  router.push({ 
-    name: 'create-thing', 
-    query: { location_id: location.value.id } 
-  })
-}
-
 const navigateToThingDetail = (thing) => {
-  router.push({ name: 'thing-detail', params: { id: thing.id } })
+  if (!thing) return;
+  
+  // Ensure we have an ID
+  const id = typeof thing === 'object' ? thing.id : thing;
+  if (!id) {
+    console.error('Cannot navigate to thing detail: Invalid ID', thing);
+    return;
+  }
+  
+  router.push({ name: 'thing-detail', params: { id } });
 }
 
-const confirmDelete = () => {
+// Handle delete button click
+const handleDeleteClick = () => {
   deleteDialog.value.visible = true
 }
 
-const deleteLocation = async () => {
+// Handle delete confirmation
+const handleDeleteConfirm = async () => {
+  if (!location.value) return
+  
   deleteDialog.value.loading = true
-  try {
-    await locationService.deleteLocation(location.value.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Location ${location.value.code} has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
+  
+  const success = await deleteLocation(location.value.id, location.value.code)
+  
+  if (success) {
     router.push({ name: 'locations' })
-  } catch (error) {
-    console.error('Error deleting location:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete location',
-      life: 3000
-    })
-  } finally {
+  } else {
     deleteDialog.value.loading = false
-  }
-}
-
-// Helper methods
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return dayjs(dateString).format('MMM D, YYYY HH:mm')
-}
-
-const getTypeName = (typeCode) => {
-  const type = locationTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
-}
-
-const getTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'entrance': return 'bg-blue-100 text-blue-800'
-    case 'work-area': return 'bg-green-100 text-green-800'
-    case 'meeting-room': return 'bg-purple-100 text-purple-800'
-    case 'break-area': return 'bg-amber-100 text-amber-800'
-    case 'reception': return 'bg-indigo-100 text-indigo-800'
-    case 'security': return 'bg-red-100 text-red-800'
-    case 'server-room': return 'bg-cyan-100 text-cyan-800'
-    case 'utility-room': return 'bg-teal-100 text-teal-800'
-    case 'storage': return 'bg-gray-100 text-gray-800'
-    case 'entrance-hall': return 'bg-blue-100 text-blue-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getThingTypeName = (typeCode) => {
-  const type = thingTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
-}
-
-const getThingTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'reader': return 'bg-blue-100 text-blue-800'
-    case 'controller': return 'bg-purple-100 text-purple-800'
-    case 'lock': return 'bg-amber-100 text-amber-800'
-    case 'temperature-sensor': return 'bg-green-100 text-green-800'
-    case 'humidity-sensor': return 'bg-cyan-100 text-cyan-800'
-    case 'hvac': return 'bg-teal-100 text-teal-800'
-    case 'lighting': return 'bg-yellow-100 text-yellow-800'
-    case 'camera': return 'bg-red-100 text-red-800'
-    case 'motion-sensor': return 'bg-indigo-100 text-indigo-800'
-    case 'occupancy-sensor': return 'bg-orange-100 text-orange-800'
-    default: return 'bg-gray-100 text-gray-800'
   }
 }
 </script>

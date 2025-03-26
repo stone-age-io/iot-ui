@@ -5,7 +5,7 @@
         <Button 
           label="Create Location" 
           icon="pi pi-plus" 
-          @click="navigateToCreate"
+          @click="navigateToLocationCreate()" 
         />
       </template>
     </PageHeader>
@@ -19,10 +19,19 @@
         :searchFields="['code', 'name', 'path', 'type', 'expand.edge_id.code']"
         title="Physical Locations"
         empty-message="No locations found"
-        @row-click="navigateToDetail"
+                  @row-click="(data) => navigateToLocationDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
+        <!-- Table action buttons -->
+        <template #table-actions>
+          <Button 
+            label="Create Location" 
+            icon="pi pi-plus" 
+            @click="navigateToLocationCreate()" 
+          />
+        </template>
+        
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
           <div class="font-medium text-primary-700">{{ data.code }}</div>
@@ -68,27 +77,27 @@
           </div>
         </template>
         
-        <!-- Actions column -->
-        <template #actions="{ data }">
+        <!-- Row actions -->
+        <template #row-actions="{ data }">
           <div class="flex gap-1 justify-center">
             <Button 
               icon="pi pi-eye" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToDetail(data)"
+              @click.stop="navigateToLocationDetail(data.id)"
               tooltip="View"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-pencil" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdit(data)"
+              @click.stop="navigateToLocationEdit(data.id)"
               tooltip="Edit"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-trash" 
               class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-              @click.stop="confirmDelete(data)"
+              @click.stop="handleDeleteClick(data)"
               tooltip="Delete"
               tooltipOptions="{ position: 'top' }"
             />
@@ -100,14 +109,14 @@
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
       v-model:visible="deleteDialog.visible"
-      title="Delete Location"
-      type="danger"
-      confirm-label="Delete"
-      confirm-icon="pi pi-trash"
+      :title="deleteDialog.title"
+      :type="deleteDialog.type"
+      :confirm-label="deleteDialog.confirmLabel"
+      :confirm-icon="deleteDialog.confirmIcon"
       :loading="deleteDialog.loading"
-      :message="`Are you sure you want to delete location '${deleteDialog.item?.code || ''}'?`"
-      details="This action cannot be undone. All things associated with this location will be orphaned or deleted."
-      @confirm="deleteLocation"
+      :message="deleteDialog.message"
+      :details="deleteDialog.details"
+      @confirm="handleDeleteConfirm"
     />
     
     <!-- Toast for success/error messages -->
@@ -116,32 +125,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import dayjs from 'dayjs'
-import { locationService, locationTypes, parseLocationPath } from '../../../services/location'
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useLocation } from '../../../composables/useLocation'
+import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
 const route = useRoute()
-const toast = useToast()
 
-// Data
-const locations = ref([])
-const loading = ref(false)
-const deleteDialog = ref({
-  visible: false,
-  loading: false,
-  item: null
-})
+// Get location functionality from composable
+const { 
+  locations,
+  loading,
+  fetchLocations,
+  formatDate,
+  getTypeName,
+  getTypeClass,
+  parseLocationPath,
+  navigateToLocationCreate,
+  navigateToLocationDetail,
+  navigateToLocationEdit
+} = useLocation()
 
-// Table columns definition - updated to include all relevant fields
-// Note: Metadata is intentionally excluded as requested
+// Get delete confirmation functionality
+const { 
+  deleteDialog,
+  confirmDelete,
+  updateDeleteDialog,
+  resetDeleteDialog 
+} = useDeleteConfirmation()
+
+// Table columns definition
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
@@ -153,115 +171,41 @@ const columns = [
 
 // Fetch locations on component mount
 onMounted(async () => {
-  await fetchLocations()
+  // Check if filtering by edge_id from query params
+  const params = {}
+  if (route.query.edge) {
+    params.edge_id = route.query.edge
+  }
+  
+  await fetchLocations(params)
 })
 
-// Methods
-const fetchLocations = async () => {
-  loading.value = true
-  try {
-    // Check if filtering by edge_id from query params
-    const params = {}
-    if (route.query.edge) {
-      params.edge_id = route.query.edge
-    }
-    
-    // Add sorting and pagination
-    params.sort = '-created'
-    
-    const response = await locationService.getLocations(params)
-    locations.value = response.data.items || []
-    
-    // Debug log to verify expanded data structure
-    // console.log('First location expand data:', locations.value[0]?.expand?.edge_id)
-  } catch (error) {
-    console.error('Error fetching locations:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load locations',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
+// Handle delete button click
+const handleDeleteClick = (location) => {
+  confirmDelete(location, 'location', 'code')
 }
 
-// Format date for display
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return dayjs(dateString).format('MMM D, YYYY')
-}
-
-const navigateToCreate = () => {
-  // Pass edge_id as a query parameter if it was in the original request
-  const query = route.query.edge ? { edge_id: route.query.edge } : {}
-  router.push({ name: 'create-location', query })
-}
-
-const navigateToDetail = (data) => {
-  router.push({ name: 'location-detail', params: { id: data.id } })
-}
-
-const navigateToEdit = (data) => {
-  router.push({ name: 'edit-location', params: { id: data.id } })
-}
-
-const confirmDelete = (data) => {
-  deleteDialog.value.item = data
-  deleteDialog.value.visible = true
-}
-
-const deleteLocation = async () => {
+// Handle delete confirmation
+const handleDeleteConfirm = async () => {
   if (!deleteDialog.value.item) return
   
-  deleteDialog.value.loading = true
-  try {
-    await locationService.deleteLocation(deleteDialog.value.item.id)
-    
+  updateDeleteDialog({ loading: true })
+  
+  const { deleteLocation } = useLocation()
+  const success = await deleteLocation(
+    deleteDialog.value.item.id, 
+    deleteDialog.value.item.code
+  )
+  
+  if (success) {
     // Remove the deleted item from the list
-    locations.value = locations.value.filter(item => item.id !== deleteDialog.value.item.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Location ${deleteDialog.value.item.code} has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-  } catch (error) {
-    console.error('Error deleting location:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete location',
-      life: 3000
-    })
-  } finally {
-    deleteDialog.value.loading = false
-  }
-}
-
-// Helper methods for formatting
-const getTypeName = (typeCode) => {
-  const type = locationTypes.find(t => t.value === typeCode)
-  return type ? type.label : typeCode
-}
-
-const getTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'entrance': return 'bg-blue-100 text-blue-800'
-    case 'work-area': return 'bg-green-100 text-green-800'
-    case 'meeting-room': return 'bg-purple-100 text-purple-800'
-    case 'break-area': return 'bg-amber-100 text-amber-800'
-    case 'reception': return 'bg-indigo-100 text-indigo-800'
-    case 'security': return 'bg-red-100 text-red-800'
-    case 'server-room': return 'bg-cyan-100 text-cyan-800'
-    case 'utility-room': return 'bg-teal-100 text-teal-800'
-    case 'storage': return 'bg-gray-100 text-gray-800'
-    case 'entrance-hall': return 'bg-blue-100 text-blue-800'
-    default: return 'bg-gray-100 text-gray-800'
+    const index = locations.value.findIndex(l => l.id === deleteDialog.value.item.id)
+    if (index !== -1) {
+      locations.value.splice(index, 1)
+    }
+    resetDeleteDialog()
+  } else {
+    updateDeleteDialog({ loading: false })
   }
 }
 </script>

@@ -1,4 +1,3 @@
-// src/views/Entities/Locations/LocationCreateView.vue
 <template>
   <div>
     <PageHeader 
@@ -20,7 +19,7 @@
         title="Location Information"
         :loading="loading"
         submit-label="Create Location"
-        @submit="handleSubmit"
+        @submit="submitForm"
         @cancel="$router.back()"
       >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -217,21 +216,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useVuelidate } from '@vuelidate/core'
-import { required, helpers } from '@vuelidate/validators'
-import { 
-  locationService, 
-  locationTypes, 
-  locationLevels, 
-  locationZones, 
-  generateLocationCode, 
-  validateLocationCode 
-} from '../../../services/location'
-import { edgeService } from '../../../services/edge'
-
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useLocationForm } from '../../../composables/useLocationForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -241,165 +228,35 @@ import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
 const route = useRoute()
-const toast = useToast()
 
-// Load edges for the dropdown
-const edges = ref([])
-const edgesLoading = ref(false)
+// Use the location form composable in create mode
+const { 
+  location, 
+  v$, 
+  loading, 
+  edges,
+  edgesLoading,
+  locationTypes,
+  locationLevels,
+  locationZones,
+  fetchEdges,
+  updateCode,
+  updatePathFromLevelZone,
+  getEdgeName,
+  getEdgeCode,
+  submitForm
+} = useLocationForm('create')
 
-// Location form data
-const location = ref({
-  edge_id: route.query.edge_id || '',
-  level: '',
-  zone: '',
-  identifier: '',
-  code: '',
-  name: '',
-  type: '',
-  path: '',
-  description: ''
-})
-
-// Loading state
-const loading = ref(false)
-
-// Form validation rules
-const rules = {
-  edge_id: { required: helpers.withMessage('Edge is required', required) },
-  level: { required: helpers.withMessage('Level is required', required) },
-  zone: { required: helpers.withMessage('Zone is required', required) },
-  identifier: { required: helpers.withMessage('Identifier is required', required) },
-  code: { 
-    required: helpers.withMessage('Code is required', required),
-    validFormat: helpers.withMessage(
-      'Code must follow format: [level]-[zone]-[identifier]', 
-      (value) => validateLocationCode(value)
-    )
-  },
-  name: { 
-    required: helpers.withMessage('Name is required', required)
-  },
-  type: { 
-    required: helpers.withMessage('Type is required', required)
-  },
-  path: { 
-    required: helpers.withMessage('Path is required', required)
-  },
-  description: {}
-}
-
-// Initialize Vuelidate
-const v$ = useVuelidate(rules, location)
-
-// Load edges on component mount
+// If edge_id is provided as a query param, set it
 onMounted(async () => {
   await fetchEdges()
   
-  // If edge_id is provided as a query param, update the path when it changes
-  if (location.value.edge_id) {
+  if (route.query.edge_id) {
+    location.value.edge_id = route.query.edge_id
+    
+    // Update the path when edge_id is set
     updatePathFromLevelZone()
   }
 })
-
-// Fetch edges for dropdown
-const fetchEdges = async () => {
-  edgesLoading.value = true
-  try {
-    const response = await edgeService.getEdges()
-    edges.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching edges:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load edges',
-      life: 3000
-    })
-  } finally {
-    edgesLoading.value = false
-  }
-}
-
-// Helper for displaying edge name in dropdown
-const getEdgeName = (edgeId) => {
-  const edge = edges.value.find(edge => edge.id === edgeId)
-  return edge ? edge.name : edgeId
-}
-
-// Helper for displaying edge code in dropdown
-const getEdgeCode = (edgeId) => {
-  const edge = edges.value.find(edge => edge.id === edgeId)
-  return edge ? edge.code : ''
-}
-
-// Generate location code when level, zone, or identifier changes
-const updateCode = () => {
-  if (location.value.level && location.value.zone && location.value.identifier) {
-    location.value.code = generateLocationCode(
-      location.value.level,
-      location.value.zone,
-      location.value.identifier
-    )
-    
-    // Also update the path
-    updatePathFromLevelZone()
-  }
-}
-
-// Update path based on level, zone, and identifier
-const updatePathFromLevelZone = () => {
-  if (location.value.level && location.value.zone && location.value.identifier) {
-    // Basic path structure: level/zone/identifier
-    location.value.path = `${location.value.level}/${location.value.zone}/${location.value.identifier}`
-  }
-}
-
-// Form submission
-const handleSubmit = async () => {
-  // Validate form
-  const isValid = await v$.value.$validate()
-  if (!isValid) return
-  
-  loading.value = true
-  
-  try {
-    // Prepare data for API
-    const locationData = {
-      edge_id: location.value.edge_id,
-      code: location.value.code,
-      name: location.value.name,
-      type: location.value.type,
-      path: location.value.path,
-      description: location.value.description
-    }
-    
-    // Submit to API
-    const response = await locationService.createLocation(locationData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Location ${locationData.code} has been created`,
-      life: 3000
-    })
-    
-    // Navigate to location detail view
-    router.push({ 
-      name: 'location-detail', 
-      params: { id: response.data.id } 
-    })
-  } catch (error) {
-    console.error('Error creating location:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to create location. Please try again.',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
-}
 </script>
