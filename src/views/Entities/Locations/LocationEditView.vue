@@ -19,7 +19,7 @@
     <div v-else>
       <PageHeader 
         title="Edit Location" 
-        :subtitle="`Updating ${location.code}`"
+        :subtitle="location ? `Updating ${location.code}` : 'Loading...'"
       >
         <template #actions>
           <Button 
@@ -80,14 +80,14 @@
               id="name"
               label="Name"
               :required="true"
-              :error-message="v$.name.$errors[0]?.$message"
+              :error-message="v$.name && v$.name.$errors.length ? v$.name.$errors[0].$message : ''"
             >
               <InputText
                 id="name"
                 v-model="location.name"
                 placeholder="North Reception Area"
                 class="w-full"
-                :class="{ 'p-invalid': v$.name.$error }"
+                :class="{ 'p-invalid': v$.name && v$.name.$error }"
               />
             </FormField>
             
@@ -96,7 +96,7 @@
               id="type"
               label="Type"
               :required="true"
-              :error-message="v$.type.$errors[0]?.$message"
+              :error-message="v$.type && v$.type.$errors.length ? v$.type.$errors[0].$message : ''"
             >
               <Dropdown
                 id="type"
@@ -106,7 +106,7 @@
                 optionValue="value"
                 placeholder="Select Type"
                 class="w-full"
-                :class="{ 'p-invalid': v$.type.$error }"
+                :class="{ 'p-invalid': v$.type && v$.type.$error }"
               />
             </FormField>
             
@@ -115,7 +115,7 @@
               id="path"
               label="Path"
               :required="true"
-              :error-message="v$.path.$errors[0]?.$message"
+              :error-message="v$.path && v$.path.$errors.length ? v$.path.$errors[0].$message : ''"
               class="md:col-span-2"
             >
               <InputText
@@ -123,7 +123,7 @@
                 v-model="location.path"
                 placeholder="floor-1/north-wing/reception"
                 class="w-full"
-                :class="{ 'p-invalid': v$.path.$error }"
+                :class="{ 'p-invalid': v$.path && v$.path.$error }"
               />
             </FormField>
             
@@ -131,7 +131,7 @@
             <FormField
               id="description"
               label="Description"
-              :error-message="v$.description.$errors[0]?.$message"
+              :error-message="v$.description && v$.description.$errors.length ? v$.description.$errors[0].$message : ''"
               class="md:col-span-2"
             >
               <Textarea
@@ -140,7 +140,7 @@
                 rows="3"
                 placeholder="Enter a description for this location"
                 class="w-full"
-                :class="{ 'p-invalid': v$.description.$error }"
+                :class="{ 'p-invalid': v$.description && v$.description.$error }"
               />
             </FormField>
           </div>
@@ -182,7 +182,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 const route = useRoute()
 
 // Get location functionality and error handling from location composable
-const { error, fetchLocation } = useLocation()
+const { error: locationError, fetchLocation } = useLocation()
 
 // Use the location form composable in edit mode
 const { 
@@ -197,13 +197,18 @@ const {
   submitForm
 } = useLocationForm('edit')
 
-// Initial loading state
+// Local state
 const initialLoading = ref(true)
+const error = ref(null)
 
 // Fetch location data on component mount
 onMounted(async () => {
   const id = route.params.id
-  if (!id) return
+  if (!id) {
+    error.value = 'Location ID is missing'
+    initialLoading.value = false
+    return
+  }
   
   try {
     // Fetch edges first, needed for the dropdown
@@ -215,7 +220,12 @@ onMounted(async () => {
     // Load data into form
     if (locationData) {
       loadLocation(locationData)
+    } else {
+      error.value = 'Location not found'
     }
+  } catch (err) {
+    error.value = locationError.value || 'Failed to load location data'
+    console.error('Error in LocationEditView:', err)
   } finally {
     initialLoading.value = false
   }
