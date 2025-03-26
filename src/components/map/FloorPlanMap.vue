@@ -1,4 +1,4 @@
-<!-- src/components/map/FloorPlanMap.vue -->
+<!-- src/components/map/FloorPlanMap.vue (Updated) -->
 <template>
   <div class="floor-plan-map">
     <!-- Loading state -->
@@ -116,7 +116,9 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import ProgressSpinner from 'primevue/progressspinner'
-import { locationService } from '../../services/location'
+
+// Import from new service layer
+import { locationService, thingService } from '../../services'
 
 // Import Leaflet using ES Module syntax - but don't initialize it yet
 import * as L from 'leaflet';
@@ -237,12 +239,9 @@ watch(() => hasFloorPlan.value, (newValue) => {
 const prepareImageUrl = () => {
   if (!hasFloorPlan.value) return;
   
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  const collectionName = 'locations';
-  const recordId = props.location.id;
-  const filename = props.location.floorplan;
+  // Use service function to get URL
+  imageUrl.value = locationService.getFloorPlanImageUrl(props.location);
   
-  imageUrl.value = `${baseUrl}pb/api/files/${collectionName}/${recordId}/${filename}`;
   console.log("Prepared direct image URL:", imageUrl.value);
 }
 
