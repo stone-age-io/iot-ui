@@ -34,7 +34,7 @@
       <div class="card">
         <EntityForm
           title="Client Information"
-          :loading="saving"
+          :loading="loading"
           submit-label="Save Changes"
           @submit="handleSubmit"
           @cancel="$router.back()"
@@ -177,7 +177,7 @@
             label="Reset Password" 
             icon="pi pi-refresh" 
             class="p-button-danger" 
-            @click="resetPassword"
+            @click="handleResetPassword"
             :loading="resetPasswordDialog.loading"
           />
           <Button 
@@ -194,12 +194,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
-import { clientService, generateSecurePassword } from '../../../services/client'
-import { topicPermissionService } from '../../../services/topicPermission'
+import { useClient } from '../../../composables/useClient'
+import { topicPermissionService } from '../../../services'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -213,14 +213,25 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
 
 const route = useRoute()
-const router = useRouter()
 const toast = useToast()
+
+// Use the client composable
+const { 
+  loading,
+  error,
+  fetchClient,
+  updateClient,
+  resetPassword,
+  copyToClipboard,
+  navigateToCreateRole,
+  navigateToClientDetail
+} = useClient()
 
 // Roles for the dropdown
 const roles = ref([])
 const rolesLoading = ref(false)
 
-// Client form data - simplified to match schema
+// Client form data
 const client = ref({
   id: '',
   username: '',
@@ -228,10 +239,8 @@ const client = ref({
   active: true
 })
 
-// Loading states
+// Additional loading state
 const initialLoading = ref(true)
-const saving = ref(false)
-const error = ref(null)
 
 // Reset password dialog
 const resetPasswordDialog = ref({
@@ -257,36 +266,26 @@ const v$ = useVuelidate(rules, client)
 // Fetch client data and roles on component mount
 onMounted(async () => {
   await Promise.all([
-    fetchClient(),
+    loadClient(),
     fetchRoles()
   ])
 })
 
 // Methods
-const fetchClient = async () => {
+const loadClient = async () => {
   const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid client ID'
-    initialLoading.value = false
-    return
-  }
-  
   initialLoading.value = true
-  error.value = null
   
   try {
-    const response = await clientService.getClient(id)
-    
-    // Set form data using only schema fields
-    client.value = {
-      id: response.data.id,
-      username: response.data.username,
-      role_id: response.data.role_id,
-      active: response.data.active
+    const data = await fetchClient(id)
+    if (data) {
+      client.value = {
+        id: data.id,
+        username: data.username,
+        role_id: data.role_id,
+        active: data.active
+      }
     }
-  } catch (err) {
-    console.error('Error fetching client:', err)
-    error.value = 'Failed to load client details. Please try again.'
   } finally {
     initialLoading.value = false
   }
@@ -311,52 +310,20 @@ const fetchRoles = async () => {
   }
 }
 
-// Navigate to create new role
-const navigateToCreateRole = () => {
-  router.push({ name: 'create-topic-permission' })
-}
-
 // Form submission
 const handleSubmit = async () => {
   // Validate form
   const isValid = await v$.value.$validate()
   if (!isValid) return
   
-  saving.value = true
+  const result = await updateClient(client.value.id, {
+    username: client.value.username,
+    role_id: client.value.role_id,
+    active: client.value.active
+  })
   
-  try {
-    // Prepare data for API
-    const clientData = {
-      username: client.value.username,
-      role_id: client.value.role_id,
-      active: client.value.active
-    }
-    
-    // Submit to API
-    await clientService.updateClient(client.value.id, clientData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Client ${client.value.username} has been updated`,
-      life: 3000
-    })
-    
-    // Navigate back to client detail view
-    router.push({ 
-      name: 'client-detail', 
-      params: { id: client.value.id } 
-    })
-  } catch (error) {
-    console.error('Error updating client:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update client. Please try again.',
-      life: 3000
-    })
-  } finally {
-    saving.value = false
+  if (result) {
+    navigateToClientDetail(client.value.id)
   }
 }
 
@@ -366,57 +333,17 @@ const showResetPasswordDialog = () => {
   resetPasswordDialog.value.newPassword = null
 }
 
-// Reset password with hashing
-const resetPassword = async () => {
+// Reset password
+const handleResetPassword = async () => {
   resetPasswordDialog.value.loading = true
   
   try {
-    // Generate new password
-    const newPassword = generateSecurePassword(12)
-    
-    // Hash the password before sending to PocketBase
-    const hashedPassword = await clientService.hashPassword(newPassword)
-    
-    // Update client with new hashed password
-    await clientService.updateClient(client.value.id, {
-      password: hashedPassword
-    })
-    
-    // Show the PLAIN TEXT password in the dialog (this is the only time the user will see it)
-    resetPasswordDialog.value.newPassword = newPassword
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Password has been reset successfully',
-      life: 3000
-    })
-  } catch (error) {
-    console.error('Error resetting password:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to reset password',
-      life: 3000
-    })
+    const newPassword = await resetPassword(client.value.id)
+    if (newPassword) {
+      resetPasswordDialog.value.newPassword = newPassword
+    }
   } finally {
     resetPasswordDialog.value.loading = false
   }
-}
-
-// Copy text to clipboard
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      toast.add({
-        severity: 'info',
-        summary: 'Copied',
-        detail: 'Text copied to clipboard',
-        life: 2000
-      })
-    })
-    .catch(err => {
-      console.error('Failed to copy text: ', err)
-    })
 }
 </script>

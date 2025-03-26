@@ -31,7 +31,7 @@
             icon="pi pi-pencil"
             label="Edit"
             class="p-button-outlined"
-            @click="navigateToEdit"
+            @click="navigateToClientEdit(client.id)"
           />
           <Button
             icon="pi pi-trash"
@@ -98,7 +98,7 @@
                   label="View Role Details"
                   icon="pi pi-arrow-right"
                   class="p-button-text p-button-sm mt-2"
-                  @click="navigateToRole"
+                  @click="navigateToRoleDetail(client.role_id)"
                 />
               </div>
             </div>
@@ -181,7 +181,7 @@
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete client '${client?.username || ''}'?`"
       details="This action cannot be undone."
-      @confirm="deleteClient"
+      @confirm="handleDeleteClient"
     />
     
     <!-- Reset Password Dialog -->
@@ -225,7 +225,7 @@
           label="Reset Password" 
           icon="pi pi-refresh" 
           class="p-button-danger" 
-          @click="resetPassword"
+          @click="handleResetPassword"
           :loading="resetPasswordDialog.loading"
         />
         <Button 
@@ -245,9 +245,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import dayjs from 'dayjs'
-import { clientService, generateSecurePassword } from '../../../services/client'
+import { useClient } from '../../../composables/useClient'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -256,12 +254,24 @@ import Dialog from 'primevue/dialog'
 
 const route = useRoute()
 const router = useRouter()
-const toast = useToast()
+
+// Use the client composable
+const { 
+  loading,
+  error,
+  formatDate,
+  getConnectionUrl,
+  fetchClient,
+  deleteClient,
+  resetPassword,
+  copyToClipboard,
+  navigateToClientEdit,
+  navigateToRoleDetail,
+  navigateToClientList
+} = useClient()
 
 // Data
 const client = ref(null)
-const loading = ref(true)
-const error = ref(null)
 const deleteDialog = ref({
   visible: false,
   loading: false
@@ -275,75 +285,27 @@ const resetPasswordDialog = ref({
 })
 
 // Computed properties
-const connectionUrl = computed(() => {
-  return import.meta.env.VITE_MQTT_HOST || 'mqtt://localhost:1883'
-})
+const connectionUrl = computed(() => getConnectionUrl())
 
 // Fetch client data on component mount
 onMounted(async () => {
-  await fetchClient()
+  const id = route.params.id
+  client.value = await fetchClient(id)
 })
 
 // Methods
-const fetchClient = async () => {
-  const id = route.params.id
-  if (!id) {
-    error.value = 'Invalid client ID'
-    loading.value = false
-    return
-  }
-  
-  loading.value = true
-  error.value = null
-  
-  try {
-    const response = await clientService.getClient(id)
-    client.value = response.data
-  } catch (err) {
-    console.error('Error fetching client:', err)
-    error.value = 'Failed to load client details. Please try again.'
-  } finally {
-    loading.value = false
-  }
-}
-
-const navigateToEdit = () => {
-  router.push({ name: 'edit-client', params: { id: client.value.id } })
-}
-
-const navigateToRole = () => {
-  router.push({ 
-    name: 'topic-permission-detail', 
-    params: { id: client.value.role_id } 
-  })
-}
-
 const confirmDelete = () => {
   deleteDialog.value.visible = true
 }
 
-const deleteClient = async () => {
+const handleDeleteClient = async () => {
   deleteDialog.value.loading = true
   try {
-    await clientService.deleteClient(client.value.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Client ${client.value.username} has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-    router.push({ name: 'clients' })
-  } catch (error) {
-    console.error('Error deleting client:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete client',
-      life: 3000
-    })
+    const success = await deleteClient(client.value.id, client.value.username)
+    if (success) {
+      deleteDialog.value.visible = false
+      navigateToClientList()
+    }
   } finally {
     deleteDialog.value.loading = false
   }
@@ -354,61 +316,16 @@ const showResetPasswordDialog = () => {
   resetPasswordDialog.value.newPassword = null
 }
 
-const resetPassword = async () => {
+const handleResetPassword = async () => {
   resetPasswordDialog.value.loading = true
   
   try {
-    // Generate new password
-    const newPassword = generateSecurePassword(12)
-    
-    // Hash the password before sending to PocketBase
-    const hashedPassword = await clientService.hashPassword(newPassword)
-    
-    // Update client with new hashed password
-    await clientService.updateClient(client.value.id, {
-      password: hashedPassword
-    })
-    
-    // Show the PLAIN TEXT password in the dialog (this is the only time the user will see it)
-    resetPasswordDialog.value.newPassword = newPassword
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Password has been reset successfully',
-      life: 3000
-    })
-  } catch (error) {
-    console.error('Error resetting password:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to reset password',
-      life: 3000
-    })
+    const newPassword = await resetPassword(client.value.id)
+    if (newPassword) {
+      resetPasswordDialog.value.newPassword = newPassword
+    }
   } finally {
     resetPasswordDialog.value.loading = false
   }
-}
-
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      toast.add({
-        severity: 'info',
-        summary: 'Copied',
-        detail: 'Text copied to clipboard',
-        life: 2000
-      })
-    })
-    .catch(err => {
-      console.error('Failed to copy text: ', err)
-    })
-}
-
-// Helper methods
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return dayjs(dateString).format('MMM D, YYYY HH:mm')
 }
 </script>

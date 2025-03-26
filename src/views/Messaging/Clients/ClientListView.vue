@@ -6,7 +6,7 @@
         <Button 
           label="Create Client" 
           icon="pi pi-plus" 
-          @click="navigateToCreate"
+          @click="navigateToClientCreate"
         />
       </template>
     </PageHeader>
@@ -20,7 +20,7 @@
         :searchFields="['username', 'expand.role_id.name']"
         title="Messaging Clients"
         empty-message="No clients found"
-        @row-click="navigateToDetail"
+        @row-click="navigateToClientDetail"
       >
         <!-- Username column with custom formatting -->
         <template #username-body="{ data }">
@@ -52,19 +52,19 @@
         </template>
         
         <!-- Actions column -->
-        <template #actions="{ data }">
+        <template #row-actions="{ data }">
           <div class="flex gap-1 justify-center">
             <Button 
               icon="pi pi-eye" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToDetail(data)"
+              @click.stop="navigateToClientDetail(data.id)"
               tooltip="View"
               tooltipOptions="{ position: 'top' }"
             />
             <Button 
               icon="pi pi-pencil" 
               class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdit(data)"
+              @click.stop="navigateToClientEdit(data.id)"
               tooltip="Edit"
               tooltipOptions="{ position: 'top' }"
             />
@@ -90,7 +90,7 @@
       :loading="deleteDialog.loading"
       :message="`Are you sure you want to delete client '${deleteDialog.item?.username || ''}'?`"
       details="This action cannot be undone."
-      @confirm="deleteClient"
+      @confirm="handleDeleteClient"
     />
     
     <!-- Toast for success/error messages -->
@@ -100,101 +100,69 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { clientService } from '../../../services/client'
+import { useClient } from '../../../composables/useClient'
+import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
-const toast = useToast()
+// Use the client composable
+const { 
+  clients,
+  loading,
+  fetchClients,
+  deleteClient,
+  navigateToClientCreate,
+  navigateToClientDetail,
+  navigateToClientEdit
+} = useClient()
 
-// Data
-const clients = ref([])
-const loading = ref(false)
+// Table columns definition
+const columns = [
+  { field: 'username', header: 'Username', sortable: true },
+  { field: 'role_id', header: 'Role', sortable: true },
+  { field: 'active', header: 'Status', sortable: true },
+  { field: 'actions', header: 'Actions', sortable: false }
+]
+
+// Delete confirmation dialog
 const deleteDialog = ref({
   visible: false,
   loading: false,
   item: null
 })
 
-// Table columns definition - updated to match actual schema
-const columns = [
-  { field: 'username', header: 'Username', sortable: true },
-  { field: 'role_id', header: 'Role', sortable: true },
-  { field: 'active', header: 'Status', sortable: true }
-]
-
 // Fetch clients on component mount
 onMounted(async () => {
   await fetchClients()
 })
 
-// Methods
-const fetchClients = async () => {
-  loading.value = true
-  try {
-    const response = await clientService.getClients()
-    clients.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching clients:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load clients',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
-}
-
-const navigateToCreate = () => {
-  router.push({ name: 'create-client' })
-}
-
-const navigateToDetail = (data) => {
-  router.push({ name: 'client-detail', params: { id: data.id } })
-}
-
-const navigateToEdit = (data) => {
-  router.push({ name: 'edit-client', params: { id: data.id } })
-}
-
+// Delete confirmation
 const confirmDelete = (data) => {
   deleteDialog.value.item = data
   deleteDialog.value.visible = true
 }
 
-const deleteClient = async () => {
+// Delete client
+const handleDeleteClient = async () => {
   if (!deleteDialog.value.item) return
   
   deleteDialog.value.loading = true
   try {
-    await clientService.deleteClient(deleteDialog.value.item.id)
+    const success = await deleteClient(
+      deleteDialog.value.item.id, 
+      deleteDialog.value.item.username
+    )
     
-    // Remove the deleted item from the list
-    clients.value = clients.value.filter(item => item.id !== deleteDialog.value.item.id)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Client ${deleteDialog.value.item.username} has been deleted`,
-      life: 3000
-    })
-    
-    deleteDialog.value.visible = false
-  } catch (error) {
-    console.error('Error deleting client:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete client',
-      life: 3000
-    })
+    if (success) {
+      // Remove the deleted item from the list without refetching
+      clients.value = clients.value.filter(
+        item => item.id !== deleteDialog.value.item.id
+      )
+      deleteDialog.value.visible = false
+    }
   } finally {
     deleteDialog.value.loading = false
   }

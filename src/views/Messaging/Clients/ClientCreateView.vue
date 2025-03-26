@@ -225,17 +225,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
+import { ref, onMounted } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
-import { 
-  clientService, 
-  generateClientUsername,
-  generateSecurePassword
-} from '../../../services/client'
-import { topicPermissionService } from '../../../services/topicPermission'
+import { useClient } from '../../../composables/useClient'
+import { topicPermissionService } from '../../../services'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -248,23 +242,29 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 
-const router = useRouter()
-const toast = useToast()
+// Use the client composable
+const { 
+  loading,
+  error,
+  generateClientUsername,
+  generateSecurePassword,
+  createClient,
+  copyToClipboard,
+  navigateToCreateRole,
+  navigateToClientDetail
+} = useClient()
 
 // Roles for the dropdown
 const roles = ref([])
 const rolesLoading = ref(false)
 
-// Client form data - simplified to match schema
+// Client form data
 const client = ref({
   username: '',
   password: generateSecurePassword(12),
   role_id: '',
   active: true
 })
-
-// Loading state
-const loading = ref(false)
 
 // Form validation rules
 const rules = {
@@ -315,12 +315,6 @@ const fetchRoles = async () => {
     roles.value = response.data.items || []
   } catch (error) {
     console.error('Error fetching roles:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load roles',
-      life: 3000
-    })
   } finally {
     rolesLoading.value = false
   }
@@ -333,24 +327,7 @@ const generateRandomPassword = () => {
 
 // Copy password to clipboard
 const copyPasswordToClipboard = () => {
-  navigator.clipboard.writeText(client.value.password)
-    .then(() => {
-      toast.add({
-        severity: 'info',
-        summary: 'Password Copied',
-        detail: 'Password has been copied to clipboard',
-        life: 2000
-      })
-    })
-    .catch(err => {
-      console.error('Failed to copy password: ', err)
-      toast.add({
-        severity: 'error',
-        summary: 'Copy Failed',
-        detail: 'Failed to copy password to clipboard',
-        life: 3000
-      })
-    })
+  copyToClipboard(client.value.password)
 }
 
 // Show username generation dialog
@@ -371,18 +348,7 @@ const generateUsername = () => {
 
 // Copy generated username to clipboard
 const copyGeneratedUsername = () => {
-  navigator.clipboard.writeText(generatedUsername.value)
-    .then(() => {
-      toast.add({
-        severity: 'info',
-        summary: 'Username Copied',
-        detail: 'Username has been copied to clipboard',
-        life: 2000
-      })
-    })
-    .catch(err => {
-      console.error('Failed to copy username: ', err)
-    })
+  copyToClipboard(generatedUsername.value)
 }
 
 // Use the generated username
@@ -391,67 +357,16 @@ const useGeneratedUsername = () => {
   generateDialog.value.visible = false
 }
 
-// Navigate to create new role
-const navigateToCreateRole = () => {
-  router.push({ name: 'create-topic-permission' })
-}
-
-// Form submission with password hashing
+// Form submission
 const handleSubmit = async () => {
   // Validate form
   const isValid = await v$.value.$validate()
   if (!isValid) return
   
-  loading.value = true
+  const result = await createClient(client.value)
   
-  try {
-    // Hash the password before sending to PocketBase
-    const hashedPassword = await clientService.hashPassword(client.value.password)
-    
-    // Remember the original password to display to the user
-    const plainPassword = client.value.password
-    
-    // Prepare data for API using only schema fields with hashed password
-    const clientData = {
-      username: client.value.username,
-      password: hashedPassword, // Now using the hashed password
-      role_id: client.value.role_id,
-      active: client.value.active
-    }
-    
-    // Submit to API
-    const response = await clientService.createClient(clientData)
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Client ${clientData.username} has been created`,
-      life: 3000
-    })
-    
-    // Show a confirmation with the plain password
-    toast.add({
-      severity: 'info',
-      summary: 'Password Information',
-      detail: `Remember to securely store the password: ${plainPassword}`,
-      life: 10000 // Leave this up longer
-    })
-    
-    // Navigate to client detail view
-    router.push({ 
-      name: 'client-detail', 
-      params: { id: response.data.id } 
-    })
-  } catch (error) {
-    console.error('Error creating client:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to create client. Please try again.',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
+  if (result) {
+    navigateToClientDetail(result.client.id)
   }
 }
 </script>
