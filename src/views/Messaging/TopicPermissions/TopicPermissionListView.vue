@@ -168,6 +168,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
+import { topicPermissionService } from '../../../services'  // Added import
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
