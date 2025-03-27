@@ -30,10 +30,19 @@ src/
 ├── assets/              # Static assets and global CSS
 ├── components/          # Reusable Vue components
 │   ├── common/          # Common UI components
-│   └── dashboard/       # Dashboard-specific components
+│   ├── dashboard/       # Dashboard-specific components
+│   └── map/             # Map and geospatial components
+├── composables/         # Vue 3 composable functions
 ├── layouts/             # Page layout components
 ├── router/              # Vue Router configuration
 ├── services/            # API services and utilities
+│   ├── base/            # Base service classes
+│   ├── edge/            # Edge-related services
+│   ├── location/        # Location-related services
+│   ├── thing/           # Thing-related services
+│   ├── client/          # Client-related services
+│   ├── topic-permission/# Topic permission services
+│   └── index.js         # Central export point
 ├── stores/              # Pinia state stores
 └── views/               # Page components
     ├── Auth/            # Authentication views

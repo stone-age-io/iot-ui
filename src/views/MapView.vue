@@ -54,123 +54,88 @@
     <!-- Location List -->
     <DashboardCard title="Locations">
       <DataTable
-        :value="filteredLocations"
+        :items="filteredLocations"
+        :columns="columns"
         :loading="loading"
-        paginator
+        :paginated="true"
         :rows="10"
         :rowsPerPageOptions="[5, 10, 20, 50]"
-        responsiveLayout="scroll"
-        class="p-datatable-sm"
-        stripedRows
-        :globalFilterFields="['name', 'code', 'expand.edge_id.name', 'type']"
-        v-model:filters="filters"
-        filterDisplay="menu"
-        :totalRecords="filteredLocations.length"
+        :searchable="true"
+        :searchFields="['name', 'code', 'expand.edge_id.name', 'type']"
+        title="Locations"
+        empty-message="No locations found. Try adjusting your filters."
+        @row-click="navigateToDetail"
       >
-        <!-- Search Filter -->
-        <template #header>
-          <div class="flex justify-between items-center flex-wrap gap-2">
-            <span class="p-input-icon-left">
-              <i class="pi pi-search" />
-              <InputText v-model="filters['global'].value" placeholder="Search..." class="p-inputtext-sm" />
-            </span>
-            
-            <!-- Location Count -->
-            <div class="text-sm text-gray-500">
-              {{ filteredLocations.length }} locations
+        <!-- Name Column Custom Template -->
+        <template #name-body="{ data }">
+          <div class="flex items-center">
+            <i 
+              class="pi pi-map-marker mr-2"
+              :class="[getIconColorClass(data.type), 'text-lg']"
+            ></i>
+            <div>
+              <div class="font-medium text-sm">{{ data.name }}</div>
+              <div class="text-xs text-gray-500">{{ data.code }}</div>
             </div>
           </div>
         </template>
         
-        <!-- Column: Name -->
-        <Column field="name" header="Name" sortable style="min-width: 14rem">
-          <template #body="slotProps">
-            <div class="flex items-center">
-              <i 
-                class="pi pi-map-marker mr-2"
-                :class="[
-                  getIconColorClass(slotProps.data.type),
-                  'text-lg'
-                ]"
-              ></i>
-              <div>
-                <div class="font-medium text-sm">{{ slotProps.data.name }}</div>
-                <div class="text-xs text-gray-500">{{ slotProps.data.code }}</div>
-              </div>
-            </div>
-          </template>
-        </Column>
+        <!-- Type Column Custom Template -->
+        <template #type-body="{ data }">
+          <span 
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+            :class="getTypeClass(data.type)"
+          >
+            {{ getTypeName(data.type) }}
+          </span>
+        </template>
         
-        <!-- Column: Type -->
-        <Column field="type" header="Type" sortable style="min-width: 10rem">
-          <template #body="slotProps">
-            <span 
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="getTypeClass(slotProps.data.type)"
-            >
-              {{ getTypeName(slotProps.data.type) }}
-            </span>
-          </template>
-        </Column>
+        <!-- Edge Column Custom Template -->
+        <template #edge-body="{ data }">
+          <div v-if="data.expand && data.expand.edge_id">
+            <div class="text-sm">{{ data.expand.edge_id.name }}</div>
+            <div class="text-xs text-gray-500">{{ data.expand.edge_id.code }}</div>
+          </div>
+          <div v-else class="text-gray-400 text-sm">No edge</div>
+        </template>
         
-        <!-- Column: Edge -->
-        <Column field="expand.edge_id.name" header="Edge" sortable style="min-width: 10rem">
-          <template #body="slotProps">
-            <div v-if="slotProps.data.expand && slotProps.data.expand.edge_id">
-              <div class="text-sm">{{ slotProps.data.expand.edge_id.name }}</div>
-              <div class="text-xs text-gray-500">{{ slotProps.data.expand.edge_id.code }}</div>
-            </div>
-            <div v-else class="text-gray-400 text-sm">No edge</div>
-          </template>
-        </Column>
+        <!-- Path Column Custom Template -->
+        <template #path-body="{ data }">
+          <div class="text-sm">{{ formatPath(data.path) }}</div>
+        </template>
         
-        <!-- Column: Path -->
-        <Column field="path" header="Path" sortable style="min-width: 12rem">
-          <template #body="slotProps">
-            <div class="text-sm">{{ formatPath(slotProps.data.path) }}</div>
-          </template>
-        </Column>
+        <!-- Coordinates Column Custom Template -->
+        <template #coordinates-body="{ data }">
+          <div v-if="hasCoordinates(data)" class="text-sm">
+            {{ formatCoordinates(data) }}
+          </div>
+          <div v-else class="text-gray-400 text-sm">No coordinates</div>
+        </template>
         
-        <!-- Column: Coordinates -->
-        <Column header="Coordinates" style="min-width: 10rem">
-          <template #body="slotProps">
-            <div v-if="hasCoordinates(slotProps.data)" class="text-sm">
-              {{ formatCoordinates(slotProps.data) }}
-            </div>
-            <div v-else class="text-gray-400 text-sm">No coordinates</div>
-          </template>
-        </Column>
-        
-        <!-- Column: Actions -->
-        <Column header="Actions" style="min-width: 8rem">
-          <template #body="slotProps">
-            <div class="flex gap-2 justify-center">
-              <Button 
-                icon="pi pi-search"
-                class="p-button-rounded p-button-text p-button-sm"
-                @click="locateOnMap(slotProps.data)"
-                v-tooltip.top="'Locate on map'"
-              />
-              <Button 
-                icon="pi pi-pencil"
-                class="p-button-rounded p-button-text p-button-sm"
-                @click="navigateToEdit(slotProps.data.id)"
-                v-tooltip.top="'Edit location'"
-              />
-              <Button 
-                icon="pi pi-external-link"
-                class="p-button-rounded p-button-text p-button-sm"
-                @click="navigateToDetail(slotProps.data.id)"
-                v-tooltip.top="'View details'"
-              />
-            </div>
-          </template>
-        </Column>
-        
-        <!-- Empty state -->
-        <template #empty>
-          <div class="text-center p-4 text-gray-500">
-            No locations found. Try adjusting your filters.
+        <!-- Row Actions Template -->
+        <template #row-actions="{ data }">
+          <div class="flex gap-2 justify-center">
+            <Button 
+              icon="pi pi-search"
+              class="p-button-rounded p-button-text p-button-sm"
+              @click.stop="locateOnMap(data)"
+              tooltip="Locate on map"
+              tooltipOptions="{ position: 'top' }"
+            />
+            <Button 
+              icon="pi pi-pencil"
+              class="p-button-rounded p-button-text p-button-sm"
+              @click.stop="navigateToEdit(data.id)"
+              tooltip="Edit location"
+              tooltipOptions="{ position: 'top' }"
+            />
+            <Button 
+              icon="pi pi-external-link"
+              class="p-button-rounded p-button-text p-button-sm"
+              @click.stop="navigateToDetail(data.id)"
+              tooltip="View details"
+              tooltipOptions="{ position: 'top' }"
+            />
           </div>
         </template>
       </DataTable>
@@ -236,8 +201,6 @@ import { FilterMatchMode } from 'primevue/api'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
@@ -251,6 +214,7 @@ import {
 // Import components
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
 import GlobalMap from '../components/map/GlobalMap.vue'
+import DataTable from '../components/common/DataTable.vue'
 
 const router = useRouter()
 const globalMapRef = ref(null)
@@ -273,6 +237,15 @@ const locationDialog = ref({
   location: null,
   title: 'Location Details'
 })
+
+// Define table columns
+const columns = [
+  { field: 'name', header: 'Name', sortable: true, style: { minWidth: '14rem' } },
+  { field: 'type', header: 'Type', sortable: true, style: { minWidth: '10rem' } },
+  { field: 'edge', header: 'Edge', sortable: true, style: { minWidth: '10rem' } },
+  { field: 'path', header: 'Path', sortable: true, style: { minWidth: '12rem' } },
+  { field: 'coordinates', header: 'Coordinates', sortable: false, style: { minWidth: '10rem' } }
+]
 
 // Computed properties
 const edgeOptions = computed(() => {
@@ -476,6 +449,9 @@ const getEdgeName = (location) => {
 
 // Navigation helpers
 const navigateToDetail = (id) => {
+  if (typeof id === 'object' && id !== null) {
+    id = id.id;
+  }
   locationDialog.value.visible = false
   router.push({ name: 'location-detail', params: { id } })
 }
