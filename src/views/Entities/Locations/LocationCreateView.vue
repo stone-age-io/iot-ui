@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Locations/LocationCreateView.vue -->
 <template>
   <div>
     <PageHeader 
@@ -58,6 +59,44 @@
                   </div>
                 </div>
                 <span v-else>Select Edge</span>
+              </template>
+            </Dropdown>
+          </FormField>
+          
+          <!-- Parent Location (NEW) -->
+          <FormField
+            id="parent_id"
+            label="Parent Location"
+            :error-message="circularReferenceError ? 'Cannot create circular reference' : ''"
+          >
+            <Dropdown
+              id="parent_id"
+              v-model="location.parent_id"
+              :options="potentialParents"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select Parent (Optional)"
+              class="w-full"
+              :class="{ 'p-invalid': circularReferenceError }"
+              :loading="parentsLoading"
+              :filter="true"
+            >
+              <template #option="slotProps">
+                <div class="flex align-items-center">
+                  <div>
+                    <div>{{ slotProps.option.name }}</div>
+                    <div class="text-xs text-gray-500">{{ slotProps.option.code }}</div>
+                  </div>
+                </div>
+              </template>
+              <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex align-items-center">
+                  <div>
+                    {{ getParentDisplay(slotProps.value).name }}
+                    <span class="text-xs text-gray-500 ml-2">{{ getParentDisplay(slotProps.value).code }}</span>
+                  </div>
+                </div>
+                <span v-else>No Parent (Root Location)</span>
               </template>
             </Dropdown>
           </FormField>
@@ -237,26 +276,39 @@ const {
   loading, 
   edges,
   edgesLoading,
+  potentialParents,
+  parentsLoading,
+  circularReferenceError,
   locationTypes,
   locationLevels,
   locationZones,
   fetchEdges,
+  fetchPotentialParents,
   updateCode,
   updatePathFromLevelZone,
   getEdgeName,
   getEdgeCode,
+  getParentDisplay,
   submitForm
 } = useLocationForm('create')
 
 // If edge_id is provided as a query param, set it
 onMounted(async () => {
-  await fetchEdges()
+  await Promise.all([
+    fetchEdges(),
+    fetchPotentialParents()
+  ])
   
   if (route.query.edge_id) {
     location.value.edge_id = route.query.edge_id
-    
-    // Update the path when edge_id is set
-    updatePathFromLevelZone()
   }
+  
+  // If parent_id is provided as a query param, set it
+  if (route.query.parent_id) {
+    location.value.parent_id = route.query.parent_id
+  }
+  
+  // Update the path when edge_id is set
+  updatePathFromLevelZone()
 })
 </script>

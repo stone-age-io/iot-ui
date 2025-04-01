@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Locations/LocationEditView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -73,6 +74,44 @@
                 class="w-full"
                 disabled
               />
+            </FormField>
+            
+            <!-- Parent Location (NEW) -->
+            <FormField
+              id="parent_id"
+              label="Parent Location"
+              :error-message="circularReferenceError ? 'Cannot create circular reference' : ''"
+            >
+              <Dropdown
+                id="parent_id"
+                v-model="location.parent_id"
+                :options="potentialParents"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Select Parent (Optional)"
+                class="w-full"
+                :class="{ 'p-invalid': circularReferenceError }"
+                :loading="parentsLoading"
+                :filter="true"
+              >
+                <template #option="slotProps">
+                  <div class="flex align-items-center">
+                    <div>
+                      <div>{{ slotProps.option.name }}</div>
+                      <div class="text-xs text-gray-500">{{ slotProps.option.code }}</div>
+                    </div>
+                  </div>
+                </template>
+                <template #value="slotProps">
+                  <div v-if="slotProps.value" class="flex align-items-center">
+                    <div>
+                      {{ getParentDisplay(slotProps.value).name }}
+                      <span class="text-xs text-gray-500 ml-2">{{ getParentDisplay(slotProps.value).code }}</span>
+                    </div>
+                  </div>
+                  <span v-else>No Parent (Root Location)</span>
+                </template>
+              </Dropdown>
             </FormField>
             
             <!-- Name -->
@@ -191,9 +230,14 @@ const {
   loading, 
   edges,
   edgesLoading,
+  potentialParents,
+  parentsLoading,
+  circularReferenceError,
   locationTypes,
   fetchEdges,
+  fetchPotentialParents,
   loadLocation,
+  getParentDisplay,
   submitForm
 } = useLocationForm('edit')
 
@@ -220,6 +264,9 @@ onMounted(async () => {
     // Load data into form
     if (locationData) {
       loadLocation(locationData)
+      
+      // Now fetch potential parent locations, excluding self and children
+      await fetchPotentialParents(id)
     } else {
       error.value = 'Location not found'
     }

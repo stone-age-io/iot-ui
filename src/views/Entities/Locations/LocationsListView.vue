@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Locations/LocationsListView.vue -->
 <template>
   <div>
     <PageHeader title="Locations" subtitle="Manage your physical locations">
@@ -16,10 +17,10 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['code', 'name', 'path', 'type', 'expand.edge_id.code']"
+        :searchFields="['code', 'name', 'path', 'type', 'expand.edge_id.code', 'expand.parent_id.code']"
         title="Physical Locations"
         empty-message="No locations found"
-                  @row-click="(data) => navigateToLocationDetail(data.id)"
+        @row-click="(data) => navigateToLocationDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
@@ -55,6 +56,20 @@
           >
             {{ getTypeName(data.type) }}
           </span>
+        </template>
+        
+        <!-- Parent column with link -->
+        <template #parent_id-body="{ data }">
+          <router-link 
+            v-if="data.expand && data.expand.parent_id"
+            :to="{ name: 'location-detail', params: { id: data.parent_id } }"
+            class="text-primary-600 hover:underline flex items-center"
+            @click.stop
+          >
+            {{ data.expand.parent_id.code }}
+            <span class="ml-1 text-xs text-gray-500">({{ data.expand.parent_id.name }})</span>
+          </router-link>
+          <span v-else class="text-gray-500">-</span>
         </template>
         
         <!-- Edge column with code -->
@@ -159,12 +174,13 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - UPDATED to include parent_id column
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'path', header: 'Path', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
+  { field: 'parent_id', header: 'Parent', sortable: true },
   { field: 'edge_id', header: 'Edge', sortable: true },
   { field: 'created', header: 'Created', sortable: true }
 ]

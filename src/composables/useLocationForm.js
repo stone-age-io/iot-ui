@@ -29,6 +29,7 @@ export function useLocationForm(mode = 'create') {
   const location = ref({
     id: '',
     edge_id: '',
+    parent_id: '', // Added parent_id field
     level: '',
     zone: '',
     identifier: '',
@@ -43,6 +44,11 @@ export function useLocationForm(mode = 'create') {
   // Edges data for dropdown
   const edges = ref([])
   const edgesLoading = ref(false)
+  
+  // Parent locations data for dropdown
+  const potentialParents = ref([])
+  const parentsLoading = ref(false)
+  const circularReferenceError = ref(false)
   
   // Loading state
   const loading = ref(false)
@@ -97,6 +103,73 @@ export function useLocationForm(mode = 'create') {
   }
   
   /**
+   * Fetch potential parent locations for dropdown
+   * @param {string} currentId - Current location ID (for edit mode to exclude self)
+   */
+  const fetchPotentialParents = async (currentId = null) => {
+    parentsLoading.value = true
+    try {
+      // Get all locations, will filter client-side
+      const response = await locationService.getLocations({
+        sort: 'name',
+        expand: 'parent_id'
+      })
+      
+      // Filter out the current location (if in edit mode) and any children
+      if (currentId) {
+        // Remove self and any locations that have this one as a parent (direct children)
+        potentialParents.value = (response.data.items || []).filter(loc => 
+          loc.id !== currentId && loc.parent_id !== currentId
+        )
+      } else {
+        potentialParents.value = response.data.items || []
+      }
+    } catch (error) {
+      console.error('Error fetching potential parents:', error)
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load potential parent locations',
+        life: 3000
+      })
+      potentialParents.value = []
+    } finally {
+      parentsLoading.value = false
+    }
+  }
+  
+  /**
+   * Check for circular references when selecting a parent
+   * @param {string} parentId - Potential parent ID
+   */
+  const checkParentValidity = async () => {
+    const currentId = location.value.id
+    const parentId = location.value.parent_id
+    
+    // Skip check if we don't have both IDs
+    if (!currentId || !parentId) {
+      circularReferenceError.value = false
+      return
+    }
+    
+    try {
+      const isCircular = await locationService.isCircularReference(currentId, parentId)
+      circularReferenceError.value = isCircular
+      
+      if (isCircular) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Invalid Selection',
+          detail: 'Cannot select this parent as it would create a circular reference',
+          life: 5000
+        })
+      }
+    } catch (error) {
+      console.error('Error checking parent validity:', error)
+    }
+  }
+  
+  /**
    * Load location data for editing
    * @param {Object} locationData - Location data to load
    */
@@ -106,6 +179,7 @@ export function useLocationForm(mode = 'create') {
     location.value = {
       id: locationData.id || '',
       edge_id: locationData.edge_id || '',
+      parent_id: locationData.parent_id || '',
       level: locationData.level || '',
       zone: locationData.zone || '',
       identifier: locationData.identifier || '',
@@ -115,6 +189,11 @@ export function useLocationForm(mode = 'create') {
       path: locationData.path || '',
       description: locationData.description || '',
       metadata: locationData.metadata || {}
+    }
+    
+    // If in edit mode, fetch potential parents
+    if (mode === 'edit' && locationData.id) {
+      fetchPotentialParents(locationData.id)
     }
   }
   
@@ -165,10 +244,33 @@ export function useLocationForm(mode = 'create') {
   }
   
   /**
+   * Helper for displaying parent location in dropdown
+   * @param {string} parentId - Parent location ID
+   * @returns {Object} - Parent location display info
+   */
+  const getParentDisplay = (parentId) => {
+    const parent = potentialParents.value.find(loc => loc.id === parentId)
+    if (!parent) return { name: '', code: '' }
+    
+    return {
+      name: parent.name,
+      code: parent.code
+    }
+  }
+  
+  /**
    * Handle form submission
    * @returns {Promise<boolean>} - Success status
    */
   const submitForm = async () => {
+    // Check for circular references
+    if (mode === 'edit' && location.value.parent_id) {
+      await checkParentValidity()
+      if (circularReferenceError.value) {
+        return false
+      }
+    }
+    
     // Validate form
     const isValid = await v$.value.$validate()
     if (!isValid) return false
@@ -179,6 +281,7 @@ export function useLocationForm(mode = 'create') {
       // Extract relevant data for API
       const locationData = {
         edge_id: location.value.edge_id,
+        parent_id: location.value.parent_id || '', // Include parent_id
         code: location.value.code,
         name: location.value.name,
         type: location.value.type,
@@ -234,6 +337,7 @@ export function useLocationForm(mode = 'create') {
     location.value = {
       id: '',
       edge_id: '',
+      parent_id: '',
       level: '',
       zone: '',
       identifier: '',
@@ -245,6 +349,7 @@ export function useLocationForm(mode = 'create') {
       metadata: {}
     }
     v$.value.$reset()
+    circularReferenceError.value = false
   }
   
   // Watch for changes to level, zone, or identifier to update code
@@ -256,21 +361,33 @@ export function useLocationForm(mode = 'create') {
     updateCode()
   })
   
+  // Watch for changes to parent_id to validate
+  watch(() => location.value.parent_id, () => {
+    if (mode === 'edit' && location.value.id) {
+      checkParentValidity()
+    }
+  })
+  
   return {
     location,
     v$,
     loading,
     edges,
     edgesLoading,
+    potentialParents,
+    parentsLoading,
+    circularReferenceError,
     locationTypes,
     locationLevels,
     locationZones,
     loadLocation,
     fetchEdges,
+    fetchPotentialParents,
     updateCode,
     updatePathFromLevelZone,
     getEdgeName,
     getEdgeCode,
+    getParentDisplay,
     submitForm,
     resetForm
   }

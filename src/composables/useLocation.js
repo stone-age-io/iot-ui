@@ -23,7 +23,9 @@ export function useLocation() {
   
   // Common state
   const locations = ref([])
+  const childLocations = ref([])
   const loading = ref(false)
+  const childrenLoading = ref(false)
   const error = ref(null)
   
   /**
@@ -99,6 +101,36 @@ export function useLocation() {
   }
   
   /**
+   * Check if a location has a parent
+   * @param {Object} location - Location object
+   * @returns {boolean} - True if parent exists
+   */
+  const hasParent = (location) => {
+    return location && 
+           location.parent_id && 
+           location.parent_id.trim() !== ''
+  }
+  
+  /**
+   * Get parent location display information
+   * @param {Object} location - Location object with expanded parent_id
+   * @returns {Object|null} - Parent info or null if no parent
+   */
+  const getParentInfo = (location) => {
+    if (!location || !location.expand || !location.expand.parent_id) {
+      return null
+    }
+    
+    const parent = location.expand.parent_id
+    return {
+      id: parent.id,
+      code: parent.code,
+      name: parent.name,
+      type: parent.type
+    }
+  }
+  
+  /**
    * Fetch all locations with optional filtering
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of locations
@@ -109,7 +141,7 @@ export function useLocation() {
     
     try {
       const response = await locationService.getLocations({ 
-        expand: 'edge_id',
+        expand: 'edge_id,parent_id',
         sort: '-created',
         ...params
       })
@@ -122,6 +154,70 @@ export function useLocation() {
         severity: 'error',
         summary: 'Error',
         detail: 'Failed to load locations',
+        life: 3000
+      })
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Fetch child locations for a given parent
+   * @param {string} parentId - Parent location ID
+   * @returns {Promise<Array>} - List of child locations
+   */
+  const fetchChildLocations = async (parentId) => {
+    if (!parentId) {
+      childLocations.value = []
+      return []
+    }
+    
+    childrenLoading.value = true
+    
+    try {
+      const response = await locationService.getChildLocations(parentId, {
+        expand: 'edge_id,parent_id',
+        sort: 'name'
+      })
+      childLocations.value = response.data.items || []
+      return childLocations.value
+    } catch (err) {
+      console.error('Error fetching child locations:', err)
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load child locations',
+        life: 3000
+      })
+      return []
+    } finally {
+      childrenLoading.value = false
+    }
+  }
+  
+  /**
+   * Fetch root locations (locations without parents)
+   * @returns {Promise<Array>} - List of root locations
+   */
+  const fetchRootLocations = async () => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await locationService.getRootLocations({
+        expand: 'edge_id,parent_id',
+        sort: 'name'
+      })
+      locations.value = response.data.items || []
+      return locations.value
+    } catch (err) {
+      console.error('Error fetching root locations:', err)
+      error.value = 'Failed to load root locations. Please try again.'
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load root locations',
         life: 3000
       })
       return []
@@ -284,6 +380,23 @@ export function useLocation() {
     }
   }
   
+  /**
+   * Check if selecting a parent would create a circular reference
+   * @param {string} locationId - Current location ID
+   * @param {string} parentId - Potential parent ID
+   * @returns {Promise<boolean>} - Whether the reference would be circular
+   */
+  const checkCircularReference = async (locationId, parentId) => {
+    if (!locationId || !parentId) return false
+    
+    try {
+      return await locationService.isCircularReference(locationId, parentId)
+    } catch (error) {
+      console.error('Error checking for circular reference:', error)
+      return false
+    }
+  }
+  
   // Navigation methods
   const navigateToLocationList = (query = {}) => router.push({ name: 'locations', query })
   const navigateToLocationDetail = (id) => router.push({ name: 'location-detail', params: { id } })
@@ -296,7 +409,9 @@ export function useLocation() {
   return {
     // State
     locations,
+    childLocations,
     loading,
+    childrenLoading,
     error,
     locationTypes,
     locationLevels,
@@ -310,11 +425,16 @@ export function useLocation() {
     formatPath,
     hasMetadata,
     hasFloorPlan,
+    hasParent,
+    getParentInfo,
     generateLocationCode,
     validateLocationCode,
+    checkCircularReference,
     
     // Operations
     fetchLocations,
+    fetchRootLocations,
+    fetchChildLocations,
     fetchLocation,
     deleteLocation,
     uploadFloorPlan,

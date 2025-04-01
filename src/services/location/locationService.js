@@ -15,7 +15,7 @@ export class LocationService extends BaseService {
       collectionEndpoint,
       {
         jsonFields: ['metadata'],
-        expandFields: ['edge_id']
+        expandFields: ['edge_id', 'parent_id'] // Added parent_id to expand fields
       }
     )
   }
@@ -36,6 +36,33 @@ export class LocationService extends BaseService {
    */
   getLocation(id) {
     return this.getById(id)
+  }
+  
+  /**
+   * Get child locations for a given parent location
+   * @param {string} parentId - Parent location ID
+   * @param {Object} params - Additional query parameters
+   * @returns {Promise} - Axios promise with child locations data
+   */
+  getChildLocations(parentId, params = {}) {
+    return this.getList({
+      ...params,
+      parent_id: parentId,
+      sort: 'created'
+    })
+  }
+  
+  /**
+   * Get root locations (locations without a parent)
+   * @param {Object} params - Additional query parameters
+   * @returns {Promise} - Axios promise with root locations data
+   */
+  getRootLocations(params = {}) {
+    return this.getList({
+      ...params,
+      parent_id_empty: true,
+      sort: 'created'
+    })
   }
   
   /**
@@ -133,9 +160,62 @@ export class LocationService extends BaseService {
    * @override
    */
   transformParams(transformedParams, originalParams) {
+    const filters = []
+    
     // Add filter for edge_id if provided
     if (originalParams.edge_id) {
-      transformedParams.filter = `edge_id="${originalParams.edge_id}"`
+      filters.push(`edge_id="${originalParams.edge_id}"`)
+    }
+    
+    // Add filter for parent_id if provided
+    if (originalParams.parent_id) {
+      filters.push(`parent_id="${originalParams.parent_id}"`)
+    }
+    
+    // Add filter for empty parent_id if requested
+    if (originalParams.parent_id_empty) {
+      filters.push(`parent_id=""`)
+    }
+    
+    // Combine all filters with AND operator
+    if (filters.length > 0) {
+      transformedParams.filter = filters.join(' && ')
+    }
+  }
+  
+  /**
+   * Check if a location is an ancestor of another location
+   * to prevent circular references when selecting a parent
+   * @param {string} locationId - Location ID to check
+   * @param {string} potentialParentId - Potential parent ID
+   * @returns {Promise<boolean>} - True if circular reference would occur
+   */
+  async isCircularReference(locationId, potentialParentId) {
+    // If IDs are the same, it's definitely circular
+    if (locationId === potentialParentId) {
+      return true
+    }
+    
+    // If there's no potential parent, no circular reference
+    if (!potentialParentId) {
+      return false
+    }
+    
+    // Check ancestors recursively
+    try {
+      const response = await this.getLocation(potentialParentId)
+      const parent = response.data
+      
+      // If the parent has a parent of its own, check recursively
+      if (parent.parent_id) {
+        return this.isCircularReference(locationId, parent.parent_id)
+      }
+      
+      // If we got here, no circular reference was found
+      return false
+    } catch (error) {
+      console.error('Error checking for circular reference:', error)
+      return false
     }
   }
 }

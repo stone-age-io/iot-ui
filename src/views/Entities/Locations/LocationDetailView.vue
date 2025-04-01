@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Locations/LocationDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -109,6 +110,26 @@
               </router-link>
             </div>
             
+            <!-- Parent Location (NEW) -->
+            <div>
+              <div class="text-sm text-gray-500 mb-1">Parent Location</div>
+              <router-link 
+                v-if="hasParent(location)"
+                :to="{ name: 'location-detail', params: { id: location.parent_id } }"
+                class="text-primary-600 hover:underline flex items-center"
+              >
+                <span class="font-medium">{{ location.expand?.parent_id?.code || '' }}</span>
+                <span class="text-gray-500 ml-2 text-sm">{{ location.expand?.parent_id?.name || '' }}</span>
+              </router-link>
+              <span v-else class="text-gray-500">No parent location</span>
+            </div>
+            
+            <!-- Description -->
+            <div class="md:col-span-2">
+              <div class="text-sm text-gray-500 mb-1">Description</div>
+              <div class="text-gray-800">{{ location.description || 'No description provided' }}</div>
+            </div>
+            
             <!-- Metadata (if any) -->
             <div v-if="hasMetadata(location)" class="md:col-span-2">
               <div class="text-sm text-gray-500 mb-1">Metadata</div>
@@ -137,6 +158,15 @@
                 class="p-button-text p-button-sm mt-2"
                 @click="navigateToThings(location.id)"
               />
+            </div>
+            
+            <!-- Child Locations (NEW) -->
+            <div>
+              <div class="text-sm text-gray-500 mb-1">Child Locations</div>
+              <div class="flex items-center">
+                <i class="pi pi-sitemap text-blue-600 mr-2"></i>
+                <div class="text-2xl font-semibold">{{ childLocations.length }}</div>
+              </div>
             </div>
             
             <!-- Thing Types -->
@@ -177,6 +207,56 @@
             />
           </div>
         </div>
+      </div>
+      
+      <!-- Child Locations Card (NEW) -->
+      <div class="card mt-6" v-if="childLocations.length > 0">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Child Locations</h2>
+          <Button
+            label="Add Child Location"
+            icon="pi pi-plus"
+            class="p-button-sm"
+            @click="navigateToLocationCreate({ parent_id: location.id })"
+          />
+        </div>
+        
+        <DataTable
+          :items="childLocations"
+          :columns="childLocationColumns"
+          :loading="childrenLoading"
+          :searchable="true"
+          empty-message="No child locations"
+          @row-click="(data) => navigateToLocationDetail(data.id)"
+        >
+          <!-- Code column -->
+          <template #code-body="{ data }">
+            <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
+          </template>
+          
+          <!-- Type column with badge -->
+          <template #type-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium"
+              :class="getTypeClass(data.type)"
+            >
+              {{ getTypeName(data.type) }}
+            </span>
+          </template>
+          
+          <!-- Actions column --> 
+          <template #row-actions="{ data }">
+            <div class="flex gap-1 justify-center">
+              <Button 
+                icon="pi pi-eye" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToLocationDetail(data.id)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }" 
+              />
+            </div>
+          </template>
+        </DataTable>
       </div>
       
       <!-- Floor Plan Map Card -->
@@ -233,7 +313,7 @@
           </template>
           
           <!-- Actions column --> 
-          <template #actions="{ data }">
+          <template #row-actions="{ data }">
             <div class="flex gap-1 justify-center">
               <Button 
                 icon="pi pi-eye" 
@@ -285,22 +365,27 @@ const router = useRouter()
 const { 
   loading, 
   error, 
+  childLocations,
+  childrenLoading,
   formatDate, 
   getTypeName, 
   getTypeClass,
   parseLocationPath,
   hasMetadata,
+  hasParent,
   fetchLocation,
+  fetchChildLocations,
   deleteLocation,
   uploadFloorPlan,
   navigateToLocationEdit,
+  navigateToLocationCreate,
+  navigateToLocationDetail,
   navigateToThings,
   navigateToCreateThing,
   navigateToEdgeDetail
 } = useLocation()
 
 // Get thing functionality from composable
-// FIX 1: Correctly map function names from the useThing composable
 const { 
   getTypeName: getThingTypeName, 
   getTypeClass: getThingTypeClass 
@@ -329,6 +414,14 @@ const thingColumns = [
   { field: 'actions', header: 'Actions', sortable: false }
 ]
 
+// Child location columns for the table
+const childLocationColumns = [
+  { field: 'code', header: 'Code', sortable: true },
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'type', header: 'Type', sortable: true },
+  { field: 'actions', header: 'Actions', sortable: false }
+]
+
 // Fetch location data on component mount
 onMounted(async () => {
   await loadLocationDetail()
@@ -347,13 +440,15 @@ const loadLocationDetail = async () => {
       
       // Now fetch associated things
       await fetchThings()
+      
+      // Now fetch child locations
+      await fetchChildLocations(id)
     }
   } catch (err) {
     // Error handling is done in the composable
   }
 }
 
-// FIX 2: Improved fetchThings method to handle field name differences
 const fetchThings = async () => {
   if (!location.value) return
   
