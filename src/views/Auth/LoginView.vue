@@ -1,12 +1,12 @@
 <!-- src/views/Auth/LoginView.vue -->
 <template>
   <div class="p-4 sm:p-6">
-    <h2 class="text-xl font-semibold text-center mb-6">Login to your account</h2>
+    <h2 class="text-xl font-semibold text-center mb-6 text-white">Login to your account</h2>
     
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <!-- Email Input -->
       <div class="space-y-2">
-        <label for="identity" class="block text-sm font-medium text-gray-700">Email</label>
+        <label for="identity" class="block text-sm font-medium text-white">Email</label>
         <InputText
           id="identity"
           v-model="identity"
@@ -18,7 +18,7 @@
         />
         <small
           id="identity-error"
-          class="p-error block"
+          class="p-error block bg-white bg-opacity-20 px-2 py-1 rounded"
           v-if="v$.identity.$error"
         >
           {{ v$.identity.$errors[0].$message }}
@@ -28,8 +28,10 @@
       <!-- Password Input -->
       <div class="space-y-2">
         <div class="flex items-center justify-between flex-wrap">
-          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-          <a href="#" class="text-sm text-primary-600 hover:text-primary-500">Forgot password?</a>
+          <label for="password" class="block text-sm font-medium text-white">Password</label>
+          <router-link to="/auth/forgot-password" class="text-sm text-white hover:text-gray-200 hover:underline">
+            Forgot password?
+          </router-link>
         </div>
         <Password
           id="password"
@@ -43,7 +45,7 @@
         />
         <small
           id="password-error"
-          class="p-error block"
+          class="p-error block bg-white bg-opacity-20 px-2 py-1 rounded"
           v-if="v$.password.$error"
         >
           {{ v$.password.$errors[0].$message }}
@@ -51,7 +53,7 @@
       </div>
       
       <!-- Error Message -->
-      <div v-if="authStore.error" class="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+      <div v-if="authStore.error" class="bg-red-100 border border-red-400 text-red-800 p-3 rounded-md text-sm">
         {{ authStore.error }}
       </div>
       
@@ -60,9 +62,17 @@
         <Button
           type="submit"
           label="Sign in"
-          class="w-full"
+          class="w-full font-medium bg-white text-[#1f4b8e] border-white hover:bg-gray-100"
           :loading="authStore.loading"
         />
+      </div>
+      
+      <!-- Registration Link -->
+      <div class="text-center text-sm">
+        <span class="text-white">Don't have an account?</span>
+        <router-link to="/auth/register" class="ml-1 text-white hover:text-gray-200 hover:underline">
+          Create one now
+        </router-link>
       </div>
     </form>
   </div>
