@@ -24,6 +24,16 @@ export function useNatsSettings() {
     natsService.onStatusChange((status, error) => {
       connectionStatus.value = status;
       errorMessage.value = error;
+      
+      // Only show error messages via toast (removed success toast here)
+      if (status === 'error' && error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Connection Error',
+          detail: error,
+          life: 5000
+        });
+      }
     });
     
     // Auto-connect if configured

@@ -154,8 +154,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useNatsSettings } from '../../composables/useNatsSettings';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
 import EntityForm from '../../components/common/EntityForm.vue';
 import FormField from '../../components/common/FormField.vue';
 import InputText from 'primevue/inputtext';
@@ -163,20 +163,43 @@ import Password from 'primevue/password';
 import InputSwitch from 'primevue/inputswitch';
 import Button from 'primevue/button';
 
-// Get NATS settings functionality
-const { 
-  config, 
-  connectionStatus, 
-  errorMessage, 
-  loading,
-  isConnected,
-  isConnecting,
-  hasError,
-  connectToNats,
-  disconnectFromNats,
-  saveSettings: saveNatsSettings,
-  resetSettings: resetNatsConfig
-} = useNatsSettings();
+// Import the NATS connection manager
+import natsConnectionManager from '../../services/nats/natsConnectionManager';
+import { natsConfigService } from '../../services/nats/natsConfigService';
+import natsService from '../../services/nats/natsService';
+
+// Get toast functionality for notifications
+const toast = useToast();
+
+// Local state
+const config = ref(natsConfigService.getDefaultConfig());
+const connectionStatus = ref('disconnected');
+const errorMessage = ref('');
+const loading = ref(false);
+const statusListener = ref(null);
+
+// Load configuration on mount
+onMounted(() => {
+  // Get current configuration
+  config.value = natsConfigService.getConfig();
+  
+  // Set up status listener
+  statusListener.value = (status, error) => {
+    connectionStatus.value = status;
+    errorMessage.value = error;
+  };
+  natsService.onStatusChange(statusListener.value);
+  
+  // Initialize with current connection status
+  connectionStatus.value = natsService.status;
+});
+
+// Clean up on unmount
+onUnmounted(() => {
+  if (statusListener.value) {
+    natsService.removeStatusListener(statusListener.value);
+  }
+});
 
 // Status display helpers
 const statusClass = computed(() => {
@@ -202,22 +225,83 @@ const statusText = computed(() => {
   }
 });
 
+// Computed properties
+const isConnected = computed(() => connectionStatus.value === 'connected');
+const isConnecting = computed(() => connectionStatus.value === 'connecting');
+const hasError = computed(() => connectionStatus.value === 'error');
+
 // Toggle connection state
-const toggleConnection = () => {
-  if (isConnected.value) {
-    disconnectFromNats();
-  } else {
-    connectToNats();
+const toggleConnection = async () => {
+  loading.value = true;
+  
+  try {
+    if (isConnected.value) {
+      // Disconnect
+      await natsConnectionManager.disconnect();
+      toast.add({
+        severity: 'info',
+        summary: 'Disconnected',
+        detail: 'Disconnected from NATS server',
+        life: 3000
+      });
+    } else {
+      // Validate config before connecting
+      const validation = natsConfigService.validateConfig(config.value);
+      if (!validation.valid) {
+        toast.add({
+          severity: 'error',
+          summary: 'Invalid Configuration',
+          detail: validation.errors.join('. '),
+          life: 5000
+        });
+        return;
+      }
+      
+      // Connect
+      const success = await natsConnectionManager.connect(config.value);
+      
+      if (success) {
+        toast.add({
+          severity: 'success',
+          summary: 'Connected',
+          detail: `Successfully connected to NATS server at ${config.value.url}`,
+          life: 3000
+        });
+      } else {
+        toast.add({
+          severity: 'error',
+          summary: 'Connection Failed',
+          detail: errorMessage.value || 'Failed to connect to NATS server',
+          life: 5000
+        });
+      }
+    }
+  } finally {
+    loading.value = false;
   }
 };
 
 // Save settings
 const saveSettings = () => {
-  saveNatsSettings();
+  natsConfigService.saveConfig(config.value);
+  
+  toast.add({
+    severity: 'success',
+    summary: 'Settings Saved',
+    detail: 'NATS configuration has been saved',
+    life: 3000
+  });
 };
 
 // Reset settings
 const resetSettings = () => {
-  resetNatsConfig();
+  config.value = natsConfigService.getDefaultConfig();
+  
+  toast.add({
+    severity: 'info',
+    summary: 'Settings Reset',
+    detail: 'NATS configuration has been reset to defaults',
+    life: 3000
+  });
 };
 </script>
