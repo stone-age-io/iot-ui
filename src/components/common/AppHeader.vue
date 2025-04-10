@@ -1,4 +1,4 @@
-<!-- src/components/common/AppHeader.vue - Updated with custom logo -->
+<!-- src/components/common/AppHeader.vue -->
 <template>
   <header class="bg-white border-b border-gray-200 h-16 flex items-center">
     <div class="flex items-center justify-between px-4 py-3 w-full">
@@ -67,10 +67,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const userMenu = ref(null)
 const notificationsVisible = ref(false)
@@ -80,7 +82,7 @@ const userFullName = computed(() => authStore.userFullName)
 const userInitials = computed(() => authStore.userInitials)
 
 // Emit events
-const emit = defineProps({
+const props = defineProps({
   sidebarOpen: {
     type: Boolean,
     default: false
@@ -89,20 +91,20 @@ const emit = defineProps({
 
 defineEmits(['toggle-sidebar'])
 
-// User menu items
+// User menu items - Updated with settings navigation
 const userMenuItems = [
   { 
     label: 'Profile',
     icon: 'pi pi-user',
     command: () => {
-      // Navigate to profile page
+      router.push({ name: 'profile' })
     }
   },
   { 
     label: 'Settings',
     icon: 'pi pi-cog',
     command: () => {
-      // Navigate to settings page
+      router.push({ name: 'settings' })
     }
   },
   { 

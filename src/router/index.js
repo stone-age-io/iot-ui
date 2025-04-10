@@ -1,4 +1,4 @@
-// src/router/index.js - Updated with Map route
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -11,7 +11,7 @@ import LoginView from '../views/Auth/LoginView.vue'
 
 // Dashboard & Map Views
 import DashboardView from '../views/DashboardView.vue'
-import MapView from '../views/MapView.vue'  // New Map View
+import MapView from '../views/MapView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 // Edge Views
@@ -44,6 +44,12 @@ import TopicPermissionDetailView from '../views/Messaging/TopicPermissions/Topic
 import TopicPermissionCreateView from '../views/Messaging/TopicPermissions/TopicPermissionCreateView.vue'
 import TopicPermissionEditView from '../views/Messaging/TopicPermissions/TopicPermissionEditView.vue'
 
+// Profile View
+import ProfileView from '../views/Profile/ProfileView.vue'
+
+// Settings View - New
+import UserSettingsView from '../views/Settings/UserSettingsView.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -63,6 +69,20 @@ const router = createRouter({
           name: 'map',
           component: MapView,
           meta: { title: 'Locations Map' }
+        },
+        // Profile route
+        {
+          path: 'profile',
+          name: 'profile',
+          component: ProfileView,
+          meta: { title: 'My Profile' }
+        },
+        // Settings route - New
+        {
+          path: 'settings',
+          name: 'settings',
+          component: UserSettingsView,
+          meta: { title: 'User Settings' }
         },
         // Edge routes
         {

@@ -9,15 +9,17 @@ export const COLLECTIONS = {
   EDGES: 'edges',
   LOCATIONS: 'locations',
   THINGS: 'things',
-  CLIENTS: 'clients',                      // Changed from MQTT_USERS
-  TOPIC_PERMISSIONS: 'topic_permissions'   // Changed from MQTT_ROLES
+  CLIENTS: 'clients',
+  TOPIC_PERMISSIONS: 'topic_permissions',
+  USERS: 'users'  
 }
 
 // API Endpoints (relative to base URL)
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/collections/users/auth-with-password',
-    REFRESH: '/collections/users/auth-refresh'
+    REFRESH: '/collections/users/auth-refresh',
+    PROFILE: '/collections/users/auth-refresh'
   }
   
   // CRUD endpoints are automatically constructed using collection names

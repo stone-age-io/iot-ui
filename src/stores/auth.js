@@ -1,9 +1,10 @@
-// Updated src/stores/auth.js
+// src/stores/auth.js
 import { defineStore } from 'pinia'
 import { jwtDecode } from 'jwt-decode'
 import { ref, computed } from 'vue'
 import apiService from '../services/api'
 import router from '../router'
+import { ENDPOINTS } from '../services/pocketbase-config'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -46,8 +47,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      // Call the login endpoint - now using /api/auth/login
-      const response = await apiService.post('/pb/api/collections/_superusers/auth-with-password', credentials)
+      // Use the endpoint from the config
+      const response = await apiService.post('/pb/api' + ENDPOINTS.AUTH.LOGIN, credentials)
       
       // Store the token and user info
       token.value = response.data.token
@@ -65,9 +66,9 @@ export const useAuthStore = defineStore('auth', () => {
         console.warn('Error decoding token, using response data instead', err)
         // Fallback to response data if token cannot be decoded
         user.value = {
-          id: response.data.user?.id,
-          email: response.data.user?.email,
-          name: response.data.user?.name || response.data.user?.email
+          id: response.data.record?.id,
+          email: response.data.record?.email,
+          name: response.data.record?.name || response.data.record?.email
         }
       }
       
@@ -125,6 +126,16 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
+  // Update user information - NEW METHOD
+  function updateUser(userData) {
+    if (!userData) return
+    
+    user.value = {
+      ...user.value,
+      ...userData
+    }
+  }
+
   return {
     // State
     token,
@@ -140,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Actions
     login,
     logout,
-    checkToken
+    checkToken,
+    updateUser
   }
 })
