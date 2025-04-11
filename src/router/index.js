@@ -50,25 +50,25 @@ import ProfileView from '../views/Profile/ProfileView.vue'
 // Settings View - New
 import UserSettingsView from '../views/Settings/UserSettingsView.vue'
 
-//import EdgeTypeListView from '../views/Types/EdgeTypes/EdgeTypeListView.vue'
-//import EdgeTypeDetailView from '../views/Types/EdgeTypes/EdgeTypeDetailView.vue'
-//import EdgeTypeCreateView from '../views/Types/EdgeTypes/EdgeTypeCreateView.vue'
-//import EdgeTypeEditView from '../views/Types/EdgeTypes/EdgeTypeEditView.vue'
+import EdgeTypeListView from '../views/Types/EdgeTypes/EdgeTypeListView.vue'
+import EdgeTypeDetailView from '../views/Types/EdgeTypes/EdgeTypeDetailView.vue'
+import EdgeTypeCreateView from '../views/Types/EdgeTypes/EdgeTypeCreateView.vue'
+import EdgeTypeEditView from '../views/Types/EdgeTypes/EdgeTypeEditView.vue'
 
-//import EdgeRegionListView from '../views/Types/EdgeRegions/EdgeRegionListView.vue'
-//import EdgeRegionDetailView from '../views/Types/EdgeRegions/EdgeRegionDetailView.vue'
-//import EdgeRegionCreateView from '../views/Types/EdgeRegions/EdgeRegionCreateView.vue'
-//import EdgeRegionEditView from '../views/Types/EdgeRegions/EdgeRegionEditView.vue'
+import EdgeRegionListView from '../views/Types/EdgeRegions/EdgeRegionListView.vue'
+import EdgeRegionDetailView from '../views/Types/EdgeRegions/EdgeRegionDetailView.vue'
+import EdgeRegionCreateView from '../views/Types/EdgeRegions/EdgeRegionCreateView.vue'
+import EdgeRegionEditView from '../views/Types/EdgeRegions/EdgeRegionEditView.vue'
 
-//import LocationTypeListView from '../views/Types/LocationTypes/LocationTypeListView.vue'
-//import LocationTypeDetailView from '../views/Types/LocationTypes/LocationTypeDetailView.vue'
-//import LocationTypeCreateView from '../views/Types/LocationTypes/LocationTypeCreateView.vue'
-//import LocationTypeEditView from '../views/Types/LocationTypes/LocationTypeEditView.vue'
+import LocationTypeListView from '../views/Types/LocationTypes/LocationTypeListView.vue'
+import LocationTypeDetailView from '../views/Types/LocationTypes/LocationTypeDetailView.vue'
+import LocationTypeCreateView from '../views/Types/LocationTypes/LocationTypeCreateView.vue'
+import LocationTypeEditView from '../views/Types/LocationTypes/LocationTypeEditView.vue'
 
-//import ThingTypeListView from '../views/Types/ThingTypes/ThingTypeListView.vue'
-//import ThingTypeDetailView from '../views/Types/ThingTypes/ThingTypeDetailView.vue'
-//import ThingTypeCreateView from '../views/Types/ThingTypes/ThingTypeCreateView.vue'
-//import ThingTypeEditView from '../views/Types/ThingTypes/ThingTypeEditView.vue'
+import ThingTypeListView from '../views/Types/ThingTypes/ThingTypeListView.vue'
+import ThingTypeDetailView from '../views/Types/ThingTypes/ThingTypeDetailView.vue'
+import ThingTypeCreateView from '../views/Types/ThingTypes/ThingTypeCreateView.vue'
+import ThingTypeEditView from '../views/Types/ThingTypes/ThingTypeEditView.vue'
 
 
 const router = createRouter({
