@@ -4,6 +4,7 @@ import {
   COLLECTIONS, 
   collectionEndpoint 
 } from '../pocketbase-config'
+import { edgeTypeService, edgeRegionService } from '../type/typeServices'
 
 /**
  * Service for Edge entity operations
@@ -93,6 +94,22 @@ export class EdgeService extends BaseService {
   }
   
   /**
+   * Get edge types from EdgeTypeService
+   * @returns {Promise<Array>} - Array of edge type options
+   */
+  async getEdgeTypes() {
+    return await edgeTypeService.getTypeOptions()
+  }
+  
+  /**
+   * Get edge regions from EdgeRegionService
+   * @returns {Promise<Array>} - Array of edge region options
+   */
+  async getEdgeRegions() {
+    return await edgeRegionService.getRegionOptions()
+  }
+  
+  /**
    * Custom parameter transformation for edge specific filters
    * @override
    */
@@ -101,34 +118,25 @@ export class EdgeService extends BaseService {
     if (originalParams.withMetadata) {
       transformedParams.fields = 'id,code,name,type,region,metadata,created,updated,active,description'
     }
+    
+    // Add filter for type if provided
+    if (originalParams.type) {
+      transformedParams.filter = transformedParams.filter 
+        ? `${transformedParams.filter} && type="${originalParams.type}"`
+        : `type="${originalParams.type}"`
+    }
+    
+    // Add filter for region if provided
+    if (originalParams.region) {
+      transformedParams.filter = transformedParams.filter 
+        ? `${transformedParams.filter} && region="${originalParams.region}"`
+        : `region="${originalParams.region}"`
+    }
   }
 }
 
 // Create instance
 export const edgeService = new EdgeService()
-
-/**
- * Edge regions for dropdown options
- */
-export const edgeRegions = [
-  { label: 'North America', value: 'na' },
-  { label: 'Europe', value: 'eu' },
-  { label: 'Asia Pacific', value: 'ap' },
-  { label: 'South America', value: 'sa' },
-  { label: 'Africa', value: 'af' },
-  { label: 'Middle East', value: 'me' },
-  { label: 'Australia', value: 'aus' }
-]
-
-/**
- * Edge types for dropdown options
- */
-export const edgeTypes = [
-  { label: 'Building', value: 'bld' },
-  { label: 'Data Center', value: 'dc' },
-  { label: 'Warehouse', value: 'wh' },
-  { label: 'Campus', value: 'camp' }
-]
 
 /**
  * Validate edge code format: [type]-[region]-[number]
@@ -153,3 +161,32 @@ export const generateEdgeCode = (type, region, number) => {
   const paddedNumber = String(number).padStart(3, '0')
   return `${type}-${region}-${paddedNumber}`
 }
+
+// Export edge types/regions references for backward compatibility
+// These will now be loaded dynamically from the service
+export const edgeTypes = []
+export const edgeRegions = []
+
+// Dynamic loading of edge types and regions
+// We initialize them empty and will load them in components when needed
+const initializeEdgeTypes = async () => {
+  try {
+    const types = await edgeService.getEdgeTypes()
+    edgeTypes.splice(0, edgeTypes.length, ...types)
+  } catch (error) {
+    console.error('Error initializing edge types:', error)
+  }
+}
+
+const initializeEdgeRegions = async () => {
+  try {
+    const regions = await edgeService.getEdgeRegions()
+    edgeRegions.splice(0, edgeRegions.length, ...regions)
+  } catch (error) {
+    console.error('Error initializing edge regions:', error)
+  }
+}
+
+// Initialize types and regions
+initializeEdgeTypes()
+initializeEdgeRegions()

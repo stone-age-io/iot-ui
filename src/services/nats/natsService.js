@@ -8,6 +8,7 @@ class NatsService {
     this.statusListeners = [];
     this.errorMessage = '';
     this.subscriptions = new Map(); // Track active subscriptions
+    this.nextSubscriptionId = 1; // Used to generate unique subscription IDs
   }
 
   /**
@@ -72,6 +73,19 @@ class NatsService {
   async disconnect() {
     if (this.connection) {
       try {
+        // First, unsubscribe from all active subscriptions
+        for (const subscription of this.subscriptions.values()) {
+          try {
+            await subscription.unsubscribe();
+          } catch (subError) {
+            console.error('Error unsubscribing during disconnect:', subError);
+          }
+        }
+        
+        // Clear subscriptions map
+        this.subscriptions.clear();
+        
+        // Now close the connection
         await this.connection.close();
         console.log('Disconnected from NATS server');
       } catch (error) {
@@ -113,7 +127,7 @@ class NatsService {
    * Subscribe to a NATS subject
    * @param {string} subject - NATS subject to subscribe to
    * @param {Function} callback - Callback function for received messages
-   * @returns {Object|null} - Subscription object or null on failure
+   * @returns {Object|null} - Enhanced subscription object or null on failure
    */
   async subscribe(subject, callback) {
     if (!this.connection) {
@@ -125,25 +139,35 @@ class NatsService {
       // Create subscription
       const subscription = this.connection.subscribe(subject);
       
+      // Generate a unique ID for this subscription
+      const subscriptionId = this.nextSubscriptionId++;
+      
+      // Store the ID on the subscription object
+      subscription.sid = subscriptionId;
+      
       // Store subscription with subject as key
       this.subscriptions.set(subject, subscription);
+      
+      console.log(`Created subscription ${subscriptionId} for subject ${subject}`);
       
       // Start message handler
       (async () => {
         for await (const message of subscription) {
           try {
             const data = JSON.parse(new TextDecoder().decode(message.data));
-            callback(data, message.subject);
+            callback(data, message.subject, subscriptionId);
           } catch (error) {
             console.error('Error parsing message:', error);
-            callback(new TextDecoder().decode(message.data), message.subject);
+            callback(new TextDecoder().decode(message.data), message.subject, subscriptionId);
           }
         }
+        
+        console.log(`Subscription ${subscriptionId} for ${subject} ended`);
       })().catch((err) => {
-        console.error('Error in subscription handler:', err);
+        console.error(`Error in subscription handler for ${subject}:`, err);
       });
       
-      console.log(`Subscribed to ${subject}`);
+      console.log(`Subscribed to ${subject} with ID ${subscriptionId}`);
       return subscription;
     } catch (error) {
       console.error('Error creating subscription:', error);
@@ -209,10 +233,13 @@ class NatsService {
     if (subscription) {
       try {
         await subscription.unsubscribe();
+        console.log(`Unsubscribed from subscription ${subscription.sid || 'unknown'}`);
+        
         // Remove from tracked subscriptions
         this.subscriptions.forEach((sub, key) => {
           if (sub === subscription) {
             this.subscriptions.delete(key);
+            console.log(`Removed subscription for ${key} from tracking`);
           }
         });
       } catch (error) {

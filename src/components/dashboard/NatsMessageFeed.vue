@@ -66,20 +66,20 @@
     <!-- COMPACT VIEW - Table -->
     <div v-else-if="compactView" class="overflow-hidden border rounded-md">
       <div class="message-table-container overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 table-fixed">
           <thead class="bg-gray-50">
             <tr>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Time</th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payload</th>
-              <th scope="col" class="px-4 py-3 w-10"></th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Topic</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Time</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">Payload</th>
+              <th scope="col" class="px-4 py-3 w-14 text-right"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="message in paginatedMessages" :key="message.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3">
+              <td class="px-4 py-3 truncate">
                 <span 
-                  class="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                  class="inline-block px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full"
                   :class="getTopicClass(message.topic)"
                   :title="message.topic"
                 >
@@ -89,9 +89,9 @@
               <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                 {{ formatTimestamp(message.timestamp) }}
               </td>
-              <td class="px-4 py-3">
-                <div class="text-gray-900 font-mono text-xs truncate max-w-[500px]" :title="formatMessageData(message.data)">
-                  {{ formatMessageDataPreview(message.data) }}
+              <td class="px-4 py-3 truncate">
+                <div class="text-gray-900 font-mono text-xs truncate" :title="formatMessageData(message.data)">
+                  {{ formatMessagePayloadOnly(message.data) }}
                 </div>
               </td>
               <td class="px-4 py-3 text-right">
@@ -151,31 +151,32 @@
       header="Message Detail" 
       :modal="true"
       :closable="true"
+      class="message-detail-dialog"
     >
       <div v-if="selectedMessage" class="message-detail">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <div class="text-sm text-gray-500">Topic</div>
-            <div class="font-medium">{{ selectedMessage.topic }}</div>
+        <div class="message-header mb-5">
+          <div class="mb-4">
+            <div class="font-medium text-gray-700 mb-1 text-base">Topic</div>
+            <div class="bg-gray-50 p-2 rounded border border-gray-200 font-medium">{{ selectedMessage.topic }}</div>
           </div>
           <div>
-            <div class="text-sm text-gray-500">Timestamp</div>
-            <div class="font-medium">{{ formatTimestamp(selectedMessage.timestamp, true) }}</div>
+            <div class="font-medium text-gray-700 mb-1 text-base">Timestamp</div>
+            <div class="bg-gray-50 p-2 rounded border border-gray-200">{{ formatTimestamp(selectedMessage.timestamp, true) }}</div>
           </div>
         </div>
         
-        <div class="mb-4">
-          <div class="text-sm text-gray-500 mb-1">Payload</div>
-          <div class="bg-gray-100 p-3 rounded overflow-auto max-h-96">
+        <div class="mb-5">
+          <div class="font-medium text-gray-700 mb-1 text-base">Payload</div>
+          <div class="bg-gray-50 p-3 rounded border border-gray-200 overflow-auto max-h-96">
             <pre class="font-mono text-sm whitespace-pre-wrap break-words">{{ formatMessageData(selectedMessage.data) }}</pre>
           </div>
         </div>
         
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-3">
           <Button 
-            label="Copy Payload" 
+            label="Copy Message" 
             icon="pi pi-copy" 
-            class="p-button-outlined p-button-sm mr-2"
+            class="p-button-outlined p-button-sm"
             @click="copyMessageData(selectedMessage.data)"
           />
           <Button 
@@ -271,8 +272,7 @@ const expandedMessages = ref([]); // Track expanded messages in expanded view
 const messageDetailVisible = ref(false);
 const selectedMessage = ref(null);
 const toast = useToast();
-const connectionAttemptCount = ref(0);
-const maxConnectionAttempts = 3;
+const subscriptionInitialized = ref(false); // Track if we've already initialized subscriptions
 
 // Page size options for dropdown
 const pageSizeOptions = [
@@ -299,6 +299,7 @@ const {
   formatMessageData,
   formatTimestamp,
   subscribeToAllTopics,
+  unsubscribeFromAllTopics,
   goToPage,
   nextPage,
   prevPage
@@ -316,6 +317,33 @@ const pageSizeModel = computed({
     goToPage(1);
   }
 });
+
+// Format only the payload field
+const formatMessagePayloadOnly = (data) => {
+  try {
+    // Parse the data if it's a string
+    const message = typeof data === 'string' ? JSON.parse(data) : data;
+    
+    // Check if it has a payload property
+    if (message && message.payload) {
+      // Return the stringified payload only
+      return JSON.stringify(message.payload);
+    }
+    
+    // Fallback to showing a shortened version of the full message
+    return formatMessageDataPreview(data);
+  } catch (error) {
+    // In case of parsing error, return the original data preview
+    return formatMessageDataPreview(data);
+  }
+};
+
+// Create a shortened preview of message data
+const formatMessageDataPreview = (data) => {
+  const formatted = formatMessageData(data);
+  if (formatted.length <= 80) return formatted;
+  return formatted.substring(0, 77) + '...';
+};
 
 // Topic CSS class generator
 const getTopicClass = (topic) => {
@@ -342,13 +370,6 @@ const getTopicClass = (topic) => {
   // Select color based on hash
   const colorIndex = Math.abs(hash) % colors.length;
   return colors[colorIndex];
-};
-
-// Create a shortened preview of message data
-const formatMessageDataPreview = (data) => {
-  const formatted = formatMessageData(data);
-  if (formatted.length <= 80) return formatted;
-  return formatted.substring(0, 77) + '...';
 };
 
 // Toggle message expansion in expanded view
@@ -381,7 +402,7 @@ const copyMessageData = (data) => {
       toast.add({
         severity: 'success',
         summary: 'Copied',
-        detail: 'Message payload copied to clipboard',
+        detail: 'Message copied to clipboard',
         life: 2000
       });
     })
@@ -396,66 +417,55 @@ const copyMessageData = (data) => {
     });
 };
 
-// Handle connection with retry logic
-const connectWithRetry = async () => {
-  // Skip if loading or max attempts reached
-  if (loading.value || connectionAttemptCount.value >= maxConnectionAttempts) return;
+// Handle connection status changes
+const handleConnectionStatus = (status) => {
+  console.log(`NATS connection status changed: ${status}`);
   
-  connectionAttemptCount.value++;
-  console.log(`NATS subscription attempt ${connectionAttemptCount.value}/${maxConnectionAttempts}`);
-  
-  // Set initial page size
-  pageSize.value = 5;
-  
-  // Check connection status directly
-  if (natsService.isConnected()) {
-    // If already connected, subscribe
-    await subscribeToAllTopics();
-  } else {
-    // Not connected - try again after a delay
-    setTimeout(async () => {
-      // Check connection again before retrying
-      if (natsService.isConnected()) {
-        await subscribeToAllTopics();
-      } else if (connectionAttemptCount.value < maxConnectionAttempts) {
-        // Try again
-        connectWithRetry();
-      } else {
-        // Max attempts reached, but if we still have topics, try to subscribe anyway
-        if (topics.value.length > 0) {
-          console.log('Max connection attempts reached, final subscription attempt');
-          await subscribeToAllTopics();
-        }
-      }
-    }, 1000); // Wait 1 second between attempts
+  if (status === 'connected' && !subscriptionInitialized.value) {
+    // Only initialize subscriptions once
+    console.log('Setting up initial NATS subscriptions');
+    subscribeToAllTopics().then(() => {
+      subscriptionInitialized.value = true;
+    });
   }
 };
 
-// Watch for NATS connection status changes
-const setupConnectionWatcher = () => {
-  const statusHandler = async (status) => {
-    if (status === 'connected') {
-      // When connection becomes available, subscribe
-      await subscribeToAllTopics();
-    }
-  };
-  
-  // Subscribe to status changes
-  natsService.onStatusChange(statusHandler);
-  
-  // Clean up on component unmount
-  onUnmounted(() => {
-    natsService.removeStatusListener(statusHandler);
-  });
+// Set initial page size
+const initializePageSize = () => {
+  pageSize.value = 5;
 };
 
 // Initialize
-onMounted(async () => {
-  // Setup connection watcher
-  setupConnectionWatcher();
+onMounted(() => {
+  console.log('NatsMessageFeed component mounted');
   
-  // Start connection attempt with retry logic
-  connectWithRetry();
+  // Set initial page size
+  initializePageSize();
+  
+  // Subscribe to connection status changes
+  natsService.onStatusChange(handleConnectionStatus);
+  
+  // If already connected, subscribe to topics
+  if (natsService.isConnected() && !subscriptionInitialized.value) {
+    console.log('NATS already connected, setting up subscriptions');
+    subscribeToAllTopics().then(() => {
+      subscriptionInitialized.value = true;
+    });
+  }
+});
+
+// Clean up when unmounted
+onUnmounted(() => {
+  console.log('NatsMessageFeed component unmounting');
+  
+  // Remove status listener
+  natsService.removeStatusListener(handleConnectionStatus);
+  
+  // Ensure we unsubscribe from all topics
+  unsubscribeFromAllTopics();
+  
+  // Reset state
+  subscriptionInitialized.value = false;
 });
 </script>
 
@@ -492,6 +502,21 @@ td, th {
 .message-data pre {
   margin: 0;
   transition: max-height 0.3s ease;
+}
+
+/* Dialog styling */
+:deep(.message-detail-dialog .p-dialog-header) {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:deep(.message-detail-dialog .p-dialog-content) {
+  padding: 1.5rem;
+}
+
+:deep(.message-detail-dialog .p-dialog-header-close) {
+  width: 2rem;
+  height: 2rem;
 }
 
 /* Responsive adjustments for mobile */
@@ -538,6 +563,17 @@ td, th {
   
   table tbody td:nth-child(4) {
     justify-content: flex-end;
+  }
+  
+  /* Mobile dialog adjustments */
+  :deep(.message-detail-dialog) {
+    width: 95vw !important;
+  }
+  
+  .message-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 }
 </style>

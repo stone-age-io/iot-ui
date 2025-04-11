@@ -24,6 +24,7 @@ export function useNatsMessages(maxMessages = 100) {
   const pageSize = ref(5) // Default to 5 messages per page
   const loading = ref(false)
   const error = ref(null)
+  const activeSubscriptionIds = ref(new Set()) // Track active subscription IDs
   
   // Get saved topics from config
   const loadTopics = () => {
@@ -34,7 +35,10 @@ export function useNatsMessages(maxMessages = 100) {
   // Subscribe to a topic
   const subscribe = async (topic) => {
     // Skip if already subscribed
-    if (subscriptions.value[topic]) return
+    if (subscriptions.value[topic]) {
+      console.log(`Already subscribed to topic: ${topic}, skipping.`)
+      return subscriptions.value[topic]
+    }
     
     // Skip if NATS is not connected
     if (!natsService.isConnected()) {
@@ -45,14 +49,22 @@ export function useNatsMessages(maxMessages = 100) {
         detail: 'Cannot subscribe: NATS is not connected',
         life: 3000
       })
-      return
+      return null
     }
     
     try {
+      console.log(`Subscribing to topic: ${topic}`)
+      
       // Subscribe to the topic
-      const subscription = await natsService.subscribe(topic, (message, subject) => {
+      const subscription = await natsService.subscribe(topic, (message, subject, subscriptionId) => {
         // Skip if paused
         if (paused.value) return
+        
+        // Skip if this subscription ID is not in our active set
+        if (!activeSubscriptionIds.value.has(subscriptionId)) {
+          console.log(`Ignoring message from inactive subscription: ${subscriptionId}`)
+          return
+        }
         
         // Add message to list
         addMessage({
@@ -67,13 +79,16 @@ export function useNatsMessages(maxMessages = 100) {
         // Store subscription
         subscriptions.value[topic] = subscription
         
-        toast.add({
-          severity: 'success',
-          summary: 'Subscribed',
-          detail: `Subscribed to topic: ${topic}`,
-          life: 3000
-        })
+        // Add subscription ID to active set
+        if (subscription.sid) {
+          activeSubscriptionIds.value.add(subscription.sid)
+          console.log(`Added subscription ID ${subscription.sid} to active set`)
+        }
+        
+        console.log(`Successfully subscribed to topic: ${topic}`)
       }
+      
+      return subscription
     } catch (err) {
       console.error('Error subscribing to topic:', err)
       error.value = `Failed to subscribe to topic: ${topic}`
@@ -83,6 +98,7 @@ export function useNatsMessages(maxMessages = 100) {
         detail: `Failed to subscribe to topic: ${topic}`,
         life: 3000
       })
+      return null
     }
   }
   
@@ -91,15 +107,18 @@ export function useNatsMessages(maxMessages = 100) {
     const subscription = subscriptions.value[topic]
     if (subscription) {
       try {
-        await natsService.unsubscribe(subscription)
-        delete subscriptions.value[topic]
+        // Remove from active subscription IDs
+        if (subscription.sid) {
+          activeSubscriptionIds.value.delete(subscription.sid)
+          console.log(`Removed subscription ID ${subscription.sid} from active set`)
+        }
         
-        toast.add({
-          severity: 'info',
-          summary: 'Unsubscribed',
-          detail: `Unsubscribed from topic: ${topic}`,
-          life: 3000
-        })
+        // Perform NATS unsubscribe
+        await natsService.unsubscribe(subscription)
+        
+        // Remove from subscriptions
+        delete subscriptions.value[topic]
+        console.log(`Unsubscribed from topic: ${topic}`)
       } catch (err) {
         console.error('Error unsubscribing from topic:', err)
       }
@@ -108,11 +127,22 @@ export function useNatsMessages(maxMessages = 100) {
   
   // Subscribe to all configured topics
   const subscribeToAllTopics = async () => {
-    loading.value = true
+    console.log("Starting subscribeToAllTopics")
+    
+    // Don't set loading if we already have active subscriptions
+    const hasActiveSubscriptions = Object.keys(subscriptions.value).length > 0
+    if (!hasActiveSubscriptions) {
+      loading.value = true
+    }
     
     try {
       // Load topics from config
       loadTopics()
+      
+      // If we have topics but no active subscriptions, clear the messages to start fresh
+      if (topics.value.length > 0 && !hasActiveSubscriptions) {
+        messages.value = []
+      }
       
       // Subscribe to each topic
       for (const topic of topics.value) {
@@ -121,6 +151,8 @@ export function useNatsMessages(maxMessages = 100) {
     } finally {
       loading.value = false
     }
+    
+    console.log("Completed subscribeToAllTopics")
   }
   
   // Unsubscribe from all topics
@@ -135,6 +167,10 @@ export function useNatsMessages(maxMessages = 100) {
       for (const topic of topicKeys) {
         await unsubscribe(topic)
       }
+      
+      // Clear active subscription IDs
+      activeSubscriptionIds.value.clear()
+      console.log("Cleared all active subscription IDs")
     } finally {
       loading.value = false
     }
@@ -262,35 +298,10 @@ export function useNatsMessages(maxMessages = 100) {
     }
   })
   
-  // Watch for changes in connection status
-  const handleConnectionStatus = (status) => {
-    if (status === 'connected') {
-      // Resubscribe to all topics on reconnect
-      subscribeToAllTopics()
-    } else if (status === 'disconnected' || status === 'error') {
-      // Clear subscriptions when disconnected
-      subscriptions.value = {}
-    }
-  }
-  
-  // Setup when mounted
-  onMounted(() => {
-    // Subscribe to connection status changes
-    natsService.onStatusChange(handleConnectionStatus)
-    
-    // If already connected, subscribe to topics
-    if (natsService.isConnected()) {
-      subscribeToAllTopics()
-    }
-  })
-  
   // Clean up when unmounted
   onUnmounted(() => {
     // Unsubscribe from all topics
     unsubscribeFromAllTopics()
-    
-    // Remove status listener
-    natsService.removeStatusListener(handleConnectionStatus)
   })
   
   return {

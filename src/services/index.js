@@ -9,6 +9,12 @@ import { clientService, generateClientUsername, generateSecurePassword } from '.
 import { topicPermissionService, validateTopic } from './topic-permission/topicPermissionService';
 import { userService } from './user/userService';
 
+// Type management services
+import { edgeTypeService } from './type/edgeTypeService';
+import { edgeRegionService } from './type/edgeRegionService';
+import { locationTypeService } from './type/locationTypeService';
+import { thingTypeService } from './type/thingTypeService';
+
 // NATS services
 import natsService from './nats/natsService';
 import { natsConfigService } from './nats/natsConfigService';
@@ -52,6 +58,12 @@ export {
   
   // Topic permission utilities
   validateTopic,
+  
+  // Type management services
+  edgeTypeService,
+  edgeRegionService,
+  locationTypeService,
+  thingTypeService,
   
   // NATS services
   natsService,

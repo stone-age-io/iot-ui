@@ -176,15 +176,30 @@ const menuSections = [
     ]
   },
   {
-    title: 'Administration',
-    items: [
-      {
-        label: 'Settings',
-        icon: 'pi pi-cog',
-        to: '/settings'
-      }
-    ]
-  }
+  title: 'Type Management',
+  items: [
+    {
+      label: 'Edge Types',
+      icon: 'pi pi-tag',
+      to: '/types/edge-types'
+    },
+    {
+      label: 'Edge Regions',
+      icon: 'pi pi-globe',
+      to: '/types/edge-regions'
+    },
+    {
+      label: 'Location Types',
+      icon: 'pi pi-list',
+      to: '/types/location-types'
+    },
+    {
+      label: 'Thing Types',
+      icon: 'pi pi-sitemap',
+      to: '/types/thing-types'
+    }
+  ]
+}
 ]
 </script>
 

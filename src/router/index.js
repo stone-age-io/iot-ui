@@ -50,6 +50,27 @@ import ProfileView from '../views/Profile/ProfileView.vue'
 // Settings View - New
 import UserSettingsView from '../views/Settings/UserSettingsView.vue'
 
+//import EdgeTypeListView from '../views/Types/EdgeTypes/EdgeTypeListView.vue'
+//import EdgeTypeDetailView from '../views/Types/EdgeTypes/EdgeTypeDetailView.vue'
+//import EdgeTypeCreateView from '../views/Types/EdgeTypes/EdgeTypeCreateView.vue'
+//import EdgeTypeEditView from '../views/Types/EdgeTypes/EdgeTypeEditView.vue'
+
+//import EdgeRegionListView from '../views/Types/EdgeRegions/EdgeRegionListView.vue'
+//import EdgeRegionDetailView from '../views/Types/EdgeRegions/EdgeRegionDetailView.vue'
+//import EdgeRegionCreateView from '../views/Types/EdgeRegions/EdgeRegionCreateView.vue'
+//import EdgeRegionEditView from '../views/Types/EdgeRegions/EdgeRegionEditView.vue'
+
+//import LocationTypeListView from '../views/Types/LocationTypes/LocationTypeListView.vue'
+//import LocationTypeDetailView from '../views/Types/LocationTypes/LocationTypeDetailView.vue'
+//import LocationTypeCreateView from '../views/Types/LocationTypes/LocationTypeCreateView.vue'
+//import LocationTypeEditView from '../views/Types/LocationTypes/LocationTypeEditView.vue'
+
+//import ThingTypeListView from '../views/Types/ThingTypes/ThingTypeListView.vue'
+//import ThingTypeDetailView from '../views/Types/ThingTypes/ThingTypeDetailView.vue'
+//import ThingTypeCreateView from '../views/Types/ThingTypes/ThingTypeCreateView.vue'
+//import ThingTypeEditView from '../views/Types/ThingTypes/ThingTypeEditView.vue'
+
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -212,7 +233,109 @@ const router = createRouter({
           name: 'edit-topic-permission',
           component: TopicPermissionEditView,
           meta: { title: 'Edit Topic Permission' }
-        }
+        },
+        {
+    	  path: 'types/edge-types',
+          name: 'edge-types',
+          component: EdgeTypeListView,
+          meta: { title: 'Edge Types' }
+	},
+  	{
+        path: 'types/edge-types/create',
+        name: 'create-edge-type',
+        component: EdgeTypeCreateView,
+        meta: { title: 'Create Edge Type' }
+        },
+  	{
+        path: 'types/edge-types/:id',
+        name: 'edge-type-detail',
+        component: EdgeTypeDetailView,
+        meta: { title: 'Edge Type Details' }
+        },
+  	{
+  	path: 'types/edge-types/:id/edit',
+  	name: 'edit-edge-type',
+  	component: EdgeTypeEditView,
+  	meta: { title: 'Edit Edge Type' }
+	},
+
+	// Edge Region routes
+	{
+  	path: 'types/edge-regions',
+  	name: 'edge-regions',
+  	component: EdgeRegionListView,
+  	meta: { title: 'Edge Regions' }
+	},
+	{
+  	path: 'types/edge-regions/create',
+  	name: 'create-edge-region',
+  	component: EdgeRegionCreateView,
+  	meta: { title: 'Create Edge Region' }
+	},
+	{
+  	path: 'types/edge-regions/:id',
+  	name: 'edge-region-detail',
+  	component: EdgeRegionDetailView,
+  	meta: { title: 'Edge Region Details' }
+	},
+	{
+  	path: 'types/edge-regions/:id/edit',
+  	name: 'edit-edge-region',
+  	component: EdgeRegionEditView,
+  	meta: { title: 'Edit Edge Region' }
+	},
+
+	// Location Type routes
+	{
+  	path: 'types/location-types',
+  	name: 'location-types',
+  	component: LocationTypeListView,
+  	meta: { title: 'Location Types' }
+	},
+	{
+  	path: 'types/location-types/create',
+  	name: 'create-location-type',
+  	component: LocationTypeCreateView,
+  	meta: { title: 'Create Location Type' }
+	},
+	{
+  	path: 'types/location-types/:id',
+  	name: 'location-type-detail',
+  	component: LocationTypeDetailView,
+  	meta: { title: 'Location Type Details' }
+	},
+	{
+  	path: 'types/location-types/:id/edit',
+  	name: 'edit-location-type',
+  	component: LocationTypeEditView,
+  	meta: { title: 'Edit Location Type' }
+	},
+
+	// Thing Type routes
+	{
+  	path: 'types/thing-types',
+  	name: 'thing-types',
+  	component: ThingTypeListView,
+  	meta: { title: 'Thing Types' }
+	},
+	{
+  	path: 'types/thing-types/create',
+  	name: 'create-thing-type',
+  	component: ThingTypeCreateView,
+  	meta: { title: 'Create Thing Type' }
+	},
+	{
+  	path: 'types/thing-types/:id',
+  	name: 'thing-type-detail',
+  	component: ThingTypeDetailView,
+  	meta: { title: 'Thing Type Details' }
+	},
+	{
+  	path: 'types/thing-types/:id/edit',
+  	name: 'edit-thing-type',
+  	component: ThingTypeEditView,
+  	meta: { title: 'Edit Thing Type' }
+	}
       ]
     },
     {
