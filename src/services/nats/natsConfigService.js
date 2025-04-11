@@ -37,7 +37,7 @@ export class NatsConfigService {
       pass: '',
       token: '',
       autoConnect: false,
-      subjects: []  // For future use - saved subscriptions
+      subjects: []  // For topic subscriptions
     };
   }
   

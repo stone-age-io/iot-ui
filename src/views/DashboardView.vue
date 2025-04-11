@@ -15,7 +15,12 @@
       />
     </div>
     
-    <!-- Recent Activity -->
+    <!-- NATS Message Feed - NEW -->
+    <DashboardCard title="Real-time Messages">
+      <NatsMessageFeed />
+    </DashboardCard>
+    
+    <!-- Recent Activity - Now showing fewer items -->
     <DashboardCard title="Recent Activity">
       <div v-if="loading" class="empty-state">
         <ProgressSpinner style="width: 24px; height: 24px" />
@@ -27,7 +32,7 @@
       
       <div v-else class="activity-feed">
         <ActivityItem
-          v-for="(item, index) in activity"
+          v-for="(item, index) in activity.slice(0, 5)" 
           :key="index"
           :type="item.type"
           :title="item.title"
@@ -63,6 +68,7 @@ import { useDashboard } from '../composables/useDashboard'
 import StatCard from '../components/dashboard/StatCard.vue'
 import ActivityItem from '../components/dashboard/ActivityItem.vue'
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
+import NatsMessageFeed from '../components/dashboard/NatsMessageFeed.vue' // New import
 import ProgressSpinner from 'primevue/progressspinner'
 import Button from 'primevue/button'
 

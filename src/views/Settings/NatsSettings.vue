@@ -118,6 +118,48 @@
             </label>
           </div>
         </FormField>
+
+        <!-- TOPICS SECTION - NEW -->
+        <div class="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+          <h3 class="text-lg font-medium mb-3">Subscription Topics</h3>
+        </div>
+        
+        <!-- Topic List -->
+        <div class="md:col-span-2 p-4 border border-gray-200 rounded-lg">
+          <div v-if="config.subjects && config.subjects.length === 0" class="text-gray-500 text-center py-4">
+            No subscription topics configured
+          </div>
+          
+          <ul v-else class="space-y-2">
+            <li v-for="(topic, index) in config.subjects" :key="index" class="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
+              <span class="font-mono text-sm">{{ topic }}</span>
+              <Button 
+                icon="pi pi-times" 
+                class="p-button-text p-button-rounded p-button-sm" 
+                @click="removeTopic(index)"
+                :disabled="isConnected"
+              />
+            </li>
+          </ul>
+          
+          <!-- Add Topic Form -->
+          <div class="flex mt-4 gap-2">
+            <InputText
+              v-model="newTopic"
+              placeholder="Enter topic (e.g. sensors.temperature)"
+              class="flex-1"
+              :disabled="isConnected"
+            />
+            <Button
+              icon="pi pi-plus"
+              @click="addTopic"
+              :disabled="!isValidTopic || isConnected"
+            />
+          </div>
+          <small class="text-gray-500 mt-1 block">
+            Topic patterns like "sensors.*" or "building.>" are supported
+          </small>
+        </div>
       </div>
       
       <!-- Connection Buttons -->
@@ -163,10 +205,13 @@ import Password from 'primevue/password';
 import InputSwitch from 'primevue/inputswitch';
 import Button from 'primevue/button';
 
-// Import the NATS connection manager
+// Import the NATS services
 import natsConnectionManager from '../../services/nats/natsConnectionManager';
 import { natsConfigService } from '../../services/nats/natsConfigService';
 import natsService from '../../services/nats/natsService';
+
+// Import topic validator
+import { validateTopic } from '../../services/topic-permission/topicPermissionService';
 
 // Get toast functionality for notifications
 const toast = useToast();
@@ -177,11 +222,17 @@ const connectionStatus = ref('disconnected');
 const errorMessage = ref('');
 const loading = ref(false);
 const statusListener = ref(null);
+const newTopic = ref(''); // NEW: for adding topics
 
 // Load configuration on mount
 onMounted(() => {
   // Get current configuration
   config.value = natsConfigService.getConfig();
+  
+  // Ensure subjects array exists
+  if (!config.value.subjects) {
+    config.value.subjects = [];
+  }
   
   // Set up status listener
   statusListener.value = (status, error) => {
@@ -223,6 +274,11 @@ const statusText = computed(() => {
     case 'error': return 'Connection error';
     default: return 'Disconnected';
   }
+});
+
+// NEW: Check if topic is valid
+const isValidTopic = computed(() => {
+  return newTopic.value && validateTopic(newTopic.value);
 });
 
 // Computed properties
@@ -303,5 +359,45 @@ const resetSettings = () => {
     detail: 'NATS configuration has been reset to defaults',
     life: 3000
   });
+};
+
+// NEW: Add a subscription topic
+const addTopic = () => {
+  // Skip if empty or invalid
+  if (!newTopic.value || !validateTopic(newTopic.value)) return;
+  
+  // Ensure subjects array exists
+  if (!config.value.subjects) {
+    config.value.subjects = [];
+  }
+  
+  // Skip if already exists
+  if (config.value.subjects.includes(newTopic.value)) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Duplicate Topic',
+      detail: 'This topic is already in the list',
+      life: 3000
+    });
+    return;
+  }
+  
+  // Add to list
+  config.value.subjects.push(newTopic.value);
+  
+  // Clear input
+  newTopic.value = '';
+  
+  // Save changes
+  saveSettings();
+};
+
+// NEW: Remove a subscription topic
+const removeTopic = (index) => {
+  // Remove topic at index
+  config.value.subjects.splice(index, 1);
+  
+  // Save changes
+  saveSettings();
 };
 </script>
