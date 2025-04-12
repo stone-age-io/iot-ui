@@ -47,6 +47,8 @@
       class="p-datatable-sm"
       filterDisplay="menu"
       tableStyle="min-width: 50rem"
+      responsiveLayout="stack"
+      breakpoint="960px"
     >
       <!-- Selection Column -->
       <Column selectionMode="multiple" v-if="selectionMode === 'multiple'" headerStyle="width: 3rem" />
@@ -244,32 +246,6 @@ const onSort = (event) => {
   table-layout: auto;
 }
 
-/* Custom styling for responsive behavior */
-@media screen and (max-width: 640px) {
-  :deep(.p-datatable-thead) {
-    display: none;
-  }
-  
-  :deep(.p-datatable-tbody > tr) {
-    border-bottom: 1px solid var(--surface-d);
-  }
-  
-  :deep(.p-datatable-tbody > tr > td) {
-    text-align: left;
-    display: block;
-    width: 100%;
-    border: 0 none;
-    padding: 0.5rem 1rem;
-    
-    &:before {
-      content: attr(data-label);
-      font-weight: bold;
-      display: inline-block;
-      margin-right: 0.5rem;
-    }
-  }
-}
-
 /* Dark mode styles for PrimeVue DataTable */
 :deep(.p-datatable) {
   @apply dark:bg-gray-800;
@@ -337,5 +313,91 @@ const onSort = (event) => {
 
 :deep(.p-datatable .p-datatable-tbody > tr.p-datatable-row-editing) {
   @apply dark:bg-gray-700;
+}
+
+/* Enhanced styles for responsive stack layout */
+:deep(.p-datatable-responsive-scroll .p-datatable-wrapper) {
+  overflow-x: auto;
+}
+
+/* Make column headers more distinct */
+:deep(.p-datatable-thead > tr > th) {
+  @apply bg-gray-50 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200 text-sm;
+}
+
+/* Improve row hover styles */
+:deep(.p-datatable .p-datatable-tbody > tr:hover) {
+  @apply bg-gray-50 dark:bg-gray-700;
+}
+
+/* Stack view styling */
+:deep(.p-datatable[data-pc-section="root"][data-pc-name="datatable"][data-pc-section="root"].p-datatable-responsive-stack .p-datatable-tbody > tr > td) {
+  @apply py-3 border-b dark:border-gray-700;
+}
+
+:deep(.p-datatable[data-pc-section="root"][data-pc-name="datatable"][data-pc-section="root"].p-datatable-responsive-stack .p-datatable-tbody > tr > td .p-column-title) {
+  @apply font-medium text-gray-700 dark:text-gray-300 mr-2;
+}
+
+/* Improve paginator styling */
+:deep(.p-paginator) {
+  @apply py-3 border-t dark:border-gray-700;
+}
+
+:deep(.p-paginator .p-paginator-pages .p-paginator-page.p-highlight) {
+  @apply bg-primary-600 text-white dark:bg-primary-700 dark:text-white;
+}
+
+:deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight) {
+  @apply bg-primary-600 text-white dark:bg-primary-700 dark:text-white;
+}
+
+/* Add some breathing room to the dropdown filter panels */
+:deep(.p-column-filter-overlay) {
+  @apply p-2 dark:bg-gray-800 dark:border-gray-700;
+}
+
+:deep(.p-column-filter-buttonbar) {
+  @apply pt-2 border-t dark:border-gray-700;
+}
+
+:deep(.p-column-filter-buttonbar .p-button) {
+  @apply text-xs;
+}
+
+/* Stack view mobile enhancements */
+@media screen and (max-width: 960px) {
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-thead) {
+    display: none !important;
+  }
+  
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr) {
+    @apply border border-gray-200 dark:border-gray-700 rounded-lg mb-3 block bg-white dark:bg-gray-800 shadow-sm;
+  }
+  
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td) {
+    @apply flex py-3 px-4 border-b border-gray-100 dark:border-gray-700 last:border-b-0;
+    text-align: left !important;
+    display: flex !important;
+    width: 100% !important;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:before) {
+    content: attr(data-p-column);
+    @apply font-medium text-gray-700 dark:text-gray-300 mr-4;
+    width: 40%;
+    min-width: 10rem;
+  }
+  
+  /* Adjust spacing for action buttons on mobile */
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:last-child) {
+    @apply border-t border-gray-100 dark:border-gray-700 mt-auto justify-center;
+  }
+  
+  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:last-child:before) {
+    display: none;
+  }
 }
 </style>

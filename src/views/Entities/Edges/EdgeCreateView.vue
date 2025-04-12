@@ -14,7 +14,7 @@
       </template>
     </PageHeader>
     
-    <div class="card">
+    <div class="card dark:bg-gray-800">
       <EntityForm
         title="Edge Information"
         :loading="loading"
@@ -146,7 +146,7 @@
                 v-model="edge.active"
                 class="mr-2"
               />
-              <label for="active" class="cursor-pointer">
+              <label for="active" class="cursor-pointer dark:text-gray-300">
                 {{ edge.active ? 'Active' : 'Inactive' }}
               </label>
             </div>

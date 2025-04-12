@@ -1,4 +1,3 @@
-<!-- src/components/common/EntityForm.vue -->
 <template>
   <div class="entity-form-wrapper">
     <form @submit.prevent="submitForm">
@@ -34,7 +33,6 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
 import Button from 'primevue/button'
 
 const props = defineProps({
@@ -61,5 +59,46 @@ const submitForm = () => {
 
 <style scoped>
 /* The card class is already themed in the global CSS */
-/* But we can add component-specific theme styles here if needed */
+/* Entity form specific theming */
+:deep(.p-inputtext),
+:deep(.p-dropdown),
+:deep(.p-multiselect),
+:deep(.p-inputnumber),
+:deep(.p-calendar),
+:deep(.p-chips),
+:deep(.p-textarea) {
+  @apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200;
+}
+
+:deep(.p-dropdown-panel),
+:deep(.p-multiselect-panel),
+:deep(.p-calendar-panel) {
+  @apply dark:bg-gray-700 dark:border-gray-600;
+}
+
+:deep(.p-dropdown-items),
+:deep(.p-multiselect-items),
+:deep(.p-calendar-header) {
+  @apply dark:bg-gray-700;
+}
+
+:deep(.p-dropdown-item),
+:deep(.p-multiselect-item),
+:deep(.p-calendar-today-button) {
+  @apply dark:text-gray-300 dark:hover:bg-gray-600;
+}
+
+:deep(.p-dropdown-item.p-highlight),
+:deep(.p-multiselect-item.p-highlight) {
+  @apply dark:bg-primary-700 dark:text-white;
+}
+
+:deep(.p-inputswitch.p-inputswitch-checked .p-inputswitch-slider) {
+  @apply dark:bg-primary-600;
+}
+
+:deep(.p-invalid) {
+  @apply dark:border-red-500;
+}
 </style>
+

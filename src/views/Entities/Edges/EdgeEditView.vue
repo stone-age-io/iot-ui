@@ -2,16 +2,16 @@
   <div>
     <!-- Loading Spinner -->
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" />
+      <ProgressSpinner strokeWidth="4" class="dark:text-primary-400" />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="card p-6 text-center">
-      <div class="text-red-500 text-xl mb-4">
+    <div v-else-if="error" class="card p-6 text-center dark:bg-gray-800">
+      <div class="text-red-500 dark:text-red-400 text-xl mb-4">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load edge
       </div>
-      <p class="text-gray-600 mb-4">{{ error }}</p>
+      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -31,7 +31,7 @@
         </template>
       </PageHeader>
       
-      <div class="card">
+      <div class="card dark:bg-gray-800">
         <EntityForm
           title="Edge Information"
           :loading="loading"
@@ -50,7 +50,7 @@
               <InputText
                 id="code"
                 v-model="edge.code"
-                class="w-full font-mono"
+                class="w-full font-mono dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
                 readonly
                 disabled
               />
@@ -85,7 +85,7 @@
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Select Edge Type"
-                class="w-full"
+                class="w-full dark:bg-gray-700 dark:border-gray-600"
                 disabled
               />
             </FormField>
@@ -103,7 +103,7 @@
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Select Region"
-                class="w-full"
+                class="w-full dark:bg-gray-700 dark:border-gray-600"
                 disabled
               />
             </FormField>
@@ -136,7 +136,7 @@
                   v-model="edge.active"
                   class="mr-2"
                 />
-                <label for="active" class="cursor-pointer">
+                <label for="active" class="cursor-pointer dark:text-gray-300">
                   {{ edge.active ? 'Active' : 'Inactive' }}
                 </label>
               </div>
@@ -144,9 +144,9 @@
           </div>
           
           <!-- Edit notes -->
-          <div class="mt-6 bg-gray-50 p-4 rounded-md text-gray-600 text-sm">
+          <div class="mt-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-md text-gray-600 dark:text-gray-300 text-sm">
             <div class="flex items-start">
-              <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500"></i>
+              <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
               <div>
                 <p><strong>Note:</strong> The edge code, type, and region cannot be changed after creation.</p>
                 <p class="mt-1">If you need to change these values, please create a new edge and delete this one.</p>
@@ -217,3 +217,16 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+/* Fix disabled dropdown and input styling in dark mode */
+:deep(.p-disabled),
+:deep(.p-disabled:hover) {
+  @apply dark:opacity-60 dark:bg-gray-700 dark:border-gray-600;
+}
+
+:deep(.p-disabled),
+:deep(.p-component:disabled) {
+  @apply dark:text-gray-400;
+}
+</style>

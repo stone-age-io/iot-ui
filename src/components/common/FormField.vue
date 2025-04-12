@@ -1,4 +1,3 @@
-<!-- src/components/common/FormField.vue -->
 <template>
   <div class="form-field-wrapper mb-4">
     <div class="flex justify-between items-start mb-1 flex-wrap">
@@ -60,5 +59,9 @@ defineProps({
   color: rgb(var(--color-text-secondary));
 }
 
-/* The p-error class is styled by PrimeVue, but we can add custom styling if needed */
+/* Specific error styling for dark mode */
+:deep(.p-error) {
+  @apply dark:text-red-400;
+}
 </style>
+

@@ -2,26 +2,26 @@
   <div>
     <!-- Loading Spinner -->
     <div v-if="loading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" />
+      <ProgressSpinner strokeWidth="4" class="dark:text-primary-400" />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="card p-6 text-center">
-      <div class="text-red-500 text-xl mb-4">
+    <div v-else-if="error" class="card p-6 text-center dark:bg-gray-800">
+      <div class="text-red-500 dark:text-red-400 text-xl mb-4">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load edge details
       </div>
-      <p class="text-gray-600 mb-4">{{ error }}</p>
+      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
     <!-- Edge Details -->
     <div v-else-if="edge">
-      <div class="flex justify-between items-start mb-6">
+      <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div class="text-sm text-gray-500 mb-1">Edge Installation</div>
-          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ edge.name }}</h1>
-          <div class="text-gray-600">
+          <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Edge Installation</div>
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1">{{ edge.name }}</h1>
+          <div class="text-gray-600 dark:text-gray-400">
             <span class="font-mono">{{ edge.code }}</span>
           </div>
         </div>
@@ -44,25 +44,25 @@
       
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
-        <div class="card lg:col-span-2">
-          <h2 class="text-xl font-semibold mb-4">Edge Details</h2>
+        <div class="card dark:bg-gray-800 lg:col-span-2">
+          <h2 class="text-xl font-semibold mb-4 dark:text-gray-200">Edge Details</h2>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
             <!-- Code -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Code</div>
-              <div class="font-mono text-lg">{{ edge.code }}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Code</div>
+              <div class="font-mono text-lg dark:text-gray-200">{{ edge.code }}</div>
             </div>
             
             <!-- Name -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Name</div>
-              <div class="text-lg">{{ edge.name }}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Name</div>
+              <div class="text-lg dark:text-gray-200">{{ edge.name }}</div>
             </div>
             
             <!-- Type -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Type</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Type</div>
               <div class="flex items-center">
                 <span 
                   class="px-2 py-1 text-xs rounded-full font-medium inline-block"
@@ -75,7 +75,7 @@
             
             <!-- Region -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Region</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Region</div>
               <div class="flex items-center">
                 <span 
                   class="px-2 py-1 text-xs rounded-full font-medium inline-block"
@@ -88,11 +88,13 @@
             
             <!-- Status -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Status</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</div>
               <div class="flex items-center">
                 <span 
                   class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="edge.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                  :class="edge.active ? 
+                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
                 >
                   {{ edge.active ? 'Active' : 'Inactive' }}
                 </span>
@@ -101,8 +103,8 @@
             
             <!-- Metadata (if any) -->
             <div v-if="hasEdgeMetadata" class="md:col-span-2">
-              <div class="text-sm text-gray-500 mb-1">Metadata</div>
-              <div class="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Metadata</div>
+              <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded border border-gray-200 dark:border-gray-600 font-mono text-sm overflow-x-auto dark:text-gray-300">
                 <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
               </div>
             </div>
@@ -110,16 +112,16 @@
         </div>
         
         <!-- Stats/Quick Info Card -->
-        <div class="card">
-          <h2 class="text-xl font-semibold mb-4">Overview</h2>
+        <div class="card dark:bg-gray-800">
+          <h2 class="text-xl font-semibold mb-4 dark:text-gray-200">Overview</h2>
           
           <div class="space-y-6">
             <!-- Locations Count -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Locations</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Locations</div>
               <div class="flex items-center">
-                <i class="pi pi-map-marker text-green-600 mr-2"></i>
-                <div class="text-2xl font-semibold">{{ stats.locationsCount }}</div>
+                <i class="pi pi-map-marker text-green-600 dark:text-green-400 mr-2"></i>
+                <div class="text-2xl font-semibold dark:text-gray-200">{{ stats.locationsCount }}</div>
               </div>
               <Button
                 label="View Locations"
@@ -131,10 +133,10 @@
             
             <!-- Things Count -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Things</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Things</div>
               <div class="flex items-center">
-                <i class="pi pi-wifi text-purple-600 mr-2"></i>
-                <div class="text-2xl font-semibold">{{ stats.thingsCount }}</div>
+                <i class="pi pi-wifi text-purple-600 dark:text-purple-400 mr-2"></i>
+                <div class="text-2xl font-semibold dark:text-gray-200">{{ stats.thingsCount }}</div>
               </div>
               <Button
                 label="View Things"
@@ -146,23 +148,23 @@
             
             <!-- Created Date -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Created</div>
-              <div class="text-gray-700">{{ formatDate(edge.created) }}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Created</div>
+              <div class="text-gray-700 dark:text-gray-300">{{ formatDate(edge.created) }}</div>
             </div>
             
             <!-- Last Updated -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Last Updated</div>
-              <div class="text-gray-700">{{ formatDate(edge.updated) }}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Last Updated</div>
+              <div class="text-gray-700 dark:text-gray-300">{{ formatDate(edge.updated) }}</div>
             </div>
           </div>
         </div>
       </div>
       
       <!-- Recent Locations -->
-      <div class="card mt-6" v-if="recentLocations.length > 0">
+      <div class="card mt-6 dark:bg-gray-800" v-if="recentLocations.length > 0">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Recent Locations</h2>
+          <h2 class="text-xl font-semibold dark:text-gray-200">Recent Locations</h2>
           <Button
             label="View All"
             icon="pi pi-arrow-right"
@@ -175,11 +177,11 @@
           <div 
             v-for="location in recentLocations" 
             :key="location.id"
-            class="bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+            class="bg-white dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 p-4 hover:shadow-md transition-shadow cursor-pointer"
             @click="navigateToLocationDetail(location.id)"
           >
             <div class="flex justify-between items-start mb-2">
-              <span class="text-primary-600 font-mono">{{ location.code }}</span>
+              <span class="text-primary-600 dark:text-primary-400 font-mono">{{ location.code }}</span>
               <span 
                 class="px-2 py-1 text-xs rounded-full font-medium"
                 :class="getLocationTypeClass(location.type)"
@@ -187,16 +189,16 @@
                 {{ typesStore.getTypeName(location.type, 'locationTypes') }}
               </span>
             </div>
-            <div class="font-semibold mb-1">{{ location.name }}</div>
-            <div class="text-sm text-gray-500">{{ formatPath(location.path) }}</div>
+            <div class="font-semibold mb-1 dark:text-gray-200">{{ location.name }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">{{ formatPath(location.path) }}</div>
           </div>
         </div>
       </div>
       
       <!-- Recent Things -->
-      <div class="card mt-6" v-if="recentThings.length > 0">
+      <div class="card mt-6 dark:bg-gray-800" v-if="recentThings.length > 0">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Recent Things</h2>
+          <h2 class="text-xl font-semibold dark:text-gray-200">Recent Things</h2>
           <Button
             label="View All"
             icon="pi pi-arrow-right"
@@ -209,11 +211,11 @@
           <div 
             v-for="thing in recentThings" 
             :key="thing.id"
-            class="bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+            class="bg-white dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 p-4 hover:shadow-md transition-shadow cursor-pointer"
             @click="navigateToThingDetail(thing.id)"
           >
             <div class="flex justify-between items-start mb-2">
-              <span class="text-primary-600 font-mono">{{ thing.thing_code }}</span>
+              <span class="text-primary-600 dark:text-primary-400 font-mono">{{ thing.thing_code }}</span>
               <span 
                 class="px-2 py-1 text-xs rounded-full font-medium"
                 :class="getThingTypeClass(thing.thing_type)"
@@ -221,18 +223,18 @@
                 {{ typesStore.getTypeName(thing.thing_type, 'thingTypes') }}
               </span>
             </div>
-            <div class="font-semibold mb-1">{{ thing.name }}</div>
-            <div class="text-sm text-gray-500">{{ getLocationName(thing.location_id) }}</div>
+            <div class="font-semibold mb-1 dark:text-gray-200">{{ thing.name }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">{{ getLocationName(thing.location_id) }}</div>
           </div>
         </div>
       </div>
       
       <!-- Analytics Link Card -->
-      <div class="card mt-6">
-        <div class="flex items-center">
+      <div class="card mt-6 dark:bg-gray-800">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
           <div class="flex-1">
-            <h2 class="text-xl font-semibold mb-1">Analytics & Monitoring</h2>
-            <p class="text-gray-600">View detailed metrics and logs for this edge in Grafana.</p>
+            <h2 class="text-xl font-semibold mb-1 dark:text-gray-200">Analytics & Monitoring</h2>
+            <p class="text-gray-600 dark:text-gray-400">View detailed metrics and logs for this edge in Grafana.</p>
           </div>
           <Button
             label="Open in Grafana"
@@ -440,23 +442,37 @@ const handleDeleteConfirm = async () => {
 
 // Type classes for location and thing types
 const getLocationTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'entrance': return 'bg-blue-100 text-blue-800'
-    case 'work-area': return 'bg-green-100 text-green-800'
-    case 'meeting-room': return 'bg-purple-100 text-purple-800'
-    case 'break-area': return 'bg-amber-100 text-amber-800'
-    case 'reception': return 'bg-indigo-100 text-indigo-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
+  return typesStore.getLocationTypeClass(typeCode)
 }
 
 const getThingTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'reader': return 'bg-blue-100 text-blue-800'
-    case 'controller': return 'bg-purple-100 text-purple-800'
-    case 'temperature-sensor': return 'bg-green-100 text-green-800'
-    case 'motion-sensor': return 'bg-amber-100 text-amber-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
+  return typesStore.getThingTypeClass(typeCode)
 }
 </script>
+
+<style scoped>
+/* Ensure consistent dark mode for all badges */
+:deep(.bg-blue-100.text-blue-800) {
+  @apply dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+:deep(.bg-purple-100.text-purple-800) {
+  @apply dark:bg-purple-900/30 dark:text-purple-300;
+}
+
+:deep(.bg-green-100.text-green-800) {
+  @apply dark:bg-green-900/30 dark:text-green-300;
+}
+
+:deep(.bg-amber-100.text-amber-800) {
+  @apply dark:bg-amber-900/30 dark:text-amber-300;
+}
+
+:deep(.bg-red-100.text-red-800) {
+  @apply dark:bg-red-900/30 dark:text-red-300;
+}
+
+:deep(.bg-gray-100.text-gray-800) {
+  @apply dark:bg-gray-700 dark:text-gray-300;
+}
+</style>

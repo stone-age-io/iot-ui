@@ -1,4 +1,3 @@
-<!-- src/components/common/PageHeader.vue -->
 <template>
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
     <div>
@@ -24,14 +23,3 @@ defineProps({
   }
 })
 </script>
-
-<style scoped>
-/* Using CSS variables from our theming system */
-h1 {
-  color: rgb(var(--color-text));
-}
-
-p {
-  color: rgb(var(--color-text-secondary));
-}
-</style>
