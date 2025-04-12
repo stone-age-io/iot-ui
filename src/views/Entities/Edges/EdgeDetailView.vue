@@ -184,7 +184,7 @@
                 class="px-2 py-1 text-xs rounded-full font-medium"
                 :class="getLocationTypeClass(location.type)"
               >
-                {{ getLocationTypeName(location.type) }}
+                {{ typesStore.getTypeName(location.type, 'locationTypes') }}
               </span>
             </div>
             <div class="font-semibold mb-1">{{ location.name }}</div>
@@ -218,7 +218,7 @@
                 class="px-2 py-1 text-xs rounded-full font-medium"
                 :class="getThingTypeClass(thing.thing_type)"
               >
-                {{ getThingTypeName(thing.thing_type) }}
+                {{ typesStore.getTypeName(thing.thing_type, 'thingTypes') }}
               </span>
             </div>
             <div class="font-semibold mb-1">{{ thing.name }}</div>
@@ -266,6 +266,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
+import { useTypesStore } from '../../../stores/types'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -273,6 +274,11 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
+const typesStore = useTypesStore()
+
+// Ensure types are loaded
+typesStore.loadLocationTypes()
+typesStore.loadThingTypes()
 
 // Edge functionality from composable
 const { 
@@ -423,17 +429,7 @@ const handleDeleteConfirm = async () => {
   }
 }
 
-// Location & thing type formatting helpers
-const getLocationTypeName = async (typeCode) => {
-  try {
-    const { locationTypes } = await import('../../../services')
-    const type = locationTypes.find(t => t.value === typeCode)
-    return type ? type.label : typeCode
-  } catch (err) {
-    return typeCode
-  }
-}
-
+// Type classes for location and thing types using the store's functions
 const getLocationTypeClass = (typeCode) => {
   switch (typeCode) {
     case 'entrance': return 'bg-blue-100 text-blue-800'
@@ -442,16 +438,6 @@ const getLocationTypeClass = (typeCode) => {
     case 'break-area': return 'bg-amber-100 text-amber-800'
     case 'reception': return 'bg-indigo-100 text-indigo-800'
     default: return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getThingTypeName = async (typeCode) => {
-  try {
-    const { thingTypes } = await import('../../../services')
-    const type = thingTypes.find(t => t.value === typeCode)
-    return type ? type.label : typeCode
-  } catch (err) {
-    return typeCode
   }
 }
 

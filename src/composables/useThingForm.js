@@ -11,6 +11,7 @@ import {
   getThingTypeAbbreviation 
 } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for thing form handling
@@ -23,6 +24,10 @@ export function useThingForm(mode = 'create') {
   const router = useRouter()
   const route = useRoute()
   const { performOperation } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Load thing types from the central store
+  typesStore.loadThingTypes()
   
   // Form data with defaults
   const thing = ref({
@@ -42,10 +47,16 @@ export function useThingForm(mode = 'create') {
   const locationsLoading = ref(false)
   const selectedLocationCode = ref('')
   
+  // Get thing types from the store via computed property
+  const thingTypes = computed(() => typesStore.thingTypes)
+  
   // Loading state
   const loading = ref(false)
   
-  // Define validation rules
+  /**
+   * Define validation rules
+   * Different rules for create vs edit mode
+   */
   const rules = {
     name: { required: helpers.withMessage('Name is required', required) },
     description: {}
@@ -86,7 +97,7 @@ export function useThingForm(mode = 'create') {
         // Merge with any additional params
         Object.assign(queryParams, params)
         
-        return locationService.getLocations(queryParams)
+        return locationService.getList(queryParams)
       },
       {
         loadingRef: locationsLoading,
@@ -241,6 +252,7 @@ export function useThingForm(mode = 'create') {
     locations,
     locationsLoading,
     selectedLocationCode,
+    thingTypes, // Expose thing types from the store
     loadThing,
     fetchLocations,
     updateLocationCode,

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Edge Types" subtitle="Manage your edge type definitions">
+    <PageHeader title="Edge Types" subtitle="Manage edge type definitions">
       <template #actions>
         <Button 
           label="Create Edge Type" 
@@ -16,7 +16,7 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['type', 'code', 'description']"
+        :searchFields="['code', 'type', 'description']"
         title="Edge Types"
         empty-message="No edge types found"
         @row-click="(data) => navigateToTypeDetail(data.id)"
@@ -32,14 +32,21 @@
           />
         </template>
         
-        <!-- Type column -->
-        <template #type-body="{ data }">
-          <div class="font-medium text-primary-700">{{ data.type }}</div>
+        <!-- Code column with custom formatting -->
+        <template #code-body="{ data }">
+          <div class="font-mono text-primary-700">{{ data.code }}</div>
         </template>
         
-        <!-- Code column -->
-        <template #code-body="{ data }">
-          <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{{ data.code }}</span>
+        <!-- Type name column -->
+        <template #type-body="{ data }">
+          <div class="font-medium">{{ data.type }}</div>
+        </template>
+        
+        <!-- Description column with truncation -->
+        <template #description-body="{ data }">
+          <div class="truncate max-w-md" :title="data.description">
+            {{ data.description || 'No description' }}
+          </div>
         </template>
         
         <!-- Created date column -->
@@ -100,26 +107,30 @@
 import { onMounted } from 'vue'
 import { useEdgeType } from '../../../composables/useEdgeType'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
+import { useTypesStore } from '../../../stores/types' 
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-// Get edge type functionality from composable
+// Get the types store
+const typesStore = useTypesStore()
+
+// Edge type functionality from composable
 const { 
   types,
   loading,
   fetchTypes,
   formatDate,
   deleteType,
-  navigateToTypeList: navigateToTypeList,
-  navigateToTypeDetail: navigateToTypeDetail,
-  navigateToTypeEdit: navigateToTypeEdit,
-  navigateToTypeCreate: navigateToTypeCreate
+  navigateToTypeList,
+  navigateToTypeDetail,
+  navigateToTypeEdit,
+  navigateToTypeCreate
 } = useEdgeType()
 
-// Get delete confirmation functionality
+// Delete confirmation functionality
 const { 
   deleteDialog,
   confirmDelete,
@@ -129,8 +140,8 @@ const {
 
 // Table columns definition
 const columns = [
-  { field: 'type', header: 'Name', sortable: true },
   { field: 'code', header: 'Code', sortable: true },
+  { field: 'type', header: 'Name', sortable: true },
   { field: 'description', header: 'Description', sortable: true },
   { field: 'created', header: 'Created', sortable: true }
 ]
@@ -138,6 +149,9 @@ const columns = [
 // Fetch edge types on component mount
 onMounted(async () => {
   await fetchTypes()
+  
+  // Also update the types store
+  typesStore.loadEdgeTypes()
 })
 
 // Handle delete button click
@@ -162,6 +176,11 @@ const handleDeleteConfirm = async () => {
     if (index !== -1) {
       types.value.splice(index, 1)
     }
+    
+    // Refresh the types store to get updated list
+    typesStore.resetTypes()
+    typesStore.loadEdgeTypes()
+    
     resetDeleteDialog()
   } else {
     updateDeleteDialog({ loading: false })
