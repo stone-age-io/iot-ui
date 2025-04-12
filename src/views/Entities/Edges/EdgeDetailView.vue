@@ -227,7 +227,7 @@
         </div>
       </div>
       
-      <!-- Graph Link Card -->
+      <!-- Analytics Link Card -->
       <div class="card mt-6">
         <div class="flex items-center">
           <div class="flex-1">
@@ -263,7 +263,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
@@ -272,7 +272,6 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
-const route = useRoute()
 const router = useRouter()
 const typesStore = useTypesStore()
 
@@ -285,7 +284,6 @@ const {
   loading, 
   error, 
   formatDate, 
-  hasMetadata: hasEdgeMetadata,
   getTypeName, 
   getRegionName, 
   getTypeClass, 
@@ -312,6 +310,14 @@ const recentLocations = ref([])
 const recentThings = ref([])
 const allLocations = ref({}) // Map of location_id -> location for quick lookups
 
+// Check if edge has metadata
+const hasEdgeMetadata = computed(() => {
+  return edge.value && 
+         edge.value.metadata && 
+         typeof edge.value.metadata === 'object' && 
+         Object.keys(edge.value.metadata).length > 0
+})
+
 // Stats based on real data
 const stats = computed(() => ({
   locationsCount: recentLocations.value.length,
@@ -320,12 +326,14 @@ const stats = computed(() => ({
 
 // Fetch edge data on component mount
 onMounted(async () => {
-  await loadEdgeDetail()
+  const edgeId = router.currentRoute.value.params.id
+  if (edgeId) {
+    await loadEdgeDetail(edgeId)
+  }
 })
 
 // Methods
-const loadEdgeDetail = async () => {
-  const id = route.params.id
+const loadEdgeDetail = async (id) => {
   if (!id) return
   
   try {
@@ -342,6 +350,7 @@ const loadEdgeDetail = async () => {
     }
   } catch (err) {
     // Error handling is done in the composable
+    console.error('Failed to load edge detail:', err)
   }
 }
 
@@ -351,7 +360,7 @@ const fetchLocations = async () => {
   
   try {
     const { locationService } = await import('../../../services')
-    const response = await locationService.getLocations({
+    const response = await locationService.getList({
       edge_id: edge.value.id,
       sort: '-created',
       perPage: 6 // Limit to 6 recent locations
@@ -374,7 +383,7 @@ const fetchThings = async () => {
   
   try {
     const { thingService } = await import('../../../services')
-    const response = await thingService.getThings({
+    const response = await thingService.getList({
       edge_id: edge.value.id,
       sort: '-created',
       perPage: 6 // Limit to 6 recent things
@@ -410,7 +419,7 @@ const formatPath = (path) => {
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!edge.value) return
-  confirmDelete(edge.value, 'edge')
+  confirmDelete(edge.value, 'Edge')
 }
 
 // Handle delete confirmation
@@ -429,7 +438,7 @@ const handleDeleteConfirm = async () => {
   }
 }
 
-// Type classes for location and thing types using the store's functions
+// Type classes for location and thing types
 const getLocationTypeClass = (typeCode) => {
   switch (typeCode) {
     case 'entrance': return 'bg-blue-100 text-blue-800'

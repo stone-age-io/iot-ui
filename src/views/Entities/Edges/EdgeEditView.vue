@@ -72,7 +72,7 @@
               />
             </FormField>
             
-            <!-- Type -->
+            <!-- Type (readonly after creation) -->
             <FormField
               id="type"
               label="Type"
@@ -90,7 +90,7 @@
               />
             </FormField>
             
-            <!-- Region -->
+            <!-- Region (readonly after creation) -->
             <FormField
               id="region"
               label="Region"
@@ -155,10 +155,10 @@
           </div>
         </EntityForm>
       </div>
-      
-      <!-- Toast for success/error messages -->
-      <Toast />
     </div>
+    
+    <!-- Toast for success/error messages -->
+    <Toast />
   </div>
 </template>
 
@@ -180,16 +180,24 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 
-// Get edge type and region options
-const { edgeTypes, edgeRegions, fetchEdge, error } = useEdge()
-
-// Use the edge form composable in edit mode
-const { edge, v$, loading, loadEdge, submitForm } = useEdgeForm('edit')
-
-// Initial loading state
+// Track initial loading state separately from form loading
 const initialLoading = ref(true)
 
-// Fetch edge data on component mount
+// Get edge functionality from composable
+const { fetchEdge, error } = useEdge()
+
+// Use the edge form composable in edit mode
+const { 
+  edge, 
+  v$, 
+  loading, 
+  edgeTypes, 
+  edgeRegions,
+  loadEdge, 
+  submitForm 
+} = useEdgeForm('edit')
+
+// Load edge data on component mount
 onMounted(async () => {
   const id = route.params.id
   if (!id) return
@@ -202,6 +210,8 @@ onMounted(async () => {
     if (edgeData) {
       loadEdge(edgeData)
     }
+  } catch (err) {
+    console.error('Failed to load edge:', err)
   } finally {
     initialLoading.value = false
   }

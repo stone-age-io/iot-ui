@@ -5,7 +5,7 @@
         <Button 
           label="Create Edge" 
           icon="pi pi-plus" 
-          @click="navigateToEdgeCreate" 
+          @click="handleCreateClick" 
         />
       </template>
     </PageHeader>
@@ -23,15 +23,6 @@
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Edge" 
-            icon="pi pi-plus" 
-            @click="navigateToEdgeCreate" 
-          />
-        </template>
-        
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
           <div class="font-medium text-primary-700">{{ data.code }}</div>
@@ -55,17 +46,6 @@
           >
             {{ getRegionName(data.region) }}
           </span>
-        </template>
-        
-        <!-- Metadata column with simple visualization -->
-        <template #metadata-body="{ data }">
-          <div v-if="data.metadata && Object.keys(data.metadata).length > 0">
-            <div class="flex items-center">
-              <i class="pi pi-info-circle text-primary-500 mr-1"></i>
-              <span class="text-sm">{{ getMetadataSummary(data.metadata) }}</span>
-            </div>
-          </div>
-          <span v-else class="text-gray-500 text-sm">No metadata</span>
         </template>
         
         <!-- Status column with badge -->
@@ -134,6 +114,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
@@ -142,7 +123,9 @@ import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vu
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-// Get edge functionality from composable - now uses the Types store internally
+const router = useRouter()
+
+// Get edge functionality from composable
 const { 
   edges,
   loading,
@@ -152,9 +135,7 @@ const {
   getRegionName,
   getTypeClass,
   getRegionClass,
-  getMetadataSummary,
   deleteEdge,
-  navigateToEdgeCreate,
   navigateToEdgeDetail,
   navigateToEdgeEdit
 } = useEdge()
@@ -167,14 +148,13 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - removed metadata column
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'region', header: 'Region', sortable: true },
   { field: 'active', header: 'Status', sortable: true },
-  { field: 'metadata', header: 'Metadata', sortable: false },
   { field: 'created', header: 'Created', sortable: true }
 ]
 
@@ -183,9 +163,14 @@ onMounted(async () => {
   await fetchEdges()
 })
 
+// Handle create button click - use router directly to avoid passing event as query
+const handleCreateClick = () => {
+  router.push({ name: 'create-edge' })
+}
+
 // Handle delete button click
 const handleDeleteClick = (edge) => {
-  confirmDelete(edge, 'edge')
+  confirmDelete(edge, 'Edge')
 }
 
 // Handle delete confirmation

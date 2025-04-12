@@ -89,7 +89,7 @@
             label="Code"
             :required="true"
             :error-message="v$.code.$errors[0]?.$message"
-            hint="Auto-generated"
+            hint="Auto-generated from type, region, and number"
           >
             <InputText
               id="code"
@@ -161,6 +161,8 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useEdgeForm } from '../../../composables/useEdgeForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -173,6 +175,37 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-// Use the edge form composable in create mode - now uses the Types store
-const { edge, v$, loading, edgeTypes, edgeRegions, updateCode, submitForm } = useEdgeForm('create')
+const route = useRoute()
+
+// Use the edge form composable in create mode
+const {
+  edge,
+  v$,
+  loading,
+  edgeTypes,
+  edgeRegions,
+  updateCode,
+  submitForm,
+  resetForm
+} = useEdgeForm('create')
+
+// Handle any query parameters (for pre-filling the form)
+onMounted(() => {
+  // Check if we need to reset the form to handle initial state properly
+  resetForm()
+  
+  // Pre-fill based on query parameters if present
+  if (route.query.type) {
+    edge.value.type = route.query.type
+  }
+  
+  if (route.query.region) {
+    edge.value.region = route.query.region
+  }
+  
+  // Update code if both type and region are set
+  if (edge.value.type && edge.value.region && edge.value.number) {
+    updateCode()
+  }
+})
 </script>
