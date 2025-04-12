@@ -14,7 +14,7 @@
       <!-- Logo & Title -->
       <div class="flex items-center">
         <router-link to="/" class="flex items-center space-x-2">
-          <div class="text-primary-600 w-8 h-8 flex items-center justify-center rounded-md">
+          <div class="text-primary-600 w-8 h-8 flex items-center justify-center rounded-md dark:text-primary-400">
             <!-- Custom SVG Logo - replaces the home icon -->
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -129,7 +129,7 @@ const toggleUserMenu = (event) => {
 }
 </script>
 
-<style scoped>
+<style>
 /* Custom styling for the logo */
 .logo-image {
   fill: var(--primary-color, #3B82F6);
@@ -139,5 +139,75 @@ const toggleUserMenu = (event) => {
 .router-link-active .logo-image,
 a:hover .logo-image {
   fill: var(--primary-700, #1D4ED8);
+}
+
+/* Dark mode styling fixes for PrimeVue Menu */
+.dark .p-menu {
+  @apply bg-gray-800 border-gray-700;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .p-menu .p-menuitem-link {
+  @apply text-gray-300;
+}
+
+.dark .p-menu .p-menuitem-link:hover {
+  @apply bg-gray-700;
+}
+
+.dark .p-menu .p-menuitem-link .p-menuitem-icon {
+  @apply text-gray-400;
+}
+
+.dark .p-menu .p-menuitem-link:hover .p-menuitem-icon {
+  @apply text-gray-300;
+}
+
+.dark .p-menu .p-menuitem-link .p-menuitem-text {
+  @apply text-gray-300;
+}
+
+.dark .p-menu .p-submenu-header {
+  @apply bg-gray-900 text-gray-400;
+}
+
+.dark .p-menu .p-separator {
+  @apply border-gray-700;
+}
+
+/* Button styling in dark mode */
+.dark .p-button.p-button-text {
+  @apply text-gray-300;
+}
+
+.dark .p-button.p-button-text:hover {
+  @apply bg-gray-700;
+}
+
+.dark .p-button.p-button-text .p-button-icon {
+  @apply text-gray-400;
+}
+
+.dark .p-button.p-button-text:hover .p-button-icon {
+  @apply text-gray-300;
+}
+
+/* Badge styling in dark mode */
+.dark .p-badge {
+  @apply bg-red-600 text-white;
+}
+
+.dark .p-badge-danger {
+  @apply bg-red-600 text-white;
+}
+
+/* Shadow styling in dark mode */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* User menu styling in dark mode */
+.dark .p-button.p-button-rounded .pi-angle-down {
+  @apply text-gray-400;
 }
 </style>

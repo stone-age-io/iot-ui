@@ -32,7 +32,7 @@
         <!-- Type column with badge -->
         <template #type-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
             :class="getTypeClass(data.type)"
           >
             {{ getTypeName(data.type) }}
@@ -42,7 +42,7 @@
         <!-- Region column with badge -->
         <template #region-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
             :class="getRegionClass(data.region)"
           >
             {{ getRegionName(data.region) }}
@@ -52,7 +52,7 @@
         <!-- Status column with badge -->
         <template #active-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
             :class="data.active ? 
               'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
               'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
@@ -122,7 +122,7 @@
       header="Filter Edges"
       :style="{ width: '30rem' }"
       :modal="true"
-      class="p-fluid dark:bg-gray-800"
+      class="p-fluid"
     >
       <div class="grid grid-cols-1 gap-4 mt-2">
         <div class="field">
@@ -233,14 +233,14 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition with width styles to ensure proper column widths
+// Table columns definition with improved responsive styling
 const columns = [
-  { field: 'code', header: 'Code', sortable: true, style: 'min-width: 10rem' },
-  { field: 'name', header: 'Name', sortable: true, style: 'min-width: 12rem' },
-  { field: 'type', header: 'Type', sortable: true, style: 'min-width: 8rem' },
-  { field: 'region', header: 'Region', sortable: true, style: 'min-width: 8rem' },
-  { field: 'active', header: 'Status', sortable: true, style: 'min-width: 8rem' },
-  { field: 'created', header: 'Created', sortable: true, style: 'min-width: 10rem' }
+  { field: 'code', header: 'Code', sortable: true, style: 'width: 10rem; min-width: 8rem' },
+  { field: 'name', header: 'Name', sortable: true, style: 'width: auto; min-width: 12rem' },
+  { field: 'type', header: 'Type', sortable: true, style: 'width: 8rem; min-width: 6rem' },
+  { field: 'region', header: 'Region', sortable: true, style: 'width: 8rem; min-width: 6rem' },
+  { field: 'active', header: 'Status', sortable: true, style: 'width: 8rem; min-width: 6rem' },
+  { field: 'created', header: 'Created', sortable: true, style: 'width: 10rem; min-width: 8rem' }
 ]
 
 // Load types for filters
@@ -333,49 +333,15 @@ const handleDeleteConfirm = async () => {
 }
 </script>
 
-<style>
-/* Ensure edge type and region badges get proper dark mode styling */
-.bg-blue-100.text-blue-800 {
-  @apply dark:bg-blue-900/30 dark:text-blue-300;
-}
-
-.bg-purple-100.text-purple-800 {
-  @apply dark:bg-purple-900/30 dark:text-purple-300;
-}
-
-.bg-green-100.text-green-800 {
-  @apply dark:bg-green-900/30 dark:text-green-300;
-}
-
-.bg-amber-100.text-amber-800 {
-  @apply dark:bg-amber-900/30 dark:text-amber-300;
-}
-
-.bg-red-100.text-red-800 {
-  @apply dark:bg-red-900/30 dark:text-red-300;
-}
-
-.bg-gray-100.text-gray-800 {
-  @apply dark:bg-gray-700 dark:text-gray-300;
-}
-
-/* Style improvements for the filter dialog */
-:deep(.p-dialog-header) {
+<style scoped>
+/* Dark mode styles for interactive elements */
+:deep(.p-dialog-header),
+:deep(.p-dialog-content),
+:deep(.p-dialog-footer) {
   @apply dark:bg-gray-800 dark:text-white dark:border-gray-700;
 }
 
-:deep(.p-dialog-content) {
-  @apply dark:bg-gray-800 dark:text-gray-200;
-}
-
-:deep(.p-dialog-footer) {
-  @apply dark:bg-gray-800 dark:border-gray-700;
-}
-
-:deep(.p-dropdown) {
-  @apply dark:bg-gray-700 dark:border-gray-600;
-}
-
+:deep(.p-dropdown),
 :deep(.p-dropdown-panel) {
   @apply dark:bg-gray-700 dark:border-gray-600;
 }
@@ -388,11 +354,14 @@ const handleDeleteConfirm = async () => {
   @apply dark:text-gray-300 dark:hover:bg-gray-600;
 }
 
-/* Fix badge displays in stack view on mobile */
-@media screen and (max-width: 960px) {
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td) span[class*="rounded-full"] {
-    display: inline-flex !important;
-    width: auto !important;
-  }
+:deep(.p-dropdown-item.p-highlight) {
+  @apply dark:bg-primary-700 dark:text-white;
+}
+
+/* Ensure badge elements appear correctly in all views */
+.rounded-full {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

@@ -11,8 +11,19 @@
     --color-border: 229 231 235;
     --color-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     
+    /* Primary colors */
+    --color-primary: 59 130 246;
+    --color-primary-light: 96 165 250;
+    --color-primary-dark: 37 99 235;
+    
+    /* Success, warning, error colors */
+    --color-success: 34 197 94;
+    --color-warning: 234 179 8;
+    --color-error: 239 68 68;
+    
     /* PrimeVue component overrides for light theme */
     --primary-color: #3B82F6;
+    --primary-color-hover: #2563EB;
     --text-color: rgb(17 24 39);
     --text-color-secondary: rgb(107 114 128);
     --surface-a: rgb(255 255 255);
@@ -22,33 +33,62 @@
     --surface-e: rgb(255 255 255);
     --surface-f: rgb(255 255 255);
     --surface-hover: rgb(243 244 246);
+    --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #3B82F6;
   }
   
   .dark {
     /* Dark theme variables */
-    --color-bg: 30 30 45;
+    --color-bg: 30 41 59;
     --color-surface: 42 42 60;
     --color-text: 243 244 246;
     --color-text-secondary: 156 163 175;
     --color-border: 75 85 99;
     --color-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     
+    /* Primary colors */
+    --color-primary: 96 165 250;
+    --color-primary-light: 147 197 253;
+    --color-primary-dark: 59 130 246;
+    
+    /* Success, warning, error colors */
+    --color-success: 74 222 128;
+    --color-warning: 250 204 21;
+    --color-error: 248 113 113;
+    
     /* PrimeVue component overrides for dark theme */
     --primary-color: #60A5FA;
+    --primary-color-hover: #3B82F6;
     --text-color: rgb(243 244 246);
     --text-color-secondary: rgb(156 163 175);
     --surface-a: rgb(42 42 60);
-    --surface-b: rgb(30 30 45);
+    --surface-b: rgb(30 41 59);
     --surface-c: rgb(75 85 99 / 30%);
     --surface-d: rgb(75 85 99);
     --surface-e: rgb(42 42 60);
     --surface-f: rgb(42 42 60);
     --surface-hover: rgb(55 65 81);
+    --focus-ring: 0 0 0 2px rgb(30 41 59), 0 0 0 4px rgb(96 165 250);
   }
   
   body {
     @apply antialiased;
     background-color: rgb(var(--color-bg));
     color: rgb(var(--color-text));
+  }
+  
+  /* Focus styles for all interactive elements */
+  a:focus-visible, 
+  button:focus-visible, 
+  input:focus-visible, 
+  select:focus-visible, 
+  textarea:focus-visible {
+    @apply outline-none;
+    box-shadow: var(--focus-ring);
+  }
+  
+  /* Maintain contrast for form elements in dark mode */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgb(156 163 175);
   }
 }

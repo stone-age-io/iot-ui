@@ -5,7 +5,7 @@
 
 /* Custom global styles */
 body {
-  @apply font-sans antialiased text-gray-900 bg-gray-50;
+  @apply font-sans antialiased text-gray-900 bg-gray-50 dark:bg-gray-900 dark:text-gray-100;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
@@ -19,11 +19,13 @@ body {
 /* Base card styling for consistency */
 .card {
   @apply bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-5;
+  @apply dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200;
 }
 
 /* Dashboard specific components */
 .page-header {
   @apply text-xl font-bold text-gray-800 mb-5;
+  @apply dark:text-gray-200;
 }
 
 @media (min-width: 640px) {
@@ -35,6 +37,7 @@ body {
 /* Card headers and titles */
 .card-title {
   @apply text-lg font-semibold text-gray-800 mb-4;
+  @apply dark:text-gray-200;
 }
 
 /* Icon styling consistency */
@@ -57,26 +60,32 @@ body {
 /* Color variants for icons */
 .icon-blue {
   @apply bg-blue-50 text-blue-600;
+  @apply dark:bg-blue-900/30 dark:text-blue-400;
 }
 
 .icon-green {
   @apply bg-green-50 text-green-600;
+  @apply dark:bg-green-900/30 dark:text-green-400;
 }
 
 .icon-purple {
   @apply bg-purple-50 text-purple-600;
+  @apply dark:bg-purple-900/30 dark:text-purple-400;
 }
 
 .icon-orange {
   @apply bg-orange-50 text-orange-600;
+  @apply dark:bg-orange-900/30 dark:text-orange-400;
 }
 
 .icon-red {
   @apply bg-red-50 text-red-600;
+  @apply dark:bg-red-900/30 dark:text-red-400;
 }
 
 .icon-gray {
   @apply bg-gray-50 text-gray-600;
+  @apply dark:bg-gray-700 dark:text-gray-400;
 }
 
 /* Grid layouts */
@@ -100,6 +109,7 @@ body {
 /* Stat card styling */
 .stat-card {
   @apply flex items-center relative p-4 h-full transition-all duration-200;
+  @apply dark:bg-gray-800 dark:border-gray-700;
 }
 
 .stat-card:hover {
@@ -108,14 +118,17 @@ body {
 
 .stat-label {
   @apply text-sm text-gray-500 font-medium;
+  @apply dark:text-gray-400;
 }
 
 .stat-value {
   @apply text-2xl font-semibold text-gray-900;
+  @apply dark:text-gray-100;
 }
 
 .stat-link {
   @apply absolute right-4 flex items-center text-xs font-medium;
+  @apply dark:text-blue-400;
 }
 
 .stat-link:hover {
@@ -125,6 +138,7 @@ body {
 /* Activity feed styling */
 .activity-feed {
   @apply flex flex-col divide-y divide-gray-100;
+  @apply dark:divide-gray-700;
 }
 
 .activity-item {
@@ -137,15 +151,18 @@ body {
 
 .activity-title {
   @apply text-sm font-medium text-gray-900;
+  @apply dark:text-gray-200;
 }
 
 .activity-time {
   @apply text-xs text-gray-500 mt-1;
+  @apply dark:text-gray-400;
 }
 
 /* Empty state styling */
 .empty-state {
   @apply flex justify-center items-center py-8 text-gray-500 text-sm;
+  @apply dark:text-gray-400;
 }
 
 /* Focus styles for accessibility */
@@ -155,11 +172,13 @@ input:focus-visible,
 select:focus-visible, 
 textarea:focus-visible {
   @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  @apply dark:ring-primary-400 dark:ring-offset-gray-800;
 }
 
 /* Improved buttons */
 .btn {
   @apply inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500;
+  @apply dark:focus:ring-primary-400 dark:ring-offset-gray-800;
 }
 
 .btn-sm {
@@ -172,10 +191,12 @@ textarea:focus-visible {
 
 .btn-primary {
   @apply bg-primary-600 text-white hover:bg-primary-700;
+  @apply dark:bg-primary-500 dark:hover:bg-primary-600;
 }
 
 .btn-outline {
   @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
+  @apply dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700;
 }
 
 /* PrimeVue overrides */
@@ -195,6 +216,128 @@ textarea:focus-visible {
   @apply text-sm;
 }
 
+/* DataTable Responsive Styling */
+/* Hide the stack view column headers that PrimeVue adds by default */
+.p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr > td[data-pc-section="bodycell"] .p-column-title {
+  display: none !important;
+}
+
+/* Basic responsive table settings */
+@media screen and (max-width: 960px) {
+  .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-thead > tr > th,
+  .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tfoot > tr > td {
+    display: none !important;
+  }
+  
+  .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr {
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+  }
+  
+  .dark .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr {
+    border-color: #4b5563;
+  }
+  
+  .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr > td {
+    text-align: left;
+    display: block;
+    width: 100%;
+    border: 0 none;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .dark .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr > td {
+    border-color: #4b5563;
+  }
+  
+  .p-datatable[data-pc-name="datatable"][data-pc-section="root"].datatable-responsive .p-datatable-tbody > tr > td:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* Badge styling for consistency */
+.badge {
+  @apply px-2 py-1 text-xs rounded-full font-medium inline-block;
+}
+
+.badge-blue, 
+.bg-blue-100.text-blue-800 {
+  @apply bg-blue-100 text-blue-800;
+  @apply dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+.badge-green,
+.bg-green-100.text-green-800 {
+  @apply bg-green-100 text-green-800;
+  @apply dark:bg-green-900/30 dark:text-green-300;
+}
+
+.badge-purple,
+.bg-purple-100.text-purple-800 {
+  @apply bg-purple-100 text-purple-800;
+  @apply dark:bg-purple-900/30 dark:text-purple-300;
+}
+
+.badge-amber,
+.bg-amber-100.text-amber-800 {
+  @apply bg-amber-100 text-amber-800;
+  @apply dark:bg-amber-900/30 dark:text-amber-300;
+}
+
+.badge-red,
+.bg-red-100.text-red-800 {
+  @apply bg-red-100 text-red-800;
+  @apply dark:bg-red-900/30 dark:text-red-300;
+}
+
+.badge-gray,
+.bg-gray-100.text-gray-800 {
+  @apply bg-gray-100 text-gray-800;
+  @apply dark:bg-gray-700 dark:text-gray-300;
+}
+
+/* Fix PrimeVue dark mode components */
+.dark .p-component {
+  color: rgb(209, 213, 219);
+}
+
+.dark .p-inputtext {
+  background-color: rgb(55, 65, 81);
+  color: rgb(229, 231, 235);
+  border-color: rgb(75, 85, 99);
+}
+
+.dark .p-dropdown, 
+.dark .p-multiselect,
+.dark .p-calendar {
+  background-color: rgb(55, 65, 81);
+  border-color: rgb(75, 85, 99);
+}
+
+.dark .p-dropdown-panel,
+.dark .p-multiselect-panel,
+.dark .p-calendar-panel {
+  background-color: rgb(55, 65, 81);
+  border-color: rgb(75, 85, 99);
+}
+
+.dark .p-dropdown-items-wrapper,
+.dark .p-multiselect-items-wrapper {
+  background-color: rgb(55, 65, 81);
+}
+
+.dark .p-dropdown-item,
+.dark .p-multiselect-item {
+  color: rgb(209, 213, 219);
+}
+
+.dark .p-dropdown-item:hover,
+.dark .p-multiselect-item:hover {
+  background-color: rgb(75, 85, 99);
+}
+
 /* Responsive tweaks */
 @media (max-width: 640px) {
   .card {
@@ -208,4 +351,26 @@ textarea:focus-visible {
   .activity-item {
     @apply py-2.5;
   }
+  
+  /* Mobile touch targets */
+  button:not(.p-button-icon-only):not(.p-button-rounded), 
+  a.btn,
+  .p-button:not(.p-button-icon-only):not(.p-button-rounded) {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Add styles for status badges */
+.status-active {
+  @apply bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply dark:bg-green-900/30 dark:text-green-300;
+}
+
+.status-inactive {
+  @apply bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply dark:bg-gray-700 dark:text-gray-300;
 }

@@ -177,34 +177,34 @@ const menuSections = [
     ]
   },
   {
-  title: 'Type Management',
-  items: [
-    {
-      label: 'Edge Types',
-      icon: 'pi pi-tag',
-      to: '/types/edge-types'
-    },
-    {
-      label: 'Edge Regions',
-      icon: 'pi pi-globe',
-      to: '/types/edge-regions'
-    },
-    {
-      label: 'Location Types',
-      icon: 'pi pi-list',
-      to: '/types/location-types'
-    },
-    {
-      label: 'Thing Types',
-      icon: 'pi pi-sitemap',
-      to: '/types/thing-types'
-    }
-  ]
-}
+    title: 'Type Management',
+    items: [
+      {
+        label: 'Edge Types',
+        icon: 'pi pi-tag',
+        to: '/types/edge-types'
+      },
+      {
+        label: 'Edge Regions',
+        icon: 'pi pi-globe',
+        to: '/types/edge-regions'
+      },
+      {
+        label: 'Location Types',
+        icon: 'pi pi-list',
+        to: '/types/location-types'
+      },
+      {
+        label: 'Thing Types',
+        icon: 'pi pi-sitemap',
+        to: '/types/thing-types'
+      }
+    ]
+  }
 ]
 </script>
 
-<style scoped>
+<style>
 /* Custom scrollbar styling for better appearance */
 .overflow-y-auto {
   scrollbar-width: thin;
@@ -252,5 +252,32 @@ a.dark\:bg-primary-900\/20::after {
   height: 100%;
   width: 3px;
   background-color: var(--primary-color, #3B82F6);
+}
+
+/* Dark mode button styling */
+.dark .p-button.p-button-text {
+  color: rgb(209, 213, 219); /* text-gray-300 */
+}
+
+.dark .p-button.p-button-text:hover {
+  background-color: rgba(55, 65, 81, 0.5); /* bg-gray-700 with opacity */
+}
+
+.dark .p-button.p-button-text:focus {
+  box-shadow: 0 0 0 2px rgb(31, 41, 55), 0 0 0 4px rgb(59, 130, 246);
+}
+
+/* Transition improvements */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Mobile optimizations */
+@media (max-width: 1023px) {
+  .lg\:hidden {
+    display: flex !important;
+  }
 }
 </style>

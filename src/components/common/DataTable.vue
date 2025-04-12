@@ -3,11 +3,11 @@
   <div class="data-table-wrapper">
     <!-- Table Header with Title, Search and Actions -->
     <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 m-0" v-if="title">{{ title }}</h2>
+      <h2 v-if="title" class="text-xl font-semibold text-gray-800 dark:text-gray-200 m-0">{{ title }}</h2>
       
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center ml-auto">
         <!-- Search Input -->
-        <span class="p-input-icon-left w-full sm:w-auto" v-if="searchable">
+        <span v-if="searchable" class="p-input-icon-left w-full sm:w-auto">
           <i class="pi pi-search" />
           <InputText 
             v-model="filters.global.value" 
@@ -44,11 +44,12 @@
       stripedRows
       v-model:selection="selectedItems"
       :selectionMode="selectionMode"
-      class="p-datatable-sm"
+      class="p-datatable-sm datatable-responsive"
       filterDisplay="menu"
-      tableStyle="min-width: 50rem"
       responsiveLayout="stack"
       breakpoint="960px"
+      tableClass="custom-datatable"
+      dataKey="id"
     >
       <!-- Selection Column -->
       <Column selectionMode="multiple" v-if="selectionMode === 'multiple'" headerStyle="width: 3rem" />
@@ -74,7 +75,7 @@
         </template>
       </Column>
       
-      <!-- Row Actions Column - Only included when slot is provided-->
+      <!-- Row Actions Column - Only included when slot is provided -->
       <Column 
         v-if="hasRowActions" 
         header="Actions" 
@@ -82,9 +83,12 @@
         bodyClass="text-center"
         headerStyle="width: 8rem; min-width: 8rem"
         style="width: 8rem; min-width: 8rem"
+        :exportable="false"
       >
         <template #body="slotProps">
-          <slot name="row-actions" :data="slotProps.data"></slot>
+          <div @click.stop class="action-buttons">
+            <slot name="row-actions" :data="slotProps.data"></slot>
+          </div>
         </template>
       </Column>
       
@@ -216,8 +220,14 @@ const formatCellValue = (data, field, format) => {
   return value
 }
 
-// Handle row click - pass through the data directly to match original behavior
+// Handle row click - pass through the data directly
 const onRowClick = (event) => {
+  // Don't trigger row click when clicking action buttons
+  const target = event.originalEvent.target;
+  if (target.closest('.action-buttons') || target.closest('[data-no-row-click]')) {
+    return;
+  }
+  
   emit('row-click', event.data)
 }
 
@@ -231,173 +241,185 @@ const onSort = (event) => {
 }
 </script>
 
-<style scoped>
-/* Make sure DataTable uses full width */
-:deep(.p-datatable) {
+<style>
+/* Base datatable styles */
+.p-datatable {
   width: 100%;
 }
 
-:deep(.p-datatable-wrapper) {
+.p-datatable-wrapper {
   overflow-x: auto;
 }
 
-:deep(.p-datatable-table) {
+.p-datatable-table {
   min-width: 100%;
   table-layout: auto;
 }
 
-/* Dark mode styles for PrimeVue DataTable */
-:deep(.p-datatable) {
-  @apply dark:bg-gray-800;
+/* Dark mode styles */
+.dark .p-datatable {
+  background-color: rgb(31, 41, 55); /* bg-gray-800 */
 }
 
-:deep(.p-datatable .p-datatable-header) {
-  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+.dark .p-datatable .p-datatable-header,
+.dark .p-datatable .p-datatable-footer {
+  background-color: rgb(31, 41, 55); /* bg-gray-800 */
+  color: rgb(229, 231, 235); /* text-gray-200 */
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
 }
 
-:deep(.p-datatable .p-datatable-thead > tr > th) {
-  @apply dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600;
+.dark .p-datatable .p-datatable-thead > tr > th {
+  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+  color: rgb(229, 231, 235); /* text-gray-200 */
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr) {
-  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+.dark .p-datatable .p-datatable-tbody > tr {
+  background-color: rgb(31, 41, 55); /* bg-gray-800 */
+  color: rgb(229, 231, 235); /* text-gray-200 */
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr > td) {
-  @apply dark:border-gray-700 dark:text-gray-300;
+.dark .p-datatable .p-datatable-tbody > tr > td {
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
+  color: rgb(209, 213, 219); /* text-gray-300 */
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr:hover) {
-  @apply dark:bg-gray-700;
+/* Stack layout CRITICAL fixes */
+/* Fix for stack view (responsive mobile layout) */
+.p-datatable.datatable-responsive .p-datatable-tbody > tr.p-datatable-row > td .p-column-title {
+  display: none !important;
 }
 
-:deep(.p-paginator) {
-  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
-}
-
-:deep(.p-paginator .p-paginator-pages .p-paginator-page) {
-  @apply dark:text-gray-300 dark:hover:bg-gray-700;
-}
-
-:deep(.p-paginator .p-paginator-pages .p-highlight) {
-  @apply dark:bg-primary-700 dark:text-white;
-}
-
-:deep(.p-dropdown-panel) {
-  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
-}
-
-:deep(.p-inputtext) {
-  @apply dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600;
-}
-
-:deep(.p-column-filter-row .p-column-filter-menu-button) {
-  @apply dark:text-gray-400;
-}
-
-:deep(.p-column-filter-row .p-column-filter-menu-button:hover) {
-  @apply dark:bg-gray-700 dark:text-gray-200;
-}
-
-:deep(.p-button.p-button-text) {
-  @apply dark:text-gray-300 dark:hover:bg-gray-700;
-}
-
-:deep(.p-button.p-button-danger.p-button-text) {
-  @apply dark:text-red-400 dark:hover:bg-red-900/20;
-}
-
-:deep(.p-datatable .p-datatable-tbody > tr.p-highlight) {
-  @apply dark:bg-primary-900/30 dark:text-primary-200;
-}
-
-:deep(.p-datatable .p-datatable-tbody > tr.p-datatable-row-editing) {
-  @apply dark:bg-gray-700;
-}
-
-/* Enhanced styles for responsive stack layout */
-:deep(.p-datatable-responsive-scroll .p-datatable-wrapper) {
-  overflow-x: auto;
-}
-
-/* Make column headers more distinct */
-:deep(.p-datatable-thead > tr > th) {
-  @apply bg-gray-50 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200 text-sm;
-}
-
-/* Improve row hover styles */
-:deep(.p-datatable .p-datatable-tbody > tr:hover) {
-  @apply bg-gray-50 dark:bg-gray-700;
-}
-
-/* Stack view styling */
-:deep(.p-datatable[data-pc-section="root"][data-pc-name="datatable"][data-pc-section="root"].p-datatable-responsive-stack .p-datatable-tbody > tr > td) {
-  @apply py-3 border-b dark:border-gray-700;
-}
-
-:deep(.p-datatable[data-pc-section="root"][data-pc-name="datatable"][data-pc-section="root"].p-datatable-responsive-stack .p-datatable-tbody > tr > td .p-column-title) {
-  @apply font-medium text-gray-700 dark:text-gray-300 mr-2;
-}
-
-/* Improve paginator styling */
-:deep(.p-paginator) {
-  @apply py-3 border-t dark:border-gray-700;
-}
-
-:deep(.p-paginator .p-paginator-pages .p-paginator-page.p-highlight) {
-  @apply bg-primary-600 text-white dark:bg-primary-700 dark:text-white;
-}
-
-:deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight) {
-  @apply bg-primary-600 text-white dark:bg-primary-700 dark:text-white;
-}
-
-/* Add some breathing room to the dropdown filter panels */
-:deep(.p-column-filter-overlay) {
-  @apply p-2 dark:bg-gray-800 dark:border-gray-700;
-}
-
-:deep(.p-column-filter-buttonbar) {
-  @apply pt-2 border-t dark:border-gray-700;
-}
-
-:deep(.p-column-filter-buttonbar .p-button) {
-  @apply text-xs;
-}
-
-/* Stack view mobile enhancements */
+/* Only show column titles in stack view */
 @media screen and (max-width: 960px) {
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-thead) {
-    display: none !important;
+  .p-datatable.datatable-responsive .p-datatable-thead {
+    /* Keep the header visible in all modes */
+    display: table-header-group !important;
   }
   
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr) {
-    @apply border border-gray-200 dark:border-gray-700 rounded-lg mb-3 block bg-white dark:bg-gray-800 shadow-sm;
-  }
-  
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td) {
-    @apply flex py-3 px-4 border-b border-gray-100 dark:border-gray-700 last:border-b-0;
-    text-align: left !important;
+  .p-datatable.datatable-responsive .p-datatable-tbody > tr {
+    /* Use flexbox for rows in stack mode */
     display: flex !important;
+    flex-wrap: wrap !important;
+    border: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+  }
+  
+  .dark .p-datatable.datatable-responsive .p-datatable-tbody > tr {
+    border-color: rgb(75, 85, 99); /* border-gray-600 */
+  }
+  
+  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td {
+    /* Style of each cell in stack mode */
     width: 100% !important;
+    display: flex !important;
     align-items: center;
-    justify-content: space-between;
+    border-width: 0;
+    border-bottom-width: 1px;
+    padding: 0.75rem 1rem;
   }
   
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:before) {
-    content: attr(data-p-column);
-    @apply font-medium text-gray-700 dark:text-gray-300 mr-4;
-    width: 40%;
-    min-width: 10rem;
+  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td:last-child {
+    border-bottom-width: 0;
   }
   
-  /* Adjust spacing for action buttons on mobile */
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:last-child) {
-    @apply border-t border-gray-100 dark:border-gray-700 mt-auto justify-center;
+  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td[data-pc-section="bodycell"]:last-child {
+    justify-content: center;
+    padding: 0.75rem;
   }
-  
-  :deep(.p-datatable.p-datatable-responsive-stack .p-datatable-tbody > tr > td:last-child:before) {
-    display: none;
-  }
+}
+
+/* Badge styling in dark mode */
+.dark .bg-blue-100.text-blue-800,
+.dark .bg-blue-900\/30.text-blue-300 {
+  background-color: rgba(37, 99, 235, 0.2);
+  color: rgb(147, 197, 253);
+}
+
+.dark .bg-green-100.text-green-800,
+.dark .bg-green-900\/30.text-green-300 {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: rgb(134, 239, 172);
+}
+
+.dark .bg-amber-100.text-amber-800,
+.dark .bg-amber-900\/30.text-amber-300 {
+  background-color: rgba(217, 119, 6, 0.2);
+  color: rgb(252, 211, 77);
+}
+
+.dark .bg-purple-100.text-purple-800,
+.dark .bg-purple-900\/30.text-purple-300 {
+  background-color: rgba(126, 34, 206, 0.2);
+  color: rgb(216, 180, 254);
+}
+
+.dark .bg-red-100.text-red-800,
+.dark .bg-red-900\/30.text-red-300 {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: rgb(252, 165, 165);
+}
+
+.dark .bg-gray-100.text-gray-800,
+.dark .bg-gray-700.text-gray-300 {
+  background-color: rgba(75, 85, 99, 0.2);
+  color: rgb(209, 213, 219);
+}
+
+/* Paginator styling */
+.dark .p-paginator {
+  background-color: rgb(31, 41, 55); /* bg-gray-800 */
+  color: rgb(229, 231, 235); /* text-gray-200 */
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
+}
+
+.dark .p-paginator .p-paginator-page {
+  color: rgb(209, 213, 219); /* text-gray-300 */
+}
+
+.dark .p-paginator .p-paginator-page:hover {
+  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+}
+
+.dark .p-paginator .p-paginator-page.p-highlight {
+  background-color: rgb(59, 130, 246); /* bg-blue-600 */
+  color: white;
+}
+
+/* Fix for form elements in datatable */
+.dark .p-inputtext {
+  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+  color: rgb(229, 231, 235); /* text-gray-200 */
+  border-color: rgb(75, 85, 99); /* border-gray-600 */
+}
+
+/* Make icons more visible in dark mode */
+.dark .pi {
+  color: rgb(209, 213, 219); /* text-gray-300 */
+}
+
+/* Fix for action buttons */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.dark .p-button.p-button-text {
+  color: rgb(209, 213, 219); /* text-gray-300 */
+}
+
+.dark .p-button.p-button-text:hover {
+  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+}
+
+.dark .p-button.p-button-danger.p-button-text {
+  color: rgb(248, 113, 113); /* text-red-400 */
+}
+
+.dark .p-button.p-button-danger.p-button-text:hover {
+  background-color: rgba(220, 38, 38, 0.16); /* bg-red-600/16 */
 }
 </style>
