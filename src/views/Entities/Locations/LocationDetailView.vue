@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Locations/LocationDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -17,36 +18,29 @@
     
     <!-- Location Details -->
     <div v-else-if="location">
-      <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+      <div class="flex justify-between items-start mb-6">
         <div>
-          <div class="text-sm text-gray-500 mb-1">Location</div>
-          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ location.name }}</h1>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="font-mono text-primary-600">{{ location.code }}</span>
-            <span 
-              class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="getTypeClass(location.type)"
+          <div class="text-sm text-gray-500 mb-1">
+            <router-link :to="{ name: 'edges' }" class="text-primary-600 hover:underline">
+              Edges
+            </router-link>
+            <i class="pi pi-angle-right mx-1 text-gray-400"></i>
+            <router-link 
+              :to="{ name: 'edge-detail', params: { id: location.edge_id } }" 
+              class="text-primary-600 hover:underline"
             >
-              {{ getTypeName(location.type) }}
-            </span>
+              {{ location.expand?.edge_id?.code || 'Unknown Edge' }}
+            </router-link>
+            <i class="pi pi-angle-right mx-1 text-gray-400"></i>
+            Locations
+          </div>
+          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ location.name }}</h1>
+          <div class="text-gray-600">
+            <span class="font-mono">{{ location.code }}</span>
           </div>
         </div>
         
-        <div class="flex flex-wrap gap-2">
-          <Button
-            icon="pi pi-upload"
-            label="Upload Floor Plan"
-            class="p-button-outlined"
-            @click="openFloorPlanUpload"
-            v-if="!hasFloorPlan(location)"
-          />
-          <Button
-            icon="pi pi-map"
-            label="View Floor Plan"
-            class="p-button-outlined p-button-success"
-            @click="viewFloorPlan = true"
-            v-if="hasFloorPlan(location)"
-          />
+        <div class="flex space-x-2">
           <Button
             icon="pi pi-pencil"
             label="Edit"
@@ -80,6 +74,17 @@
               <div class="text-lg">{{ location.name }}</div>
             </div>
             
+            <!-- Path -->
+            <div class="md:col-span-2">
+              <div class="text-sm text-gray-500 mb-1">Path</div>
+              <div class="flex flex-wrap gap-1 items-center">
+                <span v-for="(segment, index) in parseLocationPath(location.path)" :key="index" class="flex items-center">
+                  <span v-if="index > 0" class="text-gray-400 mx-1">/</span>
+                  <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-md text-sm">{{ segment }}</span>
+                </span>
+              </div>
+            </div>
+            
             <!-- Type -->
             <div>
               <div class="text-sm text-gray-500 mb-1">Type</div>
@@ -93,59 +98,36 @@
               </div>
             </div>
             
-            <!-- Path -->
+            <!-- Edge Reference -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Path</div>
-              <div class="text-gray-700">{{ formatPath(location.path) }}</div>
-            </div>
-            
-            <!-- Edge -->
-            <div v-if="edge">
               <div class="text-sm text-gray-500 mb-1">Edge</div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-xs">{{ edge.code }}</span>
-                <span class="text-gray-700">{{ edge.name }}</span>
-                <Button
-                  icon="pi pi-external-link"
-                  class="p-button-text p-button-rounded p-button-sm"
-                  @click="navigateToEdgeDetail(edge.id)"
-                  tooltip="View Edge"
-                />
-              </div>
+              <router-link 
+                :to="{ name: 'edge-detail', params: { id: location.edge_id } }"
+                class="text-primary-600 hover:underline flex items-center"
+              >
+                <span class="font-medium">{{ location.expand?.edge_id?.code || 'Unknown Edge' }}</span>
+                <span class="text-gray-500 ml-2 text-sm">{{ location.expand?.edge_id?.name || '' }}</span>
+              </router-link>
             </div>
             
-            <!-- Parent -->
-            <div v-if="parent">
+            <!-- Parent Location (NEW) -->
+            <div>
               <div class="text-sm text-gray-500 mb-1">Parent Location</div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-xs">{{ parent.code }}</span>
-                <span class="text-gray-700">{{ parent.name }}</span>
-                <Button
-                  icon="pi pi-external-link"
-                  class="p-button-text p-button-rounded p-button-sm"
-                  @click="navigateToLocationDetail(parent.id)"
-                  tooltip="View Parent Location"
-                />
-              </div>
+              <router-link 
+                v-if="hasParent(location)"
+                :to="{ name: 'location-detail', params: { id: location.parent_id } }"
+                class="text-primary-600 hover:underline flex items-center"
+              >
+                <span class="font-medium">{{ location.expand?.parent_id?.code || '' }}</span>
+                <span class="text-gray-500 ml-2 text-sm">{{ location.expand?.parent_id?.name || '' }}</span>
+              </router-link>
+              <span v-else class="text-gray-500">No parent location</span>
             </div>
             
             <!-- Description -->
-            <div class="md:col-span-2" v-if="location.description">
+            <div class="md:col-span-2">
               <div class="text-sm text-gray-500 mb-1">Description</div>
-              <div class="text-gray-700">{{ location.description }}</div>
-            </div>
-            
-            <!-- Status -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Status</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="location.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                >
-                  {{ location.active ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
+              <div class="text-gray-800">{{ location.description || 'No description provided' }}</div>
             </div>
             
             <!-- Metadata (if any) -->
@@ -158,30 +140,14 @@
           </div>
         </div>
         
-        <!-- Stats/Quick Info Card -->
+        <!-- Things/Quick Info Card -->
         <div class="card">
-          <h2 class="text-xl font-semibold mb-4">Overview</h2>
+          <h2 class="text-xl font-semibold mb-4">Things</h2>
           
           <div class="space-y-6">
-            <!-- Child Locations Count -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Child Locations</div>
-              <div class="flex items-center">
-                <i class="pi pi-sitemap text-green-600 mr-2"></i>
-                <div class="text-2xl font-semibold">{{ childLocations.length }}</div>
-              </div>
-              <Button
-                v-if="childLocations.length > 0"
-                label="View Children"
-                icon="pi pi-arrow-right"
-                class="p-button-text p-button-sm mt-2"
-                @click="showChildLocations = true"
-              />
-            </div>
-            
             <!-- Things Count -->
             <div>
-              <div class="text-sm text-gray-500 mb-1">Things</div>
+              <div class="text-sm text-gray-500 mb-1">Connected Things</div>
               <div class="flex items-center">
                 <i class="pi pi-wifi text-purple-600 mr-2"></i>
                 <div class="text-2xl font-semibold">{{ things.length }}</div>
@@ -192,12 +158,30 @@
                 class="p-button-text p-button-sm mt-2"
                 @click="navigateToThings(location.id)"
               />
-              <Button
-                label="Add Thing"
-                icon="pi pi-plus"
-                class="p-button-text p-button-sm mt-1"
-                @click="navigateToCreateThing(location.id)"
-              />
+            </div>
+            
+            <!-- Child Locations (NEW) -->
+            <div>
+              <div class="text-sm text-gray-500 mb-1">Child Locations</div>
+              <div class="flex items-center">
+                <i class="pi pi-sitemap text-blue-600 mr-2"></i>
+                <div class="text-2xl font-semibold">{{ childLocations.length }}</div>
+              </div>
+            </div>
+            
+            <!-- Thing Types -->
+            <div v-if="uniqueThingTypes.length > 0">
+              <div class="text-sm text-gray-500 mb-1">Thing Types</div>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span 
+                  v-for="type in uniqueThingTypes" 
+                  :key="type"
+                  class="px-2 py-1 text-xs rounded-full font-medium"
+                  :class="getThingTypeClass(type)"
+                >
+                  {{ getThingTypeName(type) }}
+                </span>
+              </div>
             </div>
             
             <!-- Created Date -->
@@ -212,59 +196,131 @@
               <div class="text-gray-700">{{ formatDate(location.updated) }}</div>
             </div>
           </div>
+          
+          <!-- Add Thing Button -->
+          <div class="mt-6">
+            <Button
+              label="Add Thing to This Location"
+              icon="pi pi-plus"
+              @click="navigateToCreateThing(location.id)"
+              class="w-full"
+            />
+          </div>
         </div>
       </div>
       
-      <!-- Things List -->
-      <div class="card mt-6" v-if="things.length > 0">
-        <h2 class="text-xl font-semibold mb-4">Things at this Location</h2>
+      <!-- Child Locations Card (NEW) -->
+      <div class="card mt-6" v-if="childLocations.length > 0">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Child Locations</h2>
+          <Button
+            label="Add Child Location"
+            icon="pi pi-plus"
+            class="p-button-sm"
+            @click="navigateToLocationCreate({ parent_id: location.id })"
+          />
+        </div>
         
         <DataTable
-          :items="things"
-          :columns="thingColumns"
-          :paginated="true"
-          :rows="5"
+          :items="childLocations"
+          :columns="childLocationColumns"
+          :loading="childrenLoading"
           :searchable="true"
-          empty-message="No things at this location"
-          @row-click="(data) => navigateToThingDetail(data.id)"
+          empty-message="No child locations"
+          @row-click="(data) => navigateToLocationDetail(data.id)"
         >
-          <!-- Code column with custom formatting -->
-          <template #thing_code-body="{ data }">
-            <div class="font-medium text-primary-700">{{ data.thing_code }}</div>
+          <!-- Code column -->
+          <template #code-body="{ data }">
+            <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
           </template>
           
           <!-- Type column with badge -->
-          <template #thing_type-body="{ data }">
+          <template #type-body="{ data }">
             <span 
               class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="getThingTypeClass(data.thing_type)"
+              :class="getTypeClass(data.type)"
             >
-              {{ typesStore.getTypeName(data.thing_type, 'thingTypes') }}
+              {{ getTypeName(data.type) }}
             </span>
           </template>
           
-          <!-- Active column with badge -->
-          <template #active-body="{ data }">
-            <span 
-              class="px-2 py-1 text-xs rounded-full font-medium"
-              :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-            >
-              {{ data.active ? 'Active' : 'Inactive' }}
-            </span>
-          </template>
-          
-          <!-- Actions column -->
+          <!-- Actions column --> 
           <template #row-actions="{ data }">
             <div class="flex gap-1 justify-center">
               <Button 
                 icon="pi pi-eye" 
                 class="p-button-rounded p-button-text p-button-sm" 
-                @click.stop="navigateToThingDetail(data.id)"
+                @click.stop="navigateToLocationDetail(data.id)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }" 
               />
+            </div>
+          </template>
+        </DataTable>
+      </div>
+      
+      <!-- Floor Plan Map Card -->
+      <div class="card mt-6">
+        <h2 class="text-xl font-semibold mb-4">Floor Plan</h2>
+        <FloorPlanMap
+          :location="location"
+          :things="things"
+          height="550px"
+          :editable="true"
+          legendPosition="left"
+          @update-thing-position="updateThingPosition"
+          @upload-floor-plan="handleUploadFloorPlan"
+          @thing-click="navigateToThingDetail"
+        />
+      </div>
+      
+      <!-- Connected Things -->
+      <div class="card mt-6" v-if="things.length > 0">
+        <h2 class="text-xl font-semibold mb-4">Connected Things</h2>
+        
+        <DataTable
+          :items="things"
+          :columns="thingColumns"
+          :loading="thingsLoading"
+          :searchable="true"
+          empty-message="No things found for this location"
+          @row-click="(data) => navigateToThingDetail(data)"
+        >
+          <!-- Code column -->
+          <template #code-body="{ data }">
+            <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
+          </template>
+          
+          <!-- Type column with badge -->
+          <template #type-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium"
+              :class="getThingTypeClass(data.type)"
+            >
+              {{ getThingTypeName(data.type) }}
+            </span>
+          </template>
+          
+          <!-- Indoor Position column -->
+          <template #position-body="{ data }">
+            <div v-if="hasIndoorPosition(data)" class="flex items-center text-sm">
+              <i class="pi pi-map-marker text-primary-500 mr-1"></i>
+              <span>{{ formatPosition(data) }}</span>
+            </div>
+            <div v-else class="text-gray-500 text-sm">
+              Not positioned
+            </div>
+          </template>
+          
+          <!-- Actions column --> 
+          <template #row-actions="{ data }">
+            <div class="flex gap-1 justify-center">
               <Button 
-                icon="pi pi-pencil" 
+                icon="pi pi-eye" 
                 class="p-button-rounded p-button-text p-button-sm" 
-                @click.stop="navigateToThingEdit(data.id)"
+                @click.stop="navigateToThingDetail(data)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }" 
               />
             </div>
           </template>
@@ -272,132 +328,16 @@
       </div>
     </div>
     
-    <!-- View Floor Plan Dialog -->
-    <Dialog
-      v-model:visible="viewFloorPlan"
-      header="Floor Plan"
-      :modal="true"
-      :style="{ width: '90%', maxWidth: '1200px' }"
-      :maximizable="true"
-    >
-      <div class="text-center" v-if="location && hasFloorPlan(location)">
-        <img 
-          :src="getFloorPlanImageUrl(location)" 
-          alt="Floor Plan" 
-          class="max-w-full max-h-[70vh] object-contain"
-        />
-      </div>
-    </Dialog>
-    
-    <!-- Child Locations Dialog -->
-    <Dialog
-      v-model:visible="showChildLocations"
-      header="Child Locations"
-      :modal="true"
-      :style="{ width: '90%', maxWidth: '900px' }"
-    >
-      <DataTable
-        :items="childLocations"
-        :columns="childLocationColumns"
-        :paginated="childLocations.length > 5"
-        :rows="5"
-        :searchable="true"
-        empty-message="No child locations"
-        @row-click="(data) => navigateToLocationDetail(data.id)"
-      >
-        <!-- Code column -->
-        <template #code-body="{ data }">
-          <div class="font-medium text-primary-700">{{ data.code }}</div>
-        </template>
-        
-        <!-- Type column with badge -->
-        <template #type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getTypeClass(data.type)"
-          >
-            {{ typesStore.getTypeName(data.type, 'locationTypes') }}
-          </span>
-        </template>
-        
-        <!-- Actions column -->
-        <template #row-actions="{ data }">
-          <div class="flex gap-1 justify-center">
-            <Button 
-              icon="pi pi-eye" 
-              class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToLocationDetail(data.id)"
-            />
-          </div>
-        </template>
-      </DataTable>
-    </Dialog>
-    
-    <!-- Upload Floor Plan Dialog -->
-    <Dialog
-      v-model:visible="uploadFloorPlan"
-      header="Upload Floor Plan"
-      :modal="true"
-      :style="{ width: '450px' }"
-    >
-      <div class="p-fluid">
-        <div class="mb-4">
-          <label for="floorplan-upload" class="block text-sm font-medium text-gray-700 mb-1">
-            Floor Plan Image
-          </label>
-          <FileUpload
-            ref="fileUploadRef"
-            id="floorplan-upload"
-            mode="basic"
-            name="floorplan"
-            accept="image/*"
-            :auto="false"
-            chooseLabel="Select Image"
-            class="p-button-outlined w-full"
-            :disabled="uploadLoading"
-            @select="onFileSelect"
-          />
-          <small class="text-gray-500 mt-1 block">
-            Accepted formats: PNG, JPG, JPEG, GIF, SVG
-          </small>
-        </div>
-        
-        <div v-if="selectedFile" class="mb-4">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-file text-primary-500"></i>
-            <span>{{ selectedFile.name }}</span>
-            <span class="text-xs text-gray-500">({{ formatFileSize(selectedFile.size) }})</span>
-          </div>
-        </div>
-        
-        <div class="flex justify-end gap-2">
-          <Button
-            label="Cancel"
-            class="p-button-outlined"
-            @click="cancelUpload"
-            :disabled="uploadLoading"
-          />
-          <Button
-            label="Upload"
-            icon="pi pi-upload"
-            @click="handleFloorPlanUpload"
-            :loading="uploadLoading"
-            :disabled="!selectedFile || uploadLoading"
-          />
-        </div>
-      </div>
-    </Dialog>
-    
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
       v-model:visible="deleteDialog.visible"
-      :title="deleteDialog.title"
-      :type="deleteDialog.type"
-      :confirm-label="deleteDialog.confirmLabel"
-      :confirm-icon="deleteDialog.confirmIcon"
+      title="Delete Location"
+      type="danger"
+      confirm-label="Delete"
+      confirm-icon="pi pi-trash"
       :loading="deleteDialog.loading"
-      :message="deleteDialog.message"
-      :details="deleteDialog.details"
+      :message="`Are you sure you want to delete location '${location?.code || ''}'?`"
+      details="This action cannot be undone. All things associated with this location will be orphaned or deleted."
       @confirm="handleDeleteConfirm"
     />
     
@@ -407,83 +347,84 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocation } from '../../../composables/useLocation'
-import { useDeleteConfirmation } from '../../../composables/useConfirmation'
-import { useTypesStore } from '../../../stores/types'
+import { useThing } from '../../../composables/useThing'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import FileUpload from 'primevue/fileupload'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
+import FloorPlanMap from '../../../components/map/FloorPlanMap.vue'
+import { useToast } from 'primevue/usetoast'
 
 const route = useRoute()
 const router = useRouter()
-const typesStore = useTypesStore()
+const toast = useToast()
 
-// Load location types
-typesStore.loadLocationTypes()
-typesStore.loadThingTypes()
-
-// Location functionality from composable
+// Get location functionality from composable
 const { 
-  loading,
-  error,
-  formatDate,
-  getTypeName,
+  loading, 
+  error, 
+  childLocations,
+  childrenLoading,
+  formatDate, 
+  getTypeName, 
   getTypeClass,
+  parseLocationPath,
   hasMetadata,
-  hasFloorPlan,
-  formatPath,
+  hasParent,
   fetchLocation,
+  fetchChildLocations,
   deleteLocation,
-  uploadFloorPlan: uploadFloorPlanToServer,
-  getFloorPlanImageUrl,
+  uploadFloorPlan,
   navigateToLocationEdit,
+  navigateToLocationCreate,
   navigateToLocationDetail,
   navigateToThings,
   navigateToCreateThing,
   navigateToEdgeDetail
 } = useLocation()
 
-// Delete confirmation functionality
+// Get thing functionality from composable
 const { 
-  deleteDialog,
-  confirmDelete,
-  updateDeleteDialog,
-  resetDeleteDialog 
-} = useDeleteConfirmation()
+  getTypeName: getThingTypeName, 
+  getTypeClass: getThingTypeClass,
+  fetchThings: fetchThingsByParams,
+  updateThingPosition: updateThingPositionMethod,
+  hasMetadata: hasThingMetadata
+} = useThing()
 
 // Local state
 const location = ref(null)
-const edge = ref(null)
-const parent = ref(null)
 const things = ref([])
-const childLocations = ref([])
-const viewFloorPlan = ref(false)
-const showChildLocations = ref(false)
-const uploadFloorPlan = ref(false)
-const uploadLoading = ref(false)
-const selectedFile = ref(null)
-const fileUploadRef = ref(null)
+const thingsLoading = ref(false)
+const deleteDialog = ref({
+  visible: false,
+  loading: false
+})
 
-// Column definitions for things table
+// Get unique thing types
+const uniqueThingTypes = computed(() => {
+  return [...new Set(things.value.map(thing => thing.type))]
+})
+
+// Thing columns for the table
 const thingColumns = [
-  { field: 'thing_code', header: 'Code', sortable: true },
+  { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'thing_type', header: 'Type', sortable: true },
-  { field: 'active', header: 'Status', sortable: true }
+  { field: 'type', header: 'Type', sortable: true },
+  { field: 'position', header: 'Indoor Position', sortable: false },
+  { field: 'actions', header: 'Actions', sortable: false }
 ]
 
-// Column definitions for child locations table
+// Child location columns for the table
 const childLocationColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
-  { field: 'path', header: 'Path', sortable: true }
+  { field: 'actions', header: 'Actions', sortable: false }
 ]
 
 // Fetch location data on component mount
@@ -502,188 +443,126 @@ const loadLocationDetail = async () => {
     if (locationData) {
       location.value = locationData
       
-      // Fetch related data
-      await Promise.all([
-        fetchEdge(),
-        fetchParent(),
-        fetchThings(),
-        fetchChildLocations()
-      ])
+      // Now fetch associated things
+      await fetchThings()
+      
+      // Now fetch child locations
+      await fetchChildLocations(id)
     }
   } catch (err) {
     // Error handling is done in the composable
   }
 }
 
-// Fetch edge for this location
-const fetchEdge = async () => {
-  if (!location.value || !location.value.edge_id) return
-  
-  try {
-    const { edgeService } = await import('../../../services')
-    const response = await edgeService.getById(location.value.edge_id)
-    edge.value = response.data
-  } catch (err) {
-    console.error('Error fetching edge:', err)
-  }
-}
-
-// Fetch parent location
-const fetchParent = async () => {
-  if (!location.value || !location.value.parent_id) return
-  
-  try {
-    const response = await fetchLocation(location.value.parent_id)
-    parent.value = response
-  } catch (err) {
-    console.error('Error fetching parent location:', err)
-  }
-}
-
-// Fetch things for this location
+// Fetch things using the useThing composable
 const fetchThings = async () => {
   if (!location.value) return
   
+  thingsLoading.value = true
   try {
-    const { thingService } = await import('../../../services')
-    const response = await thingService.getThingsByLocation(location.value.id)
-    things.value = response.data.items || []
+    // Use the thing composable to fetch things by location
+    const thingsData = await fetchThingsByParams({ location_id: location.value.id })
+    
+    // Normalize field names if needed
+    things.value = thingsData.map(item => ({
+      ...item,
+      code: item.code || item.thing_code,
+      type: item.type || item.thing_type
+    }))
   } catch (err) {
     console.error('Error fetching things:', err)
-  }
-}
-
-// Fetch child locations
-const fetchChildLocations = async () => {
-  if (!location.value) return
-  
-  try {
-    const childLocationsData = await fetchChildLocations(location.value.id)
-    childLocations.value = childLocationsData || []
-  } catch (err) {
-    console.error('Error fetching child locations:', err)
-    childLocations.value = []
-  }
-}
-
-// Thing navigation
-const navigateToThingDetail = (id) => {
-  router.push({ name: 'thing-detail', params: { id } })
-}
-
-const navigateToThingEdit = (id) => {
-  router.push({ name: 'edit-thing', params: { id } })
-}
-
-// Floor plan upload methods
-const openFloorPlanUpload = () => {
-  selectedFile.value = null
-  uploadFloorPlan.value = true
-}
-
-const onFileSelect = (event) => {
-  if (event.files && event.files.length > 0) {
-    selectedFile.value = event.files[0]
-  }
-}
-
-const cancelUpload = () => {
-  selectedFile.value = null
-  if (fileUploadRef.value) {
-    fileUploadRef.value.clear()
-  }
-  uploadFloorPlan.value = false
-}
-
-const handleFloorPlanUpload = async () => {
-  if (!selectedFile.value || !location.value) return
-  
-  uploadLoading.value = true
-  
-  try {
-    // Create FormData and append file
-    const formData = new FormData()
-    formData.append('floorplan', selectedFile.value)
-    
-    // Upload to server
-    const success = await uploadFloorPlanToServer(location.value.id, formData)
-    
-    if (success) {
-      // Reload location to get updated floor plan
-      const updatedLocation = await fetchLocation(location.value.id)
-      if (updatedLocation) {
-        location.value = updatedLocation
-      }
-      
-      // Close upload dialog
-      uploadFloorPlan.value = false
-      selectedFile.value = null
-      if (fileUploadRef.value) {
-        fileUploadRef.value.clear()
-      }
-    }
+    things.value = []
   } finally {
-    uploadLoading.value = false
+    thingsLoading.value = false
   }
 }
 
-// Format file size for display
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes'
+// Update thing position on the floor plan using the composable
+const updateThingPosition = async ({ thingId, coordinates }) => {
+  const thing = things.value.find(t => t.id === thingId)
+  if (!thing) return
   
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  try {
+    // Use the composable method to update position
+    await updateThingPositionMethod(thingId, coordinates)
+    
+    // Update local state
+    if (!thing.metadata) thing.metadata = {}
+    if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
+    thing.metadata.coordinates.x = coordinates.x
+    thing.metadata.coordinates.y = coordinates.y
+    
+    // Show success toast
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Updated position for ${thing.name}`,
+      life: 2000
+    })
+  } catch (error) {
+    console.error('Error updating thing position:', error)
+  }
+}
+
+// Handle floor plan upload
+const handleUploadFloorPlan = async (file) => {
+  if (!location.value) return
+  await uploadFloorPlan(location.value.id, file)
   
-  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
+  // Refresh location data to get updated floorplan field
+  const locationData = await fetchLocation(location.value.id)
+  if (locationData) {
+    location.value = locationData
+  }
+}
+
+// Check if a thing has indoor positioning coordinates
+const hasIndoorPosition = (thing) => {
+  return hasThingMetadata(thing) && 
+         thing.metadata.coordinates && 
+         typeof thing.metadata.coordinates.x !== 'undefined' && 
+         typeof thing.metadata.coordinates.y !== 'undefined'
+}
+
+// Format indoor position for display
+const formatPosition = (thing) => {
+  if (!hasIndoorPosition(thing)) return 'Not positioned'
+  
+  const x = thing.metadata.coordinates.x.toFixed(1)
+  const y = thing.metadata.coordinates.y.toFixed(1)
+  return `x: ${x}, y: ${y}`
+}
+
+const navigateToThingDetail = (thing) => {
+  if (!thing) return;
+  
+  // Ensure we have an ID
+  const id = typeof thing === 'object' ? thing.id : thing;
+  if (!id) {
+    console.error('Cannot navigate to thing detail: Invalid ID', thing);
+    return;
+  }
+  
+  router.push({ name: 'thing-detail', params: { id } });
 }
 
 // Handle delete button click
 const handleDeleteClick = () => {
-  if (!location.value) return
-  
-  let warningDetails = ''
-  if (things.value.length > 0) {
-    warningDetails = `This location has ${things.value.length} thing(s) associated with it. `
-  }
-  if (childLocations.value.length > 0) {
-    warningDetails += `It also has ${childLocations.value.length} child location(s). `
-  }
-  if (warningDetails) {
-    warningDetails += 'All associations will be lost.'
-  }
-  
-  confirmDelete(
-    location.value, 
-    'location', 
-    'code',
-    warningDetails ? { details: warningDetails } : {}
-  )
+  deleteDialog.value.visible = true
 }
 
 // Handle delete confirmation
 const handleDeleteConfirm = async () => {
   if (!location.value) return
   
-  updateDeleteDialog({ loading: true })
+  deleteDialog.value.loading = true
   
   const success = await deleteLocation(location.value.id, location.value.code)
   
   if (success) {
-    resetDeleteDialog()
     router.push({ name: 'locations' })
   } else {
-    updateDeleteDialog({ loading: false })
-  }
-}
-
-// Thing type class helper
-const getThingTypeClass = (typeCode) => {
-  switch (typeCode) {
-    case 'reader': return 'bg-blue-100 text-blue-800'
-    case 'controller': return 'bg-purple-100 text-purple-800' 
-    case 'temperature-sensor': return 'bg-green-100 text-green-800'
-    case 'lock': return 'bg-amber-100 text-amber-800'
-    default: return 'bg-gray-100 text-gray-800'
+    deleteDialog.value.loading = false
   }
 }
 </script>
