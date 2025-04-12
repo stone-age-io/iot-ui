@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { edgeService, edgeRegions, edgeTypes, generateEdgeCode, validateEdgeCode } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for edge-related functionality
@@ -12,6 +13,7 @@ import { edgeService, edgeRegions, edgeTypes, generateEdgeCode, validateEdgeCode
 export function useEdge() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performDelete } = useApiOperation()
   
   // Common state
   const edges = ref([])
@@ -124,30 +126,22 @@ export function useEdge() {
    * @returns {Promise<Array>} - List of edges
    */
   const fetchEdges = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await edgeService.getEdges({ 
+    return performOperation(
+      () => edgeService.getList({ 
         withMetadata: true,
         sort: '-created',
         ...params
-      })
-      edges.value = response.data.items || []
-      return edges.value
-    } catch (err) {
-      console.error('Error fetching edges:', err)
-      error.value = 'Failed to load edges. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load edges',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load edges',
+        onSuccess: (response) => {
+          edges.value = response.data.items || []
+          return edges.value
+        }
+      }
+    )
   }
   
   /**
@@ -161,25 +155,15 @@ export function useEdge() {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await edgeService.getEdge(id)
-      return response.data
-    } catch (err) {
-      console.error('Error fetching edge:', err)
-      error.value = 'Failed to load edge details. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load edge details',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => edgeService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load edge details',
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -189,30 +173,16 @@ export function useEdge() {
    * @returns {Promise<boolean>} - Success status
    */
   const deleteEdge = async (id, code) => {
-    loading.value = true
-    try {
-      await edgeService.deleteEdge(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Edge ${code} has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error deleting edge:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete edge',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => edgeService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete edge',
+        entityName: 'Edge',
+        entityIdentifier: code
+      }
+    )
   }
   
   /**

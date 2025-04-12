@@ -13,6 +13,7 @@ import {
   validateLocationCode 
 } from '../services'
 import { edgeService } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for location form handling
@@ -24,6 +25,7 @@ import { edgeService } from '../services'
 export function useLocationForm(mode = 'create') {
   const toast = useToast()
   const router = useRouter()
+  const { performOperation } = useApiOperation()
   
   // Form data with defaults
   const location = ref({
@@ -85,21 +87,18 @@ export function useLocationForm(mode = 'create') {
    * Fetch edges for the dropdown
    */
   const fetchEdges = async () => {
-    edgesLoading.value = true
-    try {
-      const response = await edgeService.getEdges()
-      edges.value = response.data.items || []
-    } catch (error) {
-      console.error('Error fetching edges:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load edges',
-        life: 3000
-      })
-    } finally {
-      edgesLoading.value = false
-    }
+    return performOperation(
+      () => edgeService.getList(),
+      {
+        loadingRef: edgesLoading,
+        errorRef: null,
+        errorMessage: 'Failed to load edges',
+        onSuccess: (response) => {
+          edges.value = response.data.items || []
+          return edges.value
+        }
+      }
+    )
   }
   
   /**
@@ -107,35 +106,29 @@ export function useLocationForm(mode = 'create') {
    * @param {string} currentId - Current location ID (for edit mode to exclude self)
    */
   const fetchPotentialParents = async (currentId = null) => {
-    parentsLoading.value = true
-    try {
-      // Get all locations, will filter client-side
-      const response = await locationService.getLocations({
+    return performOperation(
+      () => locationService.getList({
         sort: 'name',
         expand: 'parent_id'
-      })
-      
-      // Filter out the current location (if in edit mode) and any children
-      if (currentId) {
-        // Remove self and any locations that have this one as a parent (direct children)
-        potentialParents.value = (response.data.items || []).filter(loc => 
-          loc.id !== currentId && loc.parent_id !== currentId
-        )
-      } else {
-        potentialParents.value = response.data.items || []
+      }),
+      {
+        loadingRef: parentsLoading,
+        errorRef: null,
+        errorMessage: 'Failed to load potential parent locations',
+        onSuccess: (response) => {
+          // Filter out the current location (if in edit mode) and any children
+          if (currentId) {
+            // Remove self and any locations that have this one as a parent (direct children)
+            potentialParents.value = (response.data.items || []).filter(loc => 
+              loc.id !== currentId && loc.parent_id !== currentId
+            )
+          } else {
+            potentialParents.value = response.data.items || []
+          }
+          return potentialParents.value
+        }
       }
-    } catch (error) {
-      console.error('Error fetching potential parents:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load potential parent locations',
-        life: 3000
-      })
-      potentialParents.value = []
-    } finally {
-      parentsLoading.value = false
-    }
+    )
   }
   
   /**
@@ -152,21 +145,33 @@ export function useLocationForm(mode = 'create') {
       return
     }
     
-    try {
-      const isCircular = await locationService.isCircularReference(currentId, parentId)
-      circularReferenceError.value = isCircular
-      
-      if (isCircular) {
-        toast.add({
-          severity: 'warn',
-          summary: 'Invalid Selection',
-          detail: 'Cannot select this parent as it would create a circular reference',
-          life: 5000
-        })
+    return performOperation(
+      () => locationService.isCircularReference(currentId, parentId),
+      {
+        loadingRef: false,
+        errorRef: null,
+        errorMessage: 'Error checking parent validity',
+        onSuccess: (isCircular) => {
+          circularReferenceError.value = isCircular
+          
+          if (isCircular) {
+            toast.add({
+              severity: 'warn',
+              summary: 'Invalid Selection',
+              detail: 'Cannot select this parent as it would create a circular reference',
+              life: 5000
+            })
+          }
+          
+          return isCircular
+        },
+        onError: () => {
+          // Default to false on error
+          circularReferenceError.value = false
+          return false
+        }
       }
-    } catch (error) {
-      console.error('Error checking parent validity:', error)
-    }
+    )
   }
   
   /**
@@ -275,59 +280,34 @@ export function useLocationForm(mode = 'create') {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
     
-    loading.value = true
-    
-    try {
-      // Extract relevant data for API
-      const locationData = {
-        edge_id: location.value.edge_id,
-        parent_id: location.value.parent_id || '', // Include parent_id
-        code: location.value.code,
-        name: location.value.name,
-        type: location.value.type,
-        path: location.value.path,
-        description: location.value.description
-      }
-      
-      let response
-      
-      if (mode === 'create') {
-        // Create new location
-        response = await locationService.createLocation(locationData)
-        
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `Location ${locationData.code} has been created`,
-          life: 3000
-        })
-      } else {
-        // Update existing location
-        response = await locationService.updateLocation(location.value.id, locationData)
-        
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `Location ${location.value.code} has been updated`,
-          life: 3000
-        })
-      }
-      
-      // Navigate to location detail view
-      router.push({ name: 'location-detail', params: { id: response.data.id } })
-      return true
-    } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} location:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to ${mode === 'create' ? 'create' : 'update'} location. Please try again.`,
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
+    // Extract relevant data for API
+    const locationData = {
+      edge_id: location.value.edge_id,
+      parent_id: location.value.parent_id || '', // Include parent_id
+      code: location.value.code,
+      name: location.value.name,
+      type: location.value.type,
+      path: location.value.path,
+      description: location.value.description
     }
+    
+    return performOperation(
+      () => mode === 'create' 
+        ? locationService.create(locationData)
+        : locationService.update(location.value.id, locationData),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} location`,
+        successMessage: `Location ${location.value.code} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        onSuccess: (response) => {
+          // Navigate to location detail view
+          router.push({ name: 'location-detail', params: { id: response.data.id } })
+          return true
+        },
+        onError: () => false
+      }
+    )
   }
   
   /**

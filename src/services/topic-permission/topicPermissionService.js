@@ -34,71 +34,6 @@ export class TopicPermissionService extends BaseService {
   }
   
   /**
-   * Get a paginated list of topic permissions (roles)
-   * @param {Object} params - Query parameters
-   * @returns {Promise} - Axios promise with data
-   */
-  getTopicPermissions(params = {}) {
-    return this.getList(params)
-  }
-  
-  /**
-   * Get a single topic permission by ID
-   * @param {string} id - Topic permission ID
-   * @returns {Promise} - Axios promise with topic permission data
-   */
-  getTopicPermission(id) {
-    return this.getById(id)
-  }
-  
-  /**
-   * Create a new topic permission role
-   * @param {Object} permission - Topic permission data
-   * @returns {Promise} - Axios promise with created topic permission
-   */
-  createTopicPermission(permission) {
-    // Ensure arrays are properly initialized
-    const permissionData = {
-      name: permission.name,
-      publish_permissions: Array.isArray(permission.publish_permissions) 
-        ? permission.publish_permissions 
-        : [],
-      subscribe_permissions: Array.isArray(permission.subscribe_permissions) 
-        ? permission.subscribe_permissions 
-        : []
-    }
-    
-    return this.create(permissionData)
-  }
-  
-  /**
-   * Update an existing topic permission
-   * @param {string} id - Topic permission ID
-   * @param {Object} permission - Updated topic permission data
-   * @returns {Promise} - Axios promise with updated topic permission
-   */
-  updateTopicPermission(id, permission) {
-    // Only include fields that were provided in the update
-    const permissionData = {}
-    if (permission.name !== undefined) permissionData.name = permission.name
-    if (permission.publish_permissions !== undefined) 
-      permissionData.publish_permissions = permission.publish_permissions
-    if (permission.subscribe_permissions !== undefined) 
-      permissionData.subscribe_permissions = permission.subscribe_permissions
-    
-    return this.update(id, permissionData)
-  }
-  
-  /**
-   * Delete a topic permission
-   * @param {string} id - Topic permission ID
-   * @returns {Promise} - Axios promise
-   */
-  deleteTopicPermission(id) {
-    return this.delete(id)
-  }
-  
-  /**
    * Get clients using a specific topic permission role
    * @param {string} permissionId - Topic permission ID
    * @returns {Promise} - Axios promise with clients data
@@ -128,7 +63,7 @@ export class TopicPermissionService extends BaseService {
       return Promise.reject(new Error('Type must be either publish or subscribe'))
     }
     
-    return this.getTopicPermission(id)
+    return this.getById(id)
       .then(response => {
         const permission = response.data
         const field = `${type}_permissions`
@@ -136,7 +71,7 @@ export class TopicPermissionService extends BaseService {
         // Add topic if it doesn't exist
         if (!permission[field].includes(topic)) {
           permission[field].push(topic)
-          return this.updateTopicPermission(id, { [field]: permission[field] })
+          return this.update(id, { [field]: permission[field] })
         }
         
         return Promise.resolve({ data: permission })
@@ -155,7 +90,7 @@ export class TopicPermissionService extends BaseService {
       return Promise.reject(new Error('Type must be either publish or subscribe'))
     }
     
-    return this.getTopicPermission(id)
+    return this.getById(id)
       .then(response => {
         const permission = response.data
         const field = `${type}_permissions`
@@ -163,7 +98,7 @@ export class TopicPermissionService extends BaseService {
         // Remove topic if it exists
         if (permission[field].includes(topic)) {
           permission[field] = permission[field].filter(t => t !== topic)
-          return this.updateTopicPermission(id, { [field]: permission[field] })
+          return this.update(id, { [field]: permission[field] })
         }
         
         return Promise.resolve({ data: permission })

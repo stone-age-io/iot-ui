@@ -12,6 +12,7 @@ import {
   locationLevels, 
   locationZones 
 } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for location-related functionality
@@ -20,6 +21,7 @@ import {
 export function useLocation() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performDelete } = useApiOperation()
   
   // Common state
   const locations = ref([])
@@ -136,30 +138,22 @@ export function useLocation() {
    * @returns {Promise<Array>} - List of locations
    */
   const fetchLocations = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await locationService.getLocations({ 
+    return performOperation(
+      () => locationService.getList({ 
         expand: 'edge_id,parent_id',
         sort: '-created',
         ...params
-      })
-      locations.value = response.data.items || []
-      return locations.value
-    } catch (err) {
-      console.error('Error fetching locations:', err)
-      error.value = 'Failed to load locations. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load locations',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load locations',
+        onSuccess: (response) => {
+          locations.value = response.data.items || []
+          return locations.value
+        }
+      }
+    )
   }
   
   /**
@@ -173,27 +167,21 @@ export function useLocation() {
       return []
     }
     
-    childrenLoading.value = true
-    
-    try {
-      const response = await locationService.getChildLocations(parentId, {
+    return performOperation(
+      () => locationService.getChildLocations(parentId, {
         expand: 'edge_id,parent_id',
         sort: 'name'
-      })
-      childLocations.value = response.data.items || []
-      return childLocations.value
-    } catch (err) {
-      console.error('Error fetching child locations:', err)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load child locations',
-        life: 3000
-      })
-      return []
-    } finally {
-      childrenLoading.value = false
-    }
+      }),
+      {
+        loadingRef: childrenLoading,
+        errorRef: null,
+        errorMessage: 'Failed to load child locations',
+        onSuccess: (response) => {
+          childLocations.value = response.data.items || []
+          return childLocations.value
+        }
+      }
+    )
   }
   
   /**
@@ -201,29 +189,21 @@ export function useLocation() {
    * @returns {Promise<Array>} - List of root locations
    */
   const fetchRootLocations = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await locationService.getRootLocations({
+    return performOperation(
+      () => locationService.getRootLocations({
         expand: 'edge_id,parent_id',
         sort: 'name'
-      })
-      locations.value = response.data.items || []
-      return locations.value
-    } catch (err) {
-      console.error('Error fetching root locations:', err)
-      error.value = 'Failed to load root locations. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load root locations',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load root locations',
+        onSuccess: (response) => {
+          locations.value = response.data.items || []
+          return locations.value
+        }
+      }
+    )
   }
   
   /**
@@ -237,34 +217,26 @@ export function useLocation() {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await locationService.getLocation(id)
-      // Parse metadata if it's a string
-      if (response.data.metadata && typeof response.data.metadata === 'string') {
-        try {
-          response.data.metadata = JSON.parse(response.data.metadata)
-        } catch (e) {
-          console.warn('Failed to parse metadata for location:', response.data.code)
-          response.data.metadata = {}
+    return performOperation(
+      () => locationService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load location details',
+        onSuccess: (response) => {
+          // Parse metadata if it's a string
+          if (response.data.metadata && typeof response.data.metadata === 'string') {
+            try {
+              response.data.metadata = JSON.parse(response.data.metadata)
+            } catch (e) {
+              console.warn('Failed to parse metadata for location:', response.data.code)
+              response.data.metadata = {}
+            }
+          }
+          return response.data
         }
       }
-      return response.data
-    } catch (err) {
-      console.error('Error fetching location:', err)
-      error.value = 'Failed to load location details. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load location details',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -274,30 +246,16 @@ export function useLocation() {
    * @returns {Promise<boolean>} - Success status
    */
   const deleteLocation = async (id, code) => {
-    loading.value = true
-    try {
-      await locationService.deleteLocation(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Location ${code} has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error deleting location:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete location',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => locationService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete location',
+        entityName: 'Location',
+        entityIdentifier: code
+      }
+    )
   }
   
   /**
@@ -307,35 +265,23 @@ export function useLocation() {
    * @returns {Promise<boolean>} - Success status
    */
   const uploadFloorPlan = async (id, file) => {
-    loading.value = true
-    try {
-      // Create FormData object for file upload
-      const formData = new FormData()
-      formData.append('floorplan', file)
-      
-      // Update location with new floor plan
-      await locationService.uploadFloorPlan(id, formData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Floor plan uploaded successfully',
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error uploading floor plan:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to upload floor plan',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => {
+        // Create FormData object for file upload
+        const formData = new FormData()
+        formData.append('floorplan', file)
+        
+        // Update location with new floor plan
+        return locationService.uploadFloorPlan(id, formData)
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to upload floor plan',
+        successMessage: 'Floor plan uploaded successfully',
+        onSuccess: () => true
+      }
+    )
   }
   
   /**
@@ -354,30 +300,16 @@ export function useLocation() {
    * @returns {Promise<boolean>} - Success status
    */
   const updateLocationCoordinates = async (id, coordinates) => {
-    loading.value = true
-    try {
-      await locationService.updateLocationCoordinates(id, coordinates)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Location coordinates updated',
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error updating location coordinates:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to update location coordinates',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => locationService.updateLocationCoordinates(id, coordinates),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update location coordinates',
+        successMessage: 'Location coordinates updated',
+        onSuccess: () => true
+      }
+    )
   }
   
   /**
@@ -389,12 +321,16 @@ export function useLocation() {
   const checkCircularReference = async (locationId, parentId) => {
     if (!locationId || !parentId) return false
     
-    try {
-      return await locationService.isCircularReference(locationId, parentId)
-    } catch (error) {
-      console.error('Error checking for circular reference:', error)
-      return false
-    }
+    return performOperation(
+      () => locationService.isCircularReference(locationId, parentId),
+      {
+        loadingRef: false,
+        errorRef: null,
+        errorMessage: 'Error checking for circular reference',
+        onSuccess: (result) => result,
+        onError: () => false
+      }
+    )
   }
   
   // Navigation methods

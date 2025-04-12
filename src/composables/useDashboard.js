@@ -5,6 +5,7 @@ import { apiHelpers } from '../services/api'
 import { useEdge } from './useEdge'
 import { useLocation } from './useLocation' 
 import { useThing } from './useThing'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for dashboard-related functionality
@@ -12,6 +13,7 @@ import { useThing } from './useThing'
  */
 export function useDashboard() {
   const toast = useToast()
+  const { performOperation } = useApiOperation()
   
   // Use entity composables
   const { edges, loading: edgesLoading, fetchEdges } = useEdge()
@@ -64,17 +66,22 @@ export function useDashboard() {
    * @returns {Promise<number>} - Number of clients
    */
   const fetchClientsCount = async () => {
-    try {
-      const response = await apiHelpers.getList('/pb/api/collections/clients/records', { 
-        perPage: 1 
-      })
-      clientsCount.value = response.data?.totalItems || 0
-      return clientsCount.value
-    } catch (error) {
-      console.error('Error fetching clients count:', error)
-      clientsCount.value = 0
-      return 0
-    }
+    return performOperation(
+      () => apiHelpers.getList('/pb/api/collections/clients/records', { perPage: 1 }),
+      {
+        loadingRef: false,
+        errorRef: null,
+        errorMessage: 'Error fetching clients count',
+        onSuccess: (response) => {
+          clientsCount.value = response.data?.totalItems || 0
+          return clientsCount.value
+        },
+        onError: () => {
+          clientsCount.value = 0
+          return 0
+        }
+      }
+    )
   }
   
   /**
@@ -82,29 +89,32 @@ export function useDashboard() {
    * @returns {Promise<Array>} - Formatted activity items
    */
   const fetchActivityData = async () => {
-    try {
-      const response = await apiHelpers.getList('/pb/api/logs', { 
-        sort: '-created', 
-        perPage: 5 
-      })
-      
-      if (response.data?.items?.length) {
-        activity.value = response.data.items.map(log => ({
-          type: getActivityTypeFromLog(log),
-          title: formatLogMessage(log),
-          timestamp: formatTimestamp(log.created)
-        }))
-        
-        return activity.value
-      } else {
-        useMockActivityData()
-        return activity.value
+    return performOperation(
+      () => apiHelpers.getList('/pb/api/logs', { sort: '-created', perPage: 5 }),
+      {
+        loadingRef: false,
+        errorRef: null,
+        errorMessage: 'Error fetching activity data',
+        onSuccess: (response) => {
+          if (response.data?.items?.length) {
+            activity.value = response.data.items.map(log => ({
+              type: getActivityTypeFromLog(log),
+              title: formatLogMessage(log),
+              timestamp: formatTimestamp(log.created)
+            }))
+            
+            return activity.value
+          } else {
+            useMockActivityData()
+            return activity.value
+          }
+        },
+        onError: () => {
+          useMockActivityData()
+          return activity.value
+        }
       }
-    } catch (error) {
-      console.error('Error fetching activity data:', error)
-      useMockActivityData()
-      return activity.value
-    }
+    )
   }
   
   /**

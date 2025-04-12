@@ -22,52 +22,6 @@ export class EdgeService extends BaseService {
   }
   
   /**
-   * Get a paginated list of edges with metadata
-   * @param {Object} params - Query parameters
-   * @returns {Promise} - Axios promise with data
-   */
-  getEdges(params = {}) {
-    return this.getList(params)
-  }
-  
-  /**
-   * Get a single edge by ID
-   * @param {string} id - Edge ID
-   * @returns {Promise} - Axios promise with edge data
-   */
-  getEdge(id) {
-    return this.getById(id)
-  }
-  
-  /**
-   * Create a new edge
-   * @param {Object} edge - Edge data
-   * @returns {Promise} - Axios promise with created edge
-   */
-  createEdge(edge) {
-    return this.create(edge)
-  }
-  
-  /**
-   * Update an existing edge
-   * @param {string} id - Edge ID
-   * @param {Object} edge - Updated edge data
-   * @returns {Promise} - Axios promise with updated edge
-   */
-  updateEdge(id, edge) {
-    return this.update(id, edge)
-  }
-  
-  /**
-   * Delete an edge
-   * @param {string} id - Edge ID
-   * @returns {Promise} - Axios promise
-   */
-  deleteEdge(id) {
-    return this.delete(id)
-  }
-  
-  /**
    * Update edge metadata
    * @param {string} id - Edge ID
    * @param {Object} metadata - Metadata object to update or replace
@@ -76,7 +30,7 @@ export class EdgeService extends BaseService {
    */
   updateEdgeMetadata(id, metadata, merge = true) {
     // First get the current edge to access its metadata
-    return this.getEdge(id).then(response => {
+    return this.getById(id).then(response => {
       const edge = response.data
       let updatedMetadata = metadata
       

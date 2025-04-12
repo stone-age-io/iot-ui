@@ -4,6 +4,7 @@ import {
   COLLECTIONS, 
   collectionEndpoint 
 } from '../pocketbase-config'
+import { apiHelpers } from '../api'
 
 /**
  * Service for Location entity operations
@@ -18,24 +19,6 @@ export class LocationService extends BaseService {
         expandFields: ['edge_id', 'parent_id'] // Added parent_id to expand fields
       }
     )
-  }
-  
-  /**
-   * Get a paginated list of locations
-   * @param {Object} params - Query parameters
-   * @returns {Promise} - Axios promise with data
-   */
-  getLocations(params = {}) {
-    return this.getList(params)
-  }
-  
-  /**
-   * Get a single location by ID
-   * @param {string} id - Location ID
-   * @returns {Promise} - Axios promise with location data
-   */
-  getLocation(id) {
-    return this.getById(id)
   }
   
   /**
@@ -63,34 +46,6 @@ export class LocationService extends BaseService {
       parent_id_empty: true,
       sort: 'created'
     })
-  }
-  
-  /**
-   * Create a new location
-   * @param {Object} location - Location data
-   * @returns {Promise} - Axios promise with created location
-   */
-  createLocation(location) {
-    return this.create(location)
-  }
-  
-  /**
-   * Update an existing location
-   * @param {string} id - Location ID
-   * @param {Object} location - Updated location data
-   * @returns {Promise} - Axios promise with updated location
-   */
-  updateLocation(id, location) {
-    return this.update(id, location)
-  }
-  
-  /**
-   * Delete a location
-   * @param {string} id - Location ID
-   * @returns {Promise} - Axios promise
-   */
-  deleteLocation(id) {
-    return this.delete(id)
   }
   
   /**
@@ -137,7 +92,7 @@ export class LocationService extends BaseService {
    * @returns {Promise} - Axios promise with updated location
    */
   updateLocationCoordinates(id, coordinates) {
-    return this.getLocation(id).then(response => {
+    return this.getById(id).then(response => {
       const location = response.data
       
       // Create or update metadata
@@ -151,7 +106,7 @@ export class LocationService extends BaseService {
       }
       
       // Update location with new metadata
-      return this.updateLocation(id, { metadata })
+      return this.update(id, { metadata })
     })
   }
   
@@ -203,7 +158,7 @@ export class LocationService extends BaseService {
     
     // Check ancestors recursively
     try {
-      const response = await this.getLocation(potentialParentId)
+      const response = await this.getById(potentialParentId)
       const parent = response.data
       
       // If the parent has a parent of its own, check recursively

@@ -11,6 +11,9 @@ export class BaseService {
    * @param {string} collectionName - PocketBase collection name
    * @param {Function} collectionEndpoint - Function to generate endpoints
    * @param {Object} options - Service options
+   * @param {Array<string>} options.jsonFields - Fields to be parsed/stringified as JSON
+   * @param {Array<string>} options.expandFields - Fields to expand in queries
+   * @param {Object} options.fieldMappings - Field mappings between API and client fields
    */
   constructor(collectionName, collectionEndpoint, options = {}) {
     this.collectionName = collectionName
@@ -19,6 +22,7 @@ export class BaseService {
       // Default options
       jsonFields: [], // Fields to be parsed/stringified as JSON
       expandFields: [], // Fields to expand in queries
+      fieldMappings: {}, // Field mappings between API and client fields
       ...options
     }
   }
@@ -44,9 +48,12 @@ export class BaseService {
       .then(response => {
         const data = transformResponse(response.data)
         
-        // Process JSON fields in list items
+        // Process JSON fields and field mappings in list items
         if (data.items && data.items.length > 0) {
-          data.items = data.items.map(item => this.parseJsonFields(item))
+          data.items = data.items.map(item => {
+            const parsedItem = this.parseJsonFields(item)
+            return this.mapApiToClientFields(parsedItem)
+          })
         }
         
         return { data }
@@ -70,7 +77,9 @@ export class BaseService {
     return apiHelpers.getById(url)
       .then(response => {
         if (response.data) {
-          response.data = this.parseJsonFields(response.data)
+          // Apply JSON field parsing and field mappings
+          const parsedData = this.parseJsonFields(response.data)
+          response.data = this.mapApiToClientFields(parsedData)
         }
         return response
       })
@@ -84,10 +93,21 @@ export class BaseService {
   create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
+    // Map client fields to API fields
+    const mappedEntity = this.mapClientToApiFields(entity)
+    
     // Process entity data before sending to API
-    const processedData = this.stringifyJsonFields(entity)
+    const processedData = this.stringifyJsonFields(mappedEntity)
     
     return apiHelpers.create(endpoint, processedData)
+      .then(response => {
+        if (response.data) {
+          // Apply JSON field parsing and field mappings to response
+          const parsedData = this.parseJsonFields(response.data)
+          response.data = this.mapApiToClientFields(parsedData)
+        }
+        return response
+      })
   }
 
   /**
@@ -99,10 +119,21 @@ export class BaseService {
   update(id, entity) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
     
+    // Map client fields to API fields
+    const mappedEntity = this.mapClientToApiFields(entity)
+    
     // Process entity data before sending to API
-    const processedData = this.stringifyJsonFields(entity)
+    const processedData = this.stringifyJsonFields(mappedEntity)
     
     return apiHelpers.update(endpoint, null, processedData)
+      .then(response => {
+        if (response.data) {
+          // Apply JSON field parsing and field mappings to response
+          const parsedData = this.parseJsonFields(response.data)
+          response.data = this.mapApiToClientFields(parsedData)
+        }
+        return response
+      })
   }
 
   /**
@@ -148,6 +179,70 @@ export class BaseService {
     this.options.jsonFields.forEach(field => {
       if (result[field] && typeof result[field] === 'object') {
         result[field] = JSON.stringify(result[field])
+      }
+    })
+    
+    return result
+  }
+
+  /**
+   * Map API field names to client field names
+   * @param {Object} apiData - Data with API field names
+   * @returns {Object} - Data with client field names
+   */
+  mapApiToClientFields(apiData) {
+    const result = { ...apiData }
+    const mappings = this.options.fieldMappings
+    
+    // Skip if no mappings defined
+    if (!mappings || Object.keys(mappings).length === 0) {
+      return result
+    }
+    
+    // Apply mappings: API field name -> client field name
+    Object.entries(mappings).forEach(([apiField, clientField]) => {
+      if (apiData[apiField] !== undefined) {
+        result[clientField] = apiData[apiField]
+        
+        // Remove the original field if it's different from the client field
+        if (apiField !== clientField) {
+          delete result[apiField]
+        }
+      }
+    })
+    
+    return result
+  }
+
+  /**
+   * Map client field names to API field names
+   * @param {Object} clientData - Data with client field names
+   * @returns {Object} - Data with API field names
+   */
+  mapClientToApiFields(clientData) {
+    const result = { ...clientData }
+    const mappings = this.options.fieldMappings
+    
+    // Skip if no mappings defined
+    if (!mappings || Object.keys(mappings).length === 0) {
+      return result
+    }
+    
+    // Create reverse mappings: client field name -> API field name
+    const reverseMappings = {}
+    Object.entries(mappings).forEach(([apiField, clientField]) => {
+      reverseMappings[clientField] = apiField
+    })
+    
+    // Apply reverse mappings
+    Object.entries(reverseMappings).forEach(([clientField, apiField]) => {
+      if (clientData[clientField] !== undefined) {
+        result[apiField] = clientData[clientField]
+        
+        // Remove the original field if it's different from the API field
+        if (apiField !== clientField) {
+          delete result[clientField]
+        }
       }
     })
     

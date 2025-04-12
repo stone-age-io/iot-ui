@@ -3,12 +3,14 @@ import { ref, computed, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import natsService from '../services/nats/natsService';
 import { natsConfigService } from '../services/nats/natsConfigService';
+import { useApiOperation } from './useApiOperation';
 
 /**
  * Composable for NATS settings and connection management
  */
 export function useNatsSettings() {
   const toast = useToast();
+  const { performOperation } = useApiOperation();
   
   // Settings state
   const config = ref(natsConfigService.getDefaultConfig());
@@ -56,49 +58,32 @@ export function useNatsSettings() {
       return false;
     }
     
-    loading.value = true;
-    try {
-      const success = await natsService.connect(config.value);
-      
-      if (success) {
-        toast.add({
-          severity: 'success',
-          summary: 'Connected',
-          detail: `Successfully connected to NATS server at ${config.value.url}`,
-          life: 3000
-        });
-      } else {
-        toast.add({
-          severity: 'error',
-          summary: 'Connection Failed',
-          detail: errorMessage.value || 'Failed to connect to NATS server',
-          life: 5000
-        });
+    return performOperation(
+      () => natsService.connect(config.value),
+      {
+        loadingRef: loading,
+        errorRef: null, // NATS service already tracks error state
+        errorMessage: 'Failed to connect to NATS server',
+        successMessage: `Successfully connected to NATS server at ${config.value.url}`,
+        onSuccess: (success) => success,
+        onError: () => false
       }
-      
-      return success;
-    } finally {
-      loading.value = false;
-    }
+    );
   };
   
   // Disconnect from NATS server
   const disconnectFromNats = async () => {
-    loading.value = true;
-    try {
-      await natsService.disconnect();
-      
-      toast.add({
-        severity: 'info',
-        summary: 'Disconnected',
-        detail: 'Disconnected from NATS server',
-        life: 3000
-      });
-      
-      return true;
-    } finally {
-      loading.value = false;
-    }
+    return performOperation(
+      () => natsService.disconnect(),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: 'Error disconnecting from NATS',
+        successMessage: 'Disconnected from NATS server',
+        onSuccess: () => true,
+        onError: () => false
+      }
+    );
   };
   
   // Save NATS configuration

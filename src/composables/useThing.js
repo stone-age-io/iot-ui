@@ -10,6 +10,7 @@ import {
   validateThingCode,
   getThingTypeAbbreviation 
 } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for thing-related functionality
@@ -18,6 +19,7 @@ import {
 export function useThing() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performDelete } = useApiOperation()
   
   // Common state
   const things = ref([])
@@ -122,33 +124,22 @@ export function useThing() {
    * @returns {Promise<Array>} - List of things
    */
   const fetchThings = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      // Add expand for related entities and sorting
-      const queryParams = {
+    return performOperation(
+      () => thingService.getList({
         expand: 'location_id,edge_id',
         sort: '-created',
         ...params
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load things',
+        onSuccess: (response) => {
+          things.value = response.data.items || []
+          return things.value
+        }
       }
-      
-      const response = await thingService.getThings(queryParams)
-      things.value = response.data.items || []
-      return things.value
-    } catch (err) {
-      console.error('Error fetching things:', err)
-      error.value = 'Failed to load things. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load things',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -162,25 +153,15 @@ export function useThing() {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await thingService.getThing(id)
-      return response.data
-    } catch (err) {
-      console.error('Error fetching thing:', err)
-      error.value = 'Failed to load thing details. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load thing details',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => thingService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load thing details',
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -190,30 +171,16 @@ export function useThing() {
    * @returns {Promise<boolean>} - Success status
    */
   const deleteThing = async (id, code) => {
-    loading.value = true
-    try {
-      await thingService.deleteThing(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Thing ${code} has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error deleting thing:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete thing',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => thingService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete thing',
+        entityName: 'Thing',
+        entityIdentifier: code
+      }
+    )
   }
   
   /**

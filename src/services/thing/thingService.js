@@ -15,91 +15,17 @@ export class ThingService extends BaseService {
       collectionEndpoint,
       {
         jsonFields: ['metadata', 'current_state'],
-        expandFields: ['location_id', 'edge_id']
+        expandFields: ['location_id', 'edge_id'],
+        fieldMappings: {
+          'code': 'thing_code',
+          'type': 'thing_type'
+        }
       }
     )
   }
   
   /**
-   * Get a paginated list of things
-   * @param {Object} params - Query parameters
-   * @returns {Promise} - Axios promise with data
-   */
-  getThings(params = {}) {
-    return this.getList(params)
-      .then(response => {
-        // Ensure thing_code and thing_type fields exist for forms
-        if (response.data && response.data.items) {
-          response.data.items = response.data.items.map(item => this.mapApiToFormFields(item))
-        }
-        return response
-      })
-  }
-  
-  /**
-   * Get a single thing by ID
-   * @param {string} id - Thing ID
-   * @returns {Promise} - Axios promise with thing data
-   */
-  getThing(id) {
-    return this.getById(id)
-      .then(response => {
-        // Ensure thing_code and thing_type fields exist for forms
-        if (response.data) {
-          response.data = this.mapApiToFormFields(response.data)
-        }
-        return response
-      })
-  }
-  
-  /**
-   * Create a new thing
-   * @param {Object} thing - Thing data
-   * @returns {Promise} - Axios promise with created thing
-   */
-  createThing(thing) {
-    // Map form fields to API fields before creating
-    const apiData = this.mapFormToApiFields(thing)
-    return this.create(apiData)
-      .then(response => {
-        // Map back to form fields for consistency
-        if (response.data) {
-          response.data = this.mapApiToFormFields(response.data)
-        }
-        return response
-      })
-  }
-  
-  /**
-   * Update an existing thing
-   * @param {string} id - Thing ID
-   * @param {Object} thing - Updated thing data
-   * @returns {Promise} - Axios promise with updated thing
-   */
-  updateThing(id, thing) {
-    // Map form fields to API fields before updating
-    const apiData = this.mapFormToApiFields(thing)
-    return this.update(id, apiData)
-      .then(response => {
-        // Map back to form fields for consistency
-        if (response.data) {
-          response.data = this.mapApiToFormFields(response.data)
-        }
-        return response
-      })
-  }
-  
-  /**
-   * Delete a thing
-   * @param {string} id - Thing ID
-   * @returns {Promise} - Axios promise
-   */
-  deleteThing(id) {
-    return this.delete(id)
-  }
-  
-  /**
-   * Get all things for a specific location
+   * Get things for a specific location
    * @param {string} locationId - Location ID
    * @returns {Promise} - Axios promise with things data
    */
@@ -107,13 +33,6 @@ export class ThingService extends BaseService {
     return this.getList({ 
       location_id: locationId,
       sort: 'created'
-    })
-    .then(response => {
-      // Ensure thing_code and thing_type fields exist for forms
-      if (response.data && response.data.items) {
-        response.data.items = response.data.items.map(item => this.mapApiToFormFields(item))
-      }
-      return response
     })
   }
   
@@ -126,7 +45,7 @@ export class ThingService extends BaseService {
    */
   updateThingState(id, state, merge = true) {
     // First get the current thing to access its state
-    return this.getThing(id).then(response => {
+    return this.getById(id).then(response => {
       const thing = response.data
       let updatedState = state
       
@@ -156,7 +75,7 @@ export class ThingService extends BaseService {
    * @returns {Promise} - Axios promise with updated thing
    */
   updateThingPosition(id, coordinates) {
-    return this.getThing(id).then(response => {
+    return this.getById(id).then(response => {
       const thing = response.data
       
       // Create or update metadata
@@ -170,52 +89,8 @@ export class ThingService extends BaseService {
       }
       
       // Update thing with new metadata
-      return this.updateThing(id, { metadata })
+      return this.update(id, { metadata })
     })
-  }
-  
-  /**
-   * Map form fields to API fields
-   * @param {Object} formData - Form data with thing_code and thing_type
-   * @returns {Object} - API data with code and type
-   */
-  mapFormToApiFields(formData) {
-    const apiData = { ...formData }
-    
-    // Map thing_code to code if present
-    if (formData.thing_code !== undefined) {
-      apiData.code = formData.thing_code
-      delete apiData.thing_code
-    }
-    
-    // Map thing_type to type if present
-    if (formData.thing_type !== undefined) {
-      apiData.type = formData.thing_type
-      delete apiData.thing_type
-    }
-    
-    return apiData
-  }
-  
-  /**
-   * Map API fields to form fields
-   * @param {Object} apiData - API data with code and type
-   * @returns {Object} - Form data with thing_code and thing_type
-   */
-  mapApiToFormFields(apiData) {
-    const formData = { ...apiData }
-    
-    // Map code to thing_code for consistent form handling
-    if (apiData.code !== undefined) {
-      formData.thing_code = apiData.code
-    }
-    
-    // Map type to thing_type for consistent form handling
-    if (apiData.type !== undefined) {
-      formData.thing_type = apiData.type
-    }
-    
-    return formData
   }
   
   /**

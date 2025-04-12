@@ -8,6 +8,7 @@ import {
   generateClientUsername, 
   generateSecurePassword 
 } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for client-related functionality
@@ -16,6 +17,7 @@ import {
 export function useClient() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
   const clients = ref([])
@@ -46,30 +48,22 @@ export function useClient() {
    * @returns {Promise<Array>} - List of clients
    */
   const fetchClients = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await clientService.getClients({
+    return performOperation(
+      () => clientService.getList({
         expand: 'role_id',
         sort: '-created',
         ...params
-      })
-      clients.value = response.data.items || []
-      return clients.value
-    } catch (err) {
-      console.error('Error fetching clients:', err)
-      error.value = 'Failed to load clients. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load clients',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load clients',
+        onSuccess: (response) => {
+          clients.value = response.data.items || []
+          return clients.value
+        }
+      }
+    )
   }
   
   /**
@@ -83,25 +77,15 @@ export function useClient() {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await clientService.getClient(id)
-      return response.data
-    } catch (err) {
-      console.error('Error fetching client:', err)
-      error.value = 'Failed to load client details. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load client details',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => clientService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load client details',
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -110,57 +94,45 @@ export function useClient() {
    * @returns {Promise<Object>} - Created client and plain password
    */
   const createClient = async (clientData) => {
-    loading.value = true
-    
-    try {
-      // Hash the password before sending to PocketBase
-      const hashedPassword = await clientService.hashPassword(clientData.password)
-      
-      // Remember the original password to display to the user
-      const plainPassword = clientData.password
-      
-      // Prepare data for API using only schema fields with hashed password
-      const data = {
-        username: clientData.username,
-        password: hashedPassword,
-        role_id: clientData.role_id,
-        active: clientData.active
+    return performOperation(
+      async () => {
+        // Hash the password before sending to PocketBase
+        const hashedPassword = await clientService.hashPassword(clientData.password)
+        
+        // Remember the original password to display to the user
+        const plainPassword = clientData.password
+        
+        // Prepare data for API using only schema fields with hashed password
+        const data = {
+          username: clientData.username,
+          password: hashedPassword,
+          role_id: clientData.role_id,
+          active: clientData.active
+        }
+        
+        // Create client
+        const response = await clientService.create(data)
+        
+        // Show a confirmation with the plain password
+        toast.add({
+          severity: 'info',
+          summary: 'Password Information',
+          detail: `Remember to securely store the password: ${plainPassword}`,
+          life: 10000
+        })
+        
+        return {
+          client: response.data,
+          plainPassword
+        }
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to create client',
+        successMessage: `Client ${clientData.username} has been created`
       }
-      
-      // Create client
-      const response = await clientService.createClient(data)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Client ${data.username} has been created`,
-        life: 3000
-      })
-      
-      // Show a confirmation with the plain password
-      toast.add({
-        severity: 'info',
-        summary: 'Password Information',
-        detail: `Remember to securely store the password: ${plainPassword}`,
-        life: 10000
-      })
-      
-      return {
-        client: response.data,
-        plainPassword
-      }
-    } catch (error) {
-      console.error('Error creating client:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to create client. Please try again.',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -170,39 +142,26 @@ export function useClient() {
    * @returns {Promise<Object>} - Updated client
    */
   const updateClient = async (id, clientData) => {
-    loading.value = true
-    
-    try {
-      // If password is included, hash it
-      let data = { ...clientData }
-      
-      if (data.password) {
-        data.password = await clientService.hashPassword(data.password)
+    return performOperation(
+      async () => {
+        // If password is included, hash it
+        let data = { ...clientData }
+        
+        if (data.password) {
+          data.password = await clientService.hashPassword(data.password)
+        }
+        
+        // Update client
+        return clientService.update(id, data)
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update client',
+        successMessage: 'Client has been updated',
+        onSuccess: (response) => response.data
       }
-      
-      // Update client
-      const response = await clientService.updateClient(id, data)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Client has been updated`,
-        life: 3000
-      })
-      
-      return response.data
-    } catch (error) {
-      console.error('Error updating client:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to update client. Please try again.',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -212,30 +171,16 @@ export function useClient() {
    * @returns {Promise<boolean>} - Success status
    */
   const deleteClient = async (id, username) => {
-    loading.value = true
-    try {
-      await clientService.deleteClient(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Client ${username} has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error deleting client:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete client',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => clientService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete client',
+        entityName: 'Client',
+        entityIdentifier: username
+      }
+    )
   }
   
   /**
@@ -244,40 +189,28 @@ export function useClient() {
    * @returns {Promise<string|null>} - New plain text password or null on failure
    */
   const resetPassword = async (id) => {
-    loading.value = true
-    
-    try {
-      // Generate new password
-      const newPassword = generateSecurePassword(12)
-      
-      // Hash the password before sending to PocketBase
-      const hashedPassword = await clientService.hashPassword(newPassword)
-      
-      // Update client with new hashed password
-      await clientService.updateClient(id, {
-        password: hashedPassword
-      })
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Password has been reset successfully',
-        life: 3000
-      })
-      
-      return newPassword
-    } catch (error) {
-      console.error('Error resetting password:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to reset password',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      async () => {
+        // Generate new password
+        const newPassword = generateSecurePassword(12)
+        
+        // Hash the password before sending to PocketBase
+        const hashedPassword = await clientService.hashPassword(newPassword)
+        
+        // Update client with new hashed password
+        await clientService.update(id, {
+          password: hashedPassword
+        })
+        
+        return newPassword
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to reset password',
+        successMessage: 'Password has been reset successfully'
+      }
+    )
   }
   
   /**

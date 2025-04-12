@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '../stores/auth'
 import { userService } from '../services/user/userService'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for user profile-related functionality
@@ -13,6 +14,7 @@ export function useUserProfile() {
   const router = useRouter()
   const toast = useToast()
   const authStore = useAuthStore()
+  const { performOperation } = useApiOperation()
   
   // Common state
   const profile = ref({})
@@ -38,26 +40,18 @@ export function useUserProfile() {
    * @returns {Promise<Object>} - User profile data
    */
   const fetchProfile = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await userService.getCurrentUser()
-      profile.value = response.data || {}
-      return profile.value
-    } catch (err) {
-      console.error('Error fetching profile:', err)
-      error.value = 'Failed to load profile. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load profile',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => userService.getCurrentUser(),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load profile',
+        onSuccess: (response) => {
+          profile.value = response.data || {}
+          return profile.value
+        }
+      }
+    )
   }
   
   /**
@@ -66,43 +60,30 @@ export function useUserProfile() {
    * @returns {Promise<boolean>} - Success status
    */
   const updateProfile = async (profileData) => {
-    loading.value = true
-    
-    try {
-      await userService.updateProfile(profile.value.id, profileData)
-      
-      // Update local state
-      Object.assign(profile.value, profileData)
-      
-      // Update auth store if needed
-      if (authStore.user) {
-        const name = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim()
-        authStore.updateUser({
-          name: name || authStore.user.name,
-          email: profileData.email || authStore.user.email
-        })
+    return performOperation(
+      () => userService.updateProfile(profile.value.id, profileData),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update profile',
+        successMessage: 'Profile has been updated',
+        onSuccess: () => {
+          // Update local state
+          Object.assign(profile.value, profileData)
+          
+          // Update auth store if needed
+          if (authStore.user) {
+            const name = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim()
+            authStore.updateUser({
+              name: name || authStore.user.name,
+              email: profileData.email || authStore.user.email
+            })
+          }
+          
+          return true
+        }
       }
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Profile has been updated',
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to update profile',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -113,40 +94,27 @@ export function useUserProfile() {
    * @returns {Promise<boolean>} - Success status
    */
   const changePassword = async (currentPassword, newPassword, confirmPassword) => {
-    loading.value = true
-    
-    try {
-      // Verify passwords match
-      if (newPassword !== confirmPassword) {
-        throw new Error('New passwords do not match')
+    return performOperation(
+      async () => {
+        // Verify passwords match
+        if (newPassword !== confirmPassword) {
+          throw new Error('New passwords do not match')
+        }
+        
+        return userService.changePassword(profile.value.id, {
+          oldPassword: currentPassword,
+          password: newPassword,
+          passwordConfirm: confirmPassword
+        })
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to change password',
+        successMessage: 'Password has been changed',
+        onSuccess: () => true
       }
-      
-      await userService.changePassword(profile.value.id, {
-        oldPassword: currentPassword,
-        password: newPassword,
-        passwordConfirm: confirmPassword
-      })
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Password has been changed',
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error changing password:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: error.response?.data?.message || 'Failed to change password',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   // Navigation methods

@@ -5,6 +5,7 @@ import { required, email, minLength, sameAs, helpers } from '@vuelidate/validato
 import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
 import { userService } from '../services/user/userService'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for user profile form handling
@@ -15,6 +16,7 @@ import { userService } from '../services/user/userService'
 export function useProfileForm() {
   const toast = useToast()
   const router = useRouter()
+  const { performOperation } = useApiOperation()
   
   // Profile form data
   const profileForm = ref({
@@ -87,39 +89,24 @@ export function useProfileForm() {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
     
-    loading.value = true
-    
-    try {
-      // Prepare data for API
-      const profileData = {
-        first_name: profileForm.value.first_name,
-        last_name: profileForm.value.last_name,
-        email: profileForm.value.email
-      }
-      
-      // Update profile
-      await userService.updateProfile(profileForm.value.id, profileData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Profile has been updated',
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to update profile. Please try again.',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
+    // Prepare data for API
+    const profileData = {
+      first_name: profileForm.value.first_name,
+      last_name: profileForm.value.last_name,
+      email: profileForm.value.email
     }
+    
+    return performOperation(
+      () => userService.updateProfile(profileForm.value.id, profileData),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: 'Failed to update profile',
+        successMessage: 'Profile has been updated',
+        onSuccess: () => true,
+        onError: () => false
+      }
+    )
   }
   
   /**
@@ -131,40 +118,26 @@ export function useProfileForm() {
     const isValid = await p$.value.$validate()
     if (!isValid) return false
     
-    loading.value = true
-    
-    try {
-      // Update password
-      await userService.changePassword(profileForm.value.id, passwordForm.value)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Password has been changed',
-        life: 3000
-      })
-      
-      // Reset password form
-      passwordForm.value = {
-        oldPassword: '',
-        password: '',
-        passwordConfirm: ''
+    return performOperation(
+      () => userService.changePassword(profileForm.value.id, passwordForm.value),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: 'Failed to change password',
+        successMessage: 'Password has been changed',
+        onSuccess: () => {
+          // Reset password form
+          passwordForm.value = {
+            oldPassword: '',
+            password: '',
+            passwordConfirm: ''
+          }
+          p$.value.$reset()
+          return true
+        },
+        onError: () => false
       }
-      p$.value.$reset()
-      
-      return true
-    } catch (error) {
-      console.error('Error changing password:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to change password. Please try again.',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**

@@ -31,69 +31,6 @@ export class ClientService extends BaseService {
   }
   
   /**
-   * Get a paginated list of messaging clients
-   * @param {Object} params - Query parameters
-   * @returns {Promise} - Axios promise with data
-   */
-  getClients(params = {}) {
-    return this.getList(params)
-  }
-  
-  /**
-   * Get a single client by ID
-   * @param {string} id - Client ID
-   * @returns {Promise} - Axios promise with client data
-   */
-  getClient(id) {
-    return this.getById(id)
-  }
-  
-  /**
-   * Create a new client
-   * @param {Object} client - Client data
-   * @returns {Promise} - Axios promise with created client
-   */
-  createClient(client) {
-    // Extract only the fields that match the PocketBase schema
-    const clientData = {
-      username: client.username,
-      password: client.password, // Should be already hashed
-      role_id: client.role_id,
-      active: client.active
-    }
-    
-    return this.create(clientData)
-  }
-  
-  /**
-   * Update an existing client
-   * @param {string} id - Client ID
-   * @param {Object} client - Updated client data
-   * @returns {Promise} - Axios promise with updated client
-   */
-  updateClient(id, client) {
-    // Extract only the fields that match the PocketBase schema
-    const clientData = {}
-    
-    // Only include fields that were provided in the update
-    if (client.username !== undefined) clientData.username = client.username
-    if (client.password !== undefined) clientData.password = client.password
-    if (client.role_id !== undefined) clientData.role_id = client.role_id
-    if (client.active !== undefined) clientData.active = client.active
-    
-    return this.update(id, clientData)
-  }
-  
-  /**
-   * Delete a client
-   * @param {string} id - Client ID
-   * @returns {Promise} - Axios promise
-   */
-  deleteClient(id) {
-    return this.delete(id)
-  }
-  
-  /**
    * Hash a password using bcrypt (via server API)
    * @param {string} password - Plain text password to hash
    * @returns {Promise<string>} - Hashed password

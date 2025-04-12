@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Base composable for type management
@@ -16,6 +17,7 @@ import dayjs from 'dayjs'
 export function useTypeManagement(typeService, routeNames, entityName) {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
   const types = ref([])
@@ -38,30 +40,21 @@ export function useTypeManagement(typeService, routeNames, entityName) {
    * @returns {Promise<Array>} - List of types
    */
   const fetchTypes = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await typeService.getTypes({ 
+    return performOperation(
+      () => typeService.getList({ 
         sort: 'type',
         ...params
-      })
-      
-      types.value = response.data.items || []
-      return types.value
-    } catch (err) {
-      console.error(`Error fetching ${entityName.toLowerCase()}s:`, err)
-      error.value = `Failed to load ${entityName.toLowerCase()}s. Please try again.`
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to load ${entityName.toLowerCase()}s`,
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: `Failed to load ${entityName.toLowerCase()}s`,
+        onSuccess: (response) => {
+          types.value = response.data.items || []
+          return types.value
+        }
+      }
+    )
   }
   
   /**
@@ -75,25 +68,15 @@ export function useTypeManagement(typeService, routeNames, entityName) {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await typeService.getType(id)
-      return response.data
-    } catch (err) {
-      console.error(`Error fetching ${entityName.toLowerCase()}:`, err)
-      error.value = `Failed to load ${entityName.toLowerCase()} details. Please try again.`
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to load ${entityName.toLowerCase()} details`,
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => typeService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: `Failed to load ${entityName.toLowerCase()} details`,
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -102,59 +85,10 @@ export function useTypeManagement(typeService, routeNames, entityName) {
    * @returns {Promise<Object>} - Created type
    */
   const createType = async (typeData) => {
-    loading.value = true
-    
-    try {
-      // Check if code is already in use
-      const isCodeInUse = await typeService.isCodeInUse(typeData.code)
-      
-      if (isCodeInUse) {
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: `Code "${typeData.code}" is already in use. Please choose a different code.`,
-          life: 3000
-        })
-        return null
-      }
-      
-      const response = await typeService.createType(typeData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${entityName} "${typeData.type}" has been created`,
-        life: 3000
-      })
-      
-      return response.data
-    } catch (error) {
-      console.error(`Error creating ${entityName.toLowerCase()}:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to create ${entityName.toLowerCase()}. Please try again.`,
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  /**
-   * Update an existing type
-   * @param {string} id - Type ID
-   * @param {Object} typeData - Updated type data
-   * @returns {Promise<Object>} - Updated type
-   */
-  const updateType = async (id, typeData) => {
-    loading.value = true
-    
-    try {
-      // Check if code is already in use (excluding current type)
-      if (typeData.code) {
-        const isCodeInUse = await typeService.isCodeInUse(typeData.code, id)
+    return performOperation(
+      async () => {
+        // Check if code is already in use
+        const isCodeInUse = await typeService.isCodeInUse(typeData.code)
         
         if (isCodeInUse) {
           toast.add({
@@ -165,30 +99,53 @@ export function useTypeManagement(typeService, routeNames, entityName) {
           })
           return null
         }
+        
+        return typeService.create(typeData)
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: `Failed to create ${entityName.toLowerCase()}`,
+        successMessage: `${entityName} "${typeData.type}" has been created`,
+        onSuccess: (response) => response?.data || null
       }
-      
-      const response = await typeService.updateType(id, typeData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${entityName} "${typeData.type}" has been updated`,
-        life: 3000
-      })
-      
-      return response.data
-    } catch (error) {
-      console.error(`Error updating ${entityName.toLowerCase()}:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to update ${entityName.toLowerCase()}. Please try again.`,
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    )
+  }
+  
+  /**
+   * Update an existing type
+   * @param {string} id - Type ID
+   * @param {Object} typeData - Updated type data
+   * @returns {Promise<Object>} - Updated type
+   */
+  const updateType = async (id, typeData) => {
+    return performOperation(
+      async () => {
+        // Check if code is already in use (excluding current type)
+        if (typeData.code) {
+          const isCodeInUse = await typeService.isCodeInUse(typeData.code, id)
+          
+          if (isCodeInUse) {
+            toast.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: `Code "${typeData.code}" is already in use. Please choose a different code.`,
+              life: 3000
+            })
+            return null
+          }
+        }
+        
+        return typeService.update(id, typeData)
+      },
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: `Failed to update ${entityName.toLowerCase()}`,
+        successMessage: `${entityName} "${typeData.type}" has been updated`,
+        onSuccess: (response) => response?.data || null
+      }
+    )
   }
   
   /**
@@ -198,31 +155,16 @@ export function useTypeManagement(typeService, routeNames, entityName) {
    * @returns {Promise<boolean>} - Success status
    */
   const deleteType = async (id, name) => {
-    loading.value = true
-    
-    try {
-      await typeService.deleteType(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${entityName} "${name}" has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error(`Error deleting ${entityName.toLowerCase()}:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to delete ${entityName.toLowerCase()}`,
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => typeService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: `Failed to delete ${entityName.toLowerCase()}`,
+        entityName: entityName,
+        entityIdentifier: `"${name}"`
+      }
+    )
   }
   
   /**

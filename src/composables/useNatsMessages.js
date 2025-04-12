@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import natsService from '../services/nats/natsService'
 import { natsConfigService } from '../services/nats/natsConfigService'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for managing NATS messages subscriptions and display
@@ -14,6 +15,7 @@ import { natsConfigService } from '../services/nats/natsConfigService'
  */
 export function useNatsMessages(maxMessages = 100) {
   const toast = useToast()
+  const { performOperation } = useApiOperation()
   
   // State
   const messages = ref([])
@@ -52,77 +54,86 @@ export function useNatsMessages(maxMessages = 100) {
       return null
     }
     
-    try {
-      console.log(`Subscribing to topic: ${topic}`)
-      
-      // Subscribe to the topic
-      const subscription = await natsService.subscribe(topic, (message, subject, subscriptionId) => {
-        // Skip if paused
-        if (paused.value) return
+    return performOperation(
+      async () => {
+        console.log(`Subscribing to topic: ${topic}`)
         
-        // Skip if this subscription ID is not in our active set
-        if (!activeSubscriptionIds.value.has(subscriptionId)) {
-          console.log(`Ignoring message from inactive subscription: ${subscriptionId}`)
-          return
-        }
-        
-        // Add message to list
-        addMessage({
-          id: generateMessageId(),
-          topic: subject,
-          data: message,
-          timestamp: new Date()
+        // Subscribe to the topic
+        const subscription = await natsService.subscribe(topic, (message, subject, subscriptionId) => {
+          // Skip if paused
+          if (paused.value) return
+          
+          // Skip if this subscription ID is not in our active set
+          if (!activeSubscriptionIds.value.has(subscriptionId)) {
+            console.log(`Ignoring message from inactive subscription: ${subscriptionId}`)
+            return
+          }
+          
+          // Add message to list
+          addMessage({
+            id: generateMessageId(),
+            topic: subject,
+            data: message,
+            timestamp: new Date()
+          })
         })
-      })
-      
-      if (subscription) {
-        // Store subscription
-        subscriptions.value[topic] = subscription
         
-        // Add subscription ID to active set
-        if (subscription.sid) {
-          activeSubscriptionIds.value.add(subscription.sid)
-          console.log(`Added subscription ID ${subscription.sid} to active set`)
+        if (subscription) {
+          // Store subscription
+          subscriptions.value[topic] = subscription
+          
+          // Add subscription ID to active set
+          if (subscription.sid) {
+            activeSubscriptionIds.value.add(subscription.sid)
+            console.log(`Added subscription ID ${subscription.sid} to active set`)
+          }
+          
+          console.log(`Successfully subscribed to topic: ${topic}`)
         }
         
-        console.log(`Successfully subscribed to topic: ${topic}`)
+        return subscription
+      },
+      {
+        loadingRef: false,
+        errorRef: error,
+        errorMessage: `Failed to subscribe to topic: ${topic}`,
+        onSuccess: (subscription) => subscription,
+        onError: () => null
       }
-      
-      return subscription
-    } catch (err) {
-      console.error('Error subscribing to topic:', err)
-      error.value = `Failed to subscribe to topic: ${topic}`
-      toast.add({
-        severity: 'error',
-        summary: 'Subscription Error',
-        detail: `Failed to subscribe to topic: ${topic}`,
-        life: 3000
-      })
-      return null
-    }
+    )
   }
   
   // Unsubscribe from a topic
   const unsubscribe = async (topic) => {
     const subscription = subscriptions.value[topic]
     if (subscription) {
-      try {
-        // Remove from active subscription IDs
-        if (subscription.sid) {
-          activeSubscriptionIds.value.delete(subscription.sid)
-          console.log(`Removed subscription ID ${subscription.sid} from active set`)
+      return performOperation(
+        async () => {
+          // Remove from active subscription IDs
+          if (subscription.sid) {
+            activeSubscriptionIds.value.delete(subscription.sid)
+            console.log(`Removed subscription ID ${subscription.sid} from active set`)
+          }
+          
+          // Perform NATS unsubscribe
+          await natsService.unsubscribe(subscription)
+          
+          // Remove from subscriptions
+          delete subscriptions.value[topic]
+          console.log(`Unsubscribed from topic: ${topic}`)
+          
+          return true
+        },
+        {
+          loadingRef: false,
+          errorRef: error,
+          errorMessage: `Error unsubscribing from topic: ${topic}`,
+          onSuccess: () => true,
+          onError: () => false
         }
-        
-        // Perform NATS unsubscribe
-        await natsService.unsubscribe(subscription)
-        
-        // Remove from subscriptions
-        delete subscriptions.value[topic]
-        console.log(`Unsubscribed from topic: ${topic}`)
-      } catch (err) {
-        console.error('Error unsubscribing from topic:', err)
-      }
+      )
     }
+    return Promise.resolve(true)
   }
   
   // Subscribe to all configured topics

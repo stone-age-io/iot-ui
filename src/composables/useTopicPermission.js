@@ -7,6 +7,7 @@ import {
   topicPermissionService, 
   validateTopic
 } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for topic permission-related functionality
@@ -15,6 +16,7 @@ import {
 export function useTopicPermission() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
   const permissions = ref([])
@@ -110,29 +112,21 @@ export function useTopicPermission() {
    * @returns {Promise<Array>} - List of permissions
    */
   const fetchPermissions = async (params = {}) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await topicPermissionService.getTopicPermissions({
+    return performOperation(
+      () => topicPermissionService.getList({
         sort: '-created',
         ...params
-      })
-      permissions.value = response.data.items || []
-      return permissions.value
-    } catch (err) {
-      console.error('Error fetching permissions:', err)
-      error.value = 'Failed to load permissions. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load permissions',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load permissions',
+        onSuccess: (response) => {
+          permissions.value = response.data.items || []
+          return permissions.value
+        }
+      }
+    )
   }
   
   /**
@@ -146,35 +140,26 @@ export function useTopicPermission() {
       return null
     }
     
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await topicPermissionService.getTopicPermission(id)
-      
-      // Ensure arrays
-      const permission = response.data
-      if (!Array.isArray(permission.publish_permissions)) {
-        permission.publish_permissions = []
+    return performOperation(
+      () => topicPermissionService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load permission details',
+        onSuccess: (response) => {
+          // Ensure arrays
+          const permission = response.data
+          if (!Array.isArray(permission.publish_permissions)) {
+            permission.publish_permissions = []
+          }
+          if (!Array.isArray(permission.subscribe_permissions)) {
+            permission.subscribe_permissions = []
+          }
+          
+          return permission
+        }
       }
-      if (!Array.isArray(permission.subscribe_permissions)) {
-        permission.subscribe_permissions = []
-      }
-      
-      return permission
-    } catch (err) {
-      console.error('Error fetching permission:', err)
-      error.value = 'Failed to load permission details. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load permission details',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   /**
@@ -185,23 +170,15 @@ export function useTopicPermission() {
   const fetchClientsByPermission = async (permissionId) => {
     if (!permissionId) return []
     
-    loading.value = true
-    
-    try {
-      const response = await topicPermissionService.getClientsByPermission(permissionId)
-      return response.data.items || []
-    } catch (err) {
-      console.error('Error fetching clients by permission:', err)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load clients using this role',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => topicPermissionService.getClientsByPermission(permissionId),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: 'Failed to load clients using this role',
+        onSuccess: (response) => response.data.items || []
+      }
+    )
   }
   
   /**
@@ -210,31 +187,17 @@ export function useTopicPermission() {
    * @returns {Promise<Object>} - Created permission
    */
   const createPermission = async (permissionData) => {
-    loading.value = true
-    
-    try {
-      const response = await topicPermissionService.createTopicPermission(permissionData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Permission role '${permissionData.name}' has been created`,
-        life: 3000
-      })
-      
-      return response.data
-    } catch (error) {
-      console.error('Error creating permission:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to create permission. Please try again.',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performCreate(
+      () => topicPermissionService.create(permissionData),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to create permission',
+        entityName: 'Permission role',
+        entityIdentifier: `'${permissionData.name}'`,
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -244,31 +207,17 @@ export function useTopicPermission() {
    * @returns {Promise<Object>} - Updated permission
    */
   const updatePermission = async (id, permissionData) => {
-    loading.value = true
-    
-    try {
-      const response = await topicPermissionService.updateTopicPermission(id, permissionData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Permission role '${permissionData.name}' has been updated`,
-        life: 3000
-      })
-      
-      return response.data
-    } catch (error) {
-      console.error('Error updating permission:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to update permission. Please try again.',
-        life: 3000
-      })
-      return null
-    } finally {
-      loading.value = false
-    }
+    return performUpdate(
+      () => topicPermissionService.update(id, permissionData),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update permission',
+        entityName: 'Permission role',
+        entityIdentifier: `'${permissionData.name}'`,
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   /**
@@ -278,30 +227,16 @@ export function useTopicPermission() {
    * @returns {Promise<boolean>} - Success status
    */
   const deletePermission = async (id, name) => {
-    loading.value = true
-    try {
-      await topicPermissionService.deleteTopicPermission(id)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Permission role '${name}' has been deleted`,
-        life: 3000
-      })
-      
-      return true
-    } catch (error) {
-      console.error('Error deleting permission:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete permission',
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    return performDelete(
+      () => topicPermissionService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete permission',
+        entityName: 'Permission role',
+        entityIdentifier: `'${name}'`
+      }
+    )
   }
   
   // Navigation methods
