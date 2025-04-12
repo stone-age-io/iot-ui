@@ -1,30 +1,29 @@
-# IoT Platform UI: Composables & Service Layer Documentation
+# IoT Platform UI: Architecture Documentation
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
 2. [Architecture Overview](#architecture-overview)
-3. [Service Layer](#service-layer)
+3. [Recent Improvements](#recent-improvements)
+4. [Service Layer](#service-layer)
     - [Base Service Pattern](#base-service-pattern)
+    - [Field Mapping](#field-mapping)
     - [Entity Services](#entity-services)
-    - [Type Services](#type-services)
-    - [Utility Services](#utility-services)
-4. [Composables](#composables)
+5. [Composables](#composables)
+    - [API Operation Pattern](#api-operation-pattern)
     - [Entity Composables](#entity-composables)
     - [Form Composables](#form-composables)
     - [Utility Composables](#utility-composables)
-    - [NATS Composables](#nats-composables)
-5. [Integration Patterns](#integration-patterns)
+6. [Integration Patterns](#integration-patterns)
     - [Composable-Service Integration](#composable-service-integration)
     - [View-Composable Integration](#view-composable-integration)
-    - [Error Handling Pattern](#error-handling-pattern)
-6. [Best Practices](#best-practices)
+7. [Best Practices](#best-practices)
 
 ## Introduction
 
-This document provides detailed information about the composables and service layer implemented in the IoT Platform UI. These two architectural components form the backbone of the application, separating business logic from UI components and providing reusable functionality across the application.
+This document provides detailed information about the architecture of the IoT Platform UI, with a focus on the composables and service layer that form the backbone of the application. The architecture has been recently improved to enhance maintainability, reduce duplication, and provide consistent patterns across the codebase.
 
-The architecture follows Vue 3's Composition API patterns and implements a structured approach to API interactions through a service layer.
+The improved architecture follows Vue 3's Composition API patterns and implements a structured approach to API interactions through a streamlined service layer.
 
 ## Architecture Overview
 
@@ -36,15 +35,21 @@ The application is built with a clear separation of concerns:
 - **Services**: Encapsulated API interactions
 - **Stores**: Global state management with Pinia
 
-This document focuses on the composables and service layers, which together handle most of the application's business logic and data operations.
+## Recent Improvements
+
+The codebase has undergone several significant improvements to enhance maintainability and reduce code duplication:
+
+1. **Common API Operation Handler** - A new `useApiOperation` composable centralizes API operation handling, including loading states, error management, and toast notifications.
+
+2. **Removal of Duplicate Entity Service Methods** - Service methods that simply passed through to the base service without adding functionality have been removed to reduce redundancy.
+
+3. **Enhanced Field Mapping in BaseService** - The BaseService now includes standardized field mapping between API and client fields, ensuring consistency across all services.
 
 ## Service Layer
 
-The service layer provides a consistent interface for interacting with the backend API. It follows a hierarchical pattern where entity-specific services extend a base service.
-
 ### Base Service Pattern
 
-All entity services are built upon a common BaseService class that provides standard CRUD operations.
+All entity services are built upon a common BaseService class that provides standard CRUD operations and handles field mapping.
 
 ```javascript
 // src/services/base/BaseService.js
@@ -55,6 +60,7 @@ export class BaseService {
     this.options = {
       jsonFields: [], // Fields to be parsed/stringified as JSON
       expandFields: [], // Fields to expand in queries
+      fieldMappings: {}, // Field mappings between API and client fields
       ...options
     };
   }
@@ -66,6 +72,10 @@ export class BaseService {
   update(id, entity) { /* ... */ }
   delete(id) { /* ... */ }
 
+  // Field mapping methods
+  mapApiToClientFields(apiData) { /* ... */ }
+  mapClientToApiFields(clientData) { /* ... */ }
+
   // Utility methods
   parseJsonFields(entity) { /* ... */ }
   stringifyJsonFields(entity) { /* ... */ }
@@ -73,604 +83,308 @@ export class BaseService {
 }
 ```
 
-The BaseService:
+The BaseService provides:
 
-- Handles common CRUD operations (getList, getById, create, update, delete)
-- Manages JSON field parsing and stringification
-- Transforms query parameters for PocketBase compatibility
-- Provides extension points for entity-specific services
+- Standardized CRUD operations (getList, getById, create, update, delete)
+- JSON field parsing and stringification
+- Field mapping between API and client formats
+- Query parameter transformation
+- Extension points for entity-specific services
+
+### Field Mapping
+
+A key improvement is the standardized field mapping mechanism in the BaseService. This allows for consistent handling of field names between the API and client:
+
+```javascript
+// Field mapping example in ThingService
+constructor() {
+  super(
+    COLLECTIONS.THINGS, 
+    collectionEndpoint,
+    {
+      jsonFields: ['metadata', 'current_state'],
+      expandFields: ['location_id', 'edge_id'],
+      fieldMappings: {
+        'code': 'thing_code',
+        'type': 'thing_type'
+      }
+    }
+  )
+}
+```
+
+The mapping system:
+- Automatically converts API field names to client field names when retrieving data
+- Converts client field names back to API field names when sending data
+- Works seamlessly with all CRUD operations
+- Reduces the need for custom mapping code in entity services
 
 ### Entity Services
 
-Entity services extend the BaseService to provide entity-specific functionality.
-
-#### Edge Service
+Entity services extend the BaseService to provide entity-specific functionality while leveraging the base functionality:
 
 ```javascript
-// src/services/edge/edgeService.js
-export class EdgeService extends BaseService {
+// Example: Simplified ThingService
+export class ThingService extends BaseService {
   constructor() {
     super(
-      COLLECTIONS.EDGES,
+      COLLECTIONS.THINGS, 
       collectionEndpoint,
       {
-        jsonFields: ['metadata'],
-        expandFields: []
+        jsonFields: ['metadata', 'current_state'],
+        expandFields: ['location_id', 'edge_id'],
+        fieldMappings: {
+          'code': 'thing_code',
+          'type': 'thing_type'
+        }
       }
-    );
+    )
   }
-
-  // Entity-specific methods
-  getEdges(params = {}) { /* ... */ }
-  getEdge(id) { /* ... */ }
-  createEdge(edge) { /* ... */ }
-  updateEdge(id, edge) { /* ... */ }
-  deleteEdge(id) { /* ... */ }
-  updateEdgeMetadata(id, metadata, merge = true) { /* ... */ }
   
-  // Parameter transformation override
-  transformParams(transformedParams, originalParams) { /* ... */ }
-}
-```
-
-#### Location Service
-
-```javascript
-// src/services/location/locationService.js
-export class LocationService extends BaseService {
-  // Similar pattern to EdgeService
-  // Additional methods for location-specific operations
-  getChildLocations(parentId, params = {}) { /* ... */ }
-  getRootLocations(params = {}) { /* ... */ }
-  uploadFloorPlan(id, formData) { /* ... */ }
-  getFloorPlanImageUrl(location) { /* ... */ }
-  updateLocationCoordinates(id, coordinates) { /* ... */ }
-  isCircularReference(locationId, potentialParentId) { /* ... */ }
-}
-```
-
-#### Thing Service
-
-```javascript
-// src/services/thing/thingService.js
-export class ThingService extends BaseService {
-  // Similar pattern to other entity services
-  // Additional methods for thing-specific operations
+  // Entity-specific methods only
   getThingsByLocation(locationId) { /* ... */ }
   updateThingState(id, state, merge = true) { /* ... */ }
   updateThingPosition(id, coordinates) { /* ... */ }
-  
-  // Field mapping methods
-  mapFormToApiFields(formData) { /* ... */ }
-  mapApiToFormFields(apiData) { /* ... */ }
 }
 ```
 
-#### Client Service
-
-```javascript
-// src/services/client/clientService.js
-export class ClientService extends BaseService {
-  // Similar pattern to other entity services
-  // Additional methods for client-specific operations
-  hashPassword(password) { /* ... */ }
-}
-```
-
-#### Topic Permission Service
-
-```javascript
-// src/services/topic-permission/topicPermissionService.js
-export class TopicPermissionService extends BaseService {
-  // Similar pattern to other entity services
-  // Additional methods for permission-specific operations
-  getClientsByPermission(permissionId) { /* ... */ }
-  addTopic(id, topic, type) { /* ... */ }
-  removeTopic(id, topic, type) { /* ... */ }
-}
-```
-
-### Type Services
-
-Type services manage entity types (edge types, location types, thing types). They share a common TypeService base class.
-
-```javascript
-// src/services/type/typeService.js
-export class TypeService extends BaseService {
-  // Common type operations
-  getTypes(params = {}) { /* ... */ }
-  getType(id) { /* ... */ }
-  createType(type) { /* ... */ }
-  updateType(id, type) { /* ... */ }
-  deleteType(id) { /* ... */ }
-  isCodeInUse(code, excludeId = null) { /* ... */ }
-}
-```
-
-Specific type services extend this class:
-
-- `EdgeTypeService`
-- `EdgeRegionService`
-- `LocationTypeService`
-- `ThingTypeService`
-
-Each implements type-specific validations and provides options for dropdown lists.
-
-### Utility Services
-
-The application includes several utility services:
-
-#### API Helpers
-
-```javascript
-// src/services/api.js
-export const apiHelpers = {
-  axiosInstance: apiService,
-  getList: (endpoint, params = {}) => { /* ... */ },
-  getById: (endpoint) => { /* ... */ },
-  create: (endpoint, data) => { /* ... */ },
-  update: (endpoint, id, data) => { /* ... */ },
-  delete: (endpoint) => { /* ... */ }
-};
-```
-
-#### NATS Services
-
-- `natsService`: Manages WebSocket connections to NATS messaging server
-- `natsConfigService`: Handles NATS configuration storage and validation
-- `natsConnectionManager`: Manages connection lifecycle
-
-#### User Service
-
-```javascript
-// src/services/user/userService.js
-export class UserService extends BaseService {
-  // User-specific operations
-  getCurrentUser() { /* ... */ }
-  updateProfile(id, userData) { /* ... */ }
-  changePassword(id, passwordData) { /* ... */ }
-}
-```
+Entity services now:
+- Avoid duplicating CRUD methods already provided by BaseService
+- Focus on providing only entity-specific functionality
+- Use field mappings to handle API/client field name differences
+- Override transformParams when needed for entity-specific query transformations
 
 ## Composables
 
-Composables encapsulate reusable business logic using Vue's Composition API. They provide a clean interface for components to interact with services and manage local state.
+### API Operation Pattern
+
+A major improvement is the introduction of the `useApiOperation` composable, which centralizes API operation handling across all entity composables:
+
+```javascript
+// src/composables/useApiOperation.js
+export function useApiOperation() {
+  const toast = useToast()
+
+  const performOperation = async (operation, options) => {
+    const {
+      loadingRef,
+      errorRef,
+      errorMessage = 'Operation failed',
+      successMessage,
+      onSuccess,
+      onError
+    } = options
+
+    // Set loading state
+    if (loadingRef) loadingRef.value = true
+    if (errorRef) errorRef.value = null
+
+    try {
+      // Perform the operation
+      const response = await operation()
+
+      // Handle success
+      if (successMessage) {
+        toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: successMessage,
+          life: 3000
+        })
+      }
+
+      // Call success callback if provided
+      if (onSuccess) {
+        return onSuccess(response)
+      }
+
+      return response
+    } catch (err) {
+      // Handle error
+      console.error(`Error: ${errorMessage}`, err)
+      if (errorRef) errorRef.value = errorMessage
+      
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: errorMessage,
+        life: 3000
+      })
+
+      // Call error callback if provided
+      if (onError) {
+        return onError(err)
+      }
+
+      return null
+    } finally {
+      // Reset loading state
+      if (loadingRef) loadingRef.value = false
+    }
+  }
+
+  // Specialized operation handlers
+  const performCreate = async (operation, options) => { /* ... */ }
+  const performUpdate = async (operation, options) => { /* ... */ }
+  const performDelete = async (operation, options) => { /* ... */ }
+
+  return {
+    performOperation,
+    performCreate,
+    performUpdate,
+    performDelete
+  }
+}
+```
+
+This pattern:
+- Centralizes loading state management
+- Standardizes error handling
+- Provides consistent toast notifications
+- Supports success and error callbacks
+- Offers specialized versions for common operations (create, update, delete)
 
 ### Entity Composables
 
-Entity composables wrap entity services and provide additional functionality like state management, UI feedback, and navigation helpers.
-
-#### useEdge
+Entity composables now use the `useApiOperation` composable to handle API interactions:
 
 ```javascript
-// src/composables/useEdge.js
+// Example: Simplified useEdge.js
 export function useEdge() {
-  const router = useRouter();
-  const toast = useToast();
+  const router = useRouter()
+  const { performOperation, performDelete } = useApiOperation()
   
   // State
-  const edges = ref([]);
-  const loading = ref(false);
-  const error = ref(null);
+  const edges = ref([])
+  const loading = ref(false)
+  const error = ref(null)
   
-  // Helper functions
-  const formatDate = (dateString) => { /* ... */ };
-  const getTypeName = (typeCode) => { /* ... */ };
-  const getRegionName = (regionCode) => { /* ... */ };
-  const getTypeClass = (typeCode) => { /* ... */ };
-  const getRegionClass = (regionCode) => { /* ... */ };
-  const getMetadataSummary = (metadata) => { /* ... */ };
-  const hasMetadata = (edge) => { /* ... */ };
+  // CRUD operations with streamlined API handling
+  const fetchEdges = async (params = {}) => {
+    return performOperation(
+      () => edgeService.getList({ 
+        withMetadata: true,
+        sort: '-created',
+        ...params
+      }),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load edges',
+        onSuccess: (response) => {
+          edges.value = response.data.items || []
+          return edges.value
+        }
+      }
+    )
+  }
   
-  // CRUD operations
-  const fetchEdges = async (params = {}) => { /* ... */ };
-  const fetchEdge = async (id) => { /* ... */ };
-  const deleteEdge = async (id, code) => { /* ... */ };
+  const deleteEdge = async (id, code) => {
+    return performDelete(
+      () => edgeService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete edge',
+        entityName: 'Edge',
+        entityIdentifier: code
+      }
+    )
+  }
   
-  // Additional operations
-  const openInGrafana = (edgeId) => { /* ... */ };
-  
-  // Navigation methods
-  const navigateToEdgeList = () => router.push({ name: 'edges' });
-  const navigateToEdgeDetail = (id) => router.push({ name: 'edge-detail', params: { id } });
-  // More navigation methods...
+  // ...other methods
   
   return {
-    // State
-    edges,
-    loading,
-    error,
-    
-    // Helpers
-    formatDate,
-    getTypeName,
-    // More helpers...
-    
-    // Operations
-    fetchEdges,
-    fetchEdge,
-    deleteEdge,
-    openInGrafana,
-    
-    // Navigation
-    navigateToEdgeList,
-    navigateToEdgeDetail,
-    // More navigation methods...
-  };
+    // State and methods
+  }
 }
 ```
 
-#### useLocation
-
-Similar pattern to `useEdge` with location-specific functionality, including methods like:
-
-- `fetchChildLocations`
-- `fetchRootLocations`
-- `uploadFloorPlan`
-- `updateLocationCoordinates`
-
-#### useThing
-
-Similar pattern to other entity composables with thing-specific functionality, including methods like:
-
-- `getThingsByLocation`
-- `updateThingState`
-- `openInGrafana`
-
-#### useClient
-
-Similar pattern to other entity composables with client-specific functionality, including methods like:
-
-- `resetPassword`
-- `copyToClipboard`
-
-#### useTopicPermission
-
-Similar pattern to other entity composables with topic permission-specific functionality, including methods like:
-
-- `fetchClientsByPermission`
-- `isValidTopic`
+Benefits of this approach:
+- Reduces boilerplate code for API operations
+- Ensures consistent handling of loading states and errors
+- Provides standardized user feedback via toast notifications
+- Makes composables more focused on business logic rather than API interaction details
 
 ### Form Composables
 
-Form composables handle form state, validation, and submission.
-
-#### useEdgeForm
+Form composables leverage the same `useApiOperation` pattern for submission handling:
 
 ```javascript
-// src/composables/useEdgeForm.js
+// Example: Simplified useEdgeForm.js
 export function useEdgeForm(mode = 'create') {
-  const toast = useToast();
-  const router = useRouter();
+  const { performOperation } = useApiOperation()
   
-  // Form data
-  const edge = ref({
-    id: '',
-    type: '',
-    region: '',
-    number: null,
-    code: '',
-    name: '',
-    description: '',
-    active: true,
-    metadata: {}
-  });
+  // Form data and validation
+  const edge = ref({ /* ... */ })
+  const v$ = useVuelidate(rules, edge)
+  const loading = ref(false)
   
-  // Loading state
-  const loading = ref(false);
-  
-  // Validation rules
-  const rules = {
-    name: { 
-      required: helpers.withMessage('Name is required', required),
-      minLength: helpers.withMessage('Name must be at least 3 characters', minLength(3))
-    },
-    description: {}
-  };
-  
-  // Add create-specific validation rules
-  if (mode === 'create') {
-    // Additional rules...
+  // Form submission with simplified API handling
+  const submitForm = async () => {
+    const isValid = await v$.value.$validate()
+    if (!isValid) return false
+    
+    const edgeData = { /* ... */ }
+    
+    return performOperation(
+      () => mode === 'create' 
+        ? edgeService.create(edgeData)
+        : edgeService.update(edge.value.id, edgeData),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} edge`,
+        successMessage: `Edge ${edge.value.code} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        onSuccess: (response) => {
+          router.push({ name: 'edge-detail', params: { id: response.data.id } })
+          return true
+        },
+        onError: () => false
+      }
+    )
   }
   
-  // Initialize Vuelidate
-  const v$ = useVuelidate(rules, edge);
-  
-  // Methods
-  const loadEdge = (edgeData) => { /* ... */ };
-  const updateCode = () => { /* ... */ };
-  const submitForm = async () => { /* ... */ };
-  const resetForm = () => { /* ... */ };
+  // ...other methods
   
   return {
-    edge,
-    v$,
-    loading,
-    loadEdge,
-    updateCode,
-    submitForm,
-    resetForm
-  };
+    // Form state and methods
+  }
 }
 ```
-
-Other form composables follow a similar pattern:
-
-- `useLocationForm`
-- `useThingForm`
-- `useProfileForm`
-- `useTypeForm` (base for type forms)
 
 ### Utility Composables
 
-#### useConfirmation
+Utility composables provide specialized functionality such as confirmation dialogs, dashboard data, and settings management:
 
-```javascript
-// src/composables/useConfirmation.js
-export function useConfirmation() {
-  // Dialog state
-  const dialog = ref({
-    visible: false,
-    loading: false,
-    item: null,
-    title: 'Confirm Action',
-    message: 'Are you sure you want to proceed?',
-    details: '',
-    type: 'warning',
-    confirmLabel: 'Confirm',
-    confirmIcon: 'pi pi-check',
-    cancelLabel: 'Cancel'
-  });
-  
-  // Methods
-  const confirm = (item = null, options = {}) => { /* ... */ };
-  const updateDialog = (state) => { /* ... */ };
-  const resetDialog = () => { /* ... */ };
-  
-  return {
-    dialog,
-    confirm,
-    updateDialog,
-    resetDialog
-  };
-}
+- `useConfirmation` / `useDeleteConfirmation`: Manages confirmation dialogs
+- `useDashboard`: Aggregates data for dashboard views
+- `useNatsSettings` / `useNatsMessages`: Manages NATS messaging settings and subscriptions
+- `useMessages`: Handles device messages and states
+- `useTypeManagement`: Base composable for all type management
 
-// Specialized confirmation for deletions
-export function useDeleteConfirmation() {
-  const { dialog, confirm, updateDialog, resetDialog } = useConfirmation();
-  
-  const confirmDelete = (item, entityName = 'item', identifierField = 'code') => { /* ... */ };
-  
-  return {
-    deleteDialog: dialog,
-    confirmDelete,
-    updateDeleteDialog: updateDialog,
-    resetDeleteDialog: resetDialog
-  };
-}
-```
-
-#### useDashboard
-
-```javascript
-// src/composables/useDashboard.js
-export function useDashboard() {
-  // Uses other entity composables
-  const { edges, loading: edgesLoading, fetchEdges } = useEdge();
-  const { locations, loading: locationsLoading, fetchLocations } = useLocation();
-  const { things, loading: thingsLoading, fetchThings } = useThing();
-  
-  // Additional state
-  const clientsCount = ref(0);
-  const activity = ref([]);
-  const loading = ref(false);
-  
-  // Computed values
-  const edgesCount = computed(() => edges.value.length);
-  const locationsCount = computed(() => locations.value.length);
-  const thingsCount = computed(() => things.value.length);
-  
-  // Methods
-  const fetchDashboardData = async () => { /* ... */ };
-  const fetchClientsCount = async () => { /* ... */ };
-  const fetchActivityData = async () => { /* ... */ };
-  
-  // Activity formatting helpers
-  const getActivityTypeFromLog = (log) => { /* ... */ };
-  const formatLogMessage = (log) => { /* ... */ };
-  const formatTimestamp = (isoDate) => { /* ... */ };
-  
-  return {
-    // State and computed values
-    edges, locations, things, clientsCount, activity, loading,
-    edgesCount, locationsCount, thingsCount,
-    
-    // Methods
-    fetchDashboardData,
-    fetchActivityData,
-    formatTimestamp,
-    openGrafana
-  };
-}
-```
-
-#### useUserProfile
-
-```javascript
-// src/composables/useUserProfile.js
-export function useUserProfile() {
-  // State and services
-  const router = useRouter();
-  const toast = useToast();
-  const authStore = useAuthStore();
-  const profile = ref({});
-  const loading = ref(false);
-  const error = ref(null);
-  
-  // Methods
-  const formatDate = (dateString) => { /* ... */ };
-  const fetchProfile = async () => { /* ... */ };
-  const updateProfile = async (profileData) => { /* ... */ };
-  const changePassword = async (currentPassword, newPassword, confirmPassword) => { /* ... */ };
-  
-  // Navigation
-  const navigateToProfile = () => router.push({ name: 'profile' });
-  const navigateToHome = () => router.push({ name: 'dashboard' });
-  
-  return {
-    // State
-    profile, loading, error,
-    
-    // Methods
-    fetchProfile, updateProfile, changePassword, formatDate,
-    
-    // Navigation
-    navigateToProfile, navigateToHome
-  };
-}
-```
-
-#### useTypeManagement
-
-Base composable for managing entity types (edge types, location types, thing types).
-
-```javascript
-// src/composables/useTypeManagement.js
-export function useTypeManagement(typeService, routeNames, entityName) {
-  // Common state management
-  const types = ref([]);
-  const loading = ref(false);
-  const error = ref(null);
-  
-  // Common operations
-  const fetchTypes = async (params = {}) => { /* ... */ };
-  const fetchType = async (id) => { /* ... */ };
-  const createType = async (typeData) => { /* ... */ };
-  const updateType = async (id, typeData) => { /* ... */ };
-  const deleteType = async (id, name) => { /* ... */ };
-  const validateCode = (code) => { /* ... */ };
-  
-  // Navigation methods
-  const navigateToTypeList = () => router.push({ name: routeNames.list });
-  const navigateToTypeDetail = (id) => router.push({ name: routeNames.detail, params: { id } });
-  // More navigation methods...
-  
-  return {
-    // State, methods, and navigation
-  };
-}
-```
-
-Type-specific composables like `useEdgeType`, `useLocationType`, and `useThingType` use this base composable and add type-specific functionality.
-
-### NATS Composables
-
-#### useNatsSettings
-
-```javascript
-// src/composables/useNatsSettings.js
-export function useNatsSettings() {
-  // State
-  const config = ref(natsConfigService.getDefaultConfig());
-  const connectionStatus = ref('disconnected');
-  const errorMessage = ref('');
-  const loading = ref(false);
-  
-  // Computed properties
-  const isConnected = computed(() => connectionStatus.value === 'connected');
-  const isConnecting = computed(() => connectionStatus.value === 'connecting');
-  const hasError = computed(() => connectionStatus.value === 'error');
-  
-  // Methods
-  const initSettings = () => { /* ... */ };
-  const connectToNats = async () => { /* ... */ };
-  const disconnectFromNats = async () => { /* ... */ };
-  const saveSettings = () => { /* ... */ };
-  const resetSettings = () => { /* ... */ };
-  
-  return {
-    // State, computed, and methods
-  };
-}
-```
-
-#### useNatsMessages
-
-```javascript
-// src/composables/useNatsMessages.js
-export function useNatsMessages(maxMessages = 100) {
-  // State
-  const messages = ref([]);
-  const paused = ref(false);
-  const subscriptions = ref({});
-  const topics = ref([]);
-  const currentPage = ref(1);
-  const pageSize = ref(5);
-  const loading = ref(false);
-  const error = ref(null);
-  const activeSubscriptionIds = ref(new Set());
-  
-  // Methods for topic management
-  const loadTopics = () => { /* ... */ };
-  const subscribe = async (topic) => { /* ... */ };
-  const unsubscribe = async (topic) => { /* ... */ };
-  const subscribeToAllTopics = async () => { /* ... */ };
-  const unsubscribeFromAllTopics = async () => { /* ... */ };
-  
-  // Methods for message handling
-  const togglePause = () => { /* ... */ };
-  const addMessage = (message) => { /* ... */ };
-  const clearMessages = () => { /* ... */ };
-  const formatMessageData = (data) => { /* ... */ };
-  const formatTimestamp = (timestamp, includeDate = false) => { /* ... */ };
-  
-  // Pagination methods
-  const paginatedMessages = computed(() => { /* ... */ });
-  const totalPages = computed(() => { /* ... */ });
-  const goToPage = (page) => { /* ... */ };
-  const nextPage = () => { /* ... */ };
-  const prevPage = () => { /* ... */ };
-  
-  return {
-    // State, computed, and methods
-  };
-}
-```
+These utility composables also benefit from the `useApiOperation` pattern when they interact with services.
 
 ## Integration Patterns
 
 ### Composable-Service Integration
 
-Composables typically wrap services, providing:
-
-1. State management (loading, error, data)
-2. UI feedback via toasts
-3. Method wrapping with error handling
-4. Navigation helpers
+Composables interact with services using the `useApiOperation` pattern:
 
 ```javascript
-// Example composable-service integration
 const fetchItems = async (params = {}) => {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    const response = await itemService.getItems(params);
-    items.value = response.data.items || [];
-    return items.value;
-  } catch (err) {
-    console.error('Error fetching items:', err);
-    error.value = 'Failed to load items. Please try again.';
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load items',
-      life: 3000
-    });
-    return [];
-  } finally {
-    loading.value = false;
-  }
+  return performOperation(
+    () => itemService.getItems(params),
+    {
+      loadingRef: loading,
+      errorRef: error,
+      errorMessage: 'Failed to load items',
+      onSuccess: (response) => {
+        items.value = response.data.items || [];
+        return items.value;
+      }
+    }
+  );
 };
 ```
 
@@ -683,8 +397,6 @@ Views use composables to access functionality and state:
 import { ref, onMounted } from 'vue';
 import { FilterMatchMode } from 'primevue/api';
 import { useEntity } from '../../composables/useEntity';
-import PageHeader from '../../components/common/PageHeader.vue';
-import DataTable from '../../components/common/DataTable.vue';
 
 // Use the entity composable
 const { 
@@ -706,50 +418,27 @@ onMounted(() => {
 </script>
 ```
 
-### Error Handling Pattern
-
-The application uses a consistent approach to error handling:
-
-1. **Service Layer**: Handles API errors with consistent error transformation
-2. **Composable Layer**: Manages error state and provides user feedback via toasts
-3. **Component Layer**: Displays appropriate error messages to users
-4. **Global Handler**: Catches uncaught errors in the Axios interceptors
-
-```javascript
-// Error handling in composables
-try {
-  // Operation
-} catch (error) {
-  console.error('Error description:', error);
-  error.value = 'User-friendly error message';
-  toast.add({
-    severity: 'error',
-    summary: 'Error',
-    detail: 'User-friendly error message',
-    life: 3000
-  });
-} finally {
-  loading.value = false;
-}
-```
-
 ## Best Practices
 
-The codebase demonstrates several best practices:
+The improved architecture enforces several best practices:
 
-1. **Separation of Concerns**: Clearly separates UI (views/components), business logic (composables), and data access (services)
-2. **Reusable Logic**: Extracts common patterns into base classes and composables
-3. **Consistent Error Handling**: Uses a consistent pattern for error reporting
-4. **User Feedback**: Provides toast notifications for operations
-5. **Type Safety**: Uses clear parameter and return types
-6. **Navigation Encapsulation**: Wraps router operations in navigation methods
-7. **State Management**: Uses reactive state with Vue's Composition API
-8. **Method Naming**: Uses clear and consistent method naming
+1. **DRY Principle**: Avoid duplicating code by using the common patterns in `useApiOperation` and BaseService field mapping.
 
-Key best practices for extending the codebase:
+2. **Single Responsibility**: Entity services focus on entity-specific functionality instead of duplicating CRUD operations.
 
-1. For new entity types, create both a service (extending BaseService) and a composable
-2. For form handling, create a dedicated form composable
-3. For shared UI patterns, create utility composables
-4. Maintain consistent error handling and user feedback
-5. Document return values and parameters
+3. **Consistent Error Handling**: Use the standardized error handling in `useApiOperation` instead of implementing custom error handling.
+
+4. **Field Mapping**: Use the field mapping mechanism in BaseService to handle differences between API and client field names.
+
+5. **Separation of Concerns**: 
+   - Services handle data access and API interactions
+   - Composables manage state and provide business logic
+   - Views focus on UI rendering and user interaction
+
+6. **Extension Over Modification**: Extend base classes and composables instead of modifying them or duplicating their functionality.
+
+7. **Toast Notification Standardization**: Use the toast notification pattern in `useApiOperation` for consistent user feedback.
+
+8. **Avoid Direct Dependencies**: Composables should not directly depend on specific view components, and views should not directly use services.
+
+By following these patterns, the IoT Platform UI codebase achieves greater maintainability, reduced duplication, and a more consistent developer experience.

@@ -124,9 +124,145 @@ const handleAction = () => {
 
 ## Composable Functions Pattern
 
-### Base Composables
+### API Operation Composable
 
-Composables encapsulate reusable logic and follow this pattern:
+The application uses a centralized API operation handler composable that standardizes API interactions across all entity composables:
+
+```javascript
+// src/composables/useApiOperation.js
+import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
+
+/**
+ * Composable for handling common API operations
+ * Provides a consistent way to handle loading states, errors, and toast notifications
+ * @returns {Object} - API operation handler functions
+ */
+export function useApiOperation() {
+  const toast = useToast()
+
+  /**
+   * Perform an API operation with consistent loading state and error handling
+   * @param {Function} operation - Async function that performs the API call
+   * @param {Object} options - Operation options
+   * @param {Ref} options.loadingRef - Loading state ref
+   * @param {Ref} options.errorRef - Error state ref
+   * @param {string} options.errorMessage - User-friendly error message
+   * @param {string} options.successMessage - Success message to display (optional)
+   * @param {Function} options.onSuccess - Callback for successful operation (optional)
+   * @param {Function} options.onError - Callback for failed operation (optional)
+   * @returns {Promise<any>} - Result of the operation
+   */
+  const performOperation = async (operation, options) => {
+    const {
+      loadingRef,
+      errorRef,
+      errorMessage = 'Operation failed',
+      successMessage,
+      onSuccess,
+      onError
+    } = options
+
+    // Set loading state
+    if (loadingRef) loadingRef.value = true
+    if (errorRef) errorRef.value = null
+
+    try {
+      // Perform the operation
+      const response = await operation()
+
+      // Show success toast if provided
+      if (successMessage) {
+        toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: successMessage,
+          life: 3000
+        })
+      }
+
+      // Call success callback if provided
+      if (onSuccess) {
+        return onSuccess(response)
+      }
+
+      return response
+    } catch (err) {
+      console.error(`Error: ${errorMessage}`, err)
+
+      // Set error state
+      if (errorRef) {
+        errorRef.value = errorMessage
+      }
+
+      // Show error toast
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: errorMessage,
+        life: 3000
+      })
+
+      // Call error callback if provided
+      if (onError) {
+        return onError(err)
+      }
+
+      // Return a default value or rethrow
+      return null
+    } finally {
+      // Reset loading state
+      if (loadingRef) loadingRef.value = false
+    }
+  }
+
+  /**
+   * Specialized operation handlers for common operation types
+   */
+  const performCreate = async (operation, options) => {
+    // Implementation for creation operations
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been created`
+        : `${entityName} has been created`,
+      ...restOptions
+    })
+  }
+
+  const performUpdate = async (operation, options) => {
+    // Implementation for update operations
+    // Similar pattern to performCreate
+  }
+
+  const performDelete = async (operation, options) => {
+    // Implementation for delete operations
+    // Similar pattern to performCreate
+  }
+
+  return {
+    performOperation,
+    performCreate,
+    performUpdate,
+    performDelete
+  }
+}
+```
+
+This pattern centralizes:
+- Loading state management
+- Error handling and user feedback
+- Toast notifications
+- Success and error callbacks
+
+### Entity Composables
+
+Entity composables use the `useApiOperation` composable for standardized API interactions:
 
 ```javascript
 // src/composables/useEntity.js
@@ -134,6 +270,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { entityService } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for entity-related functionality
@@ -142,32 +279,41 @@ import { entityService } from '../services'
 export function useEntity() {
   const router = useRouter()
   const toast = useToast()
+  const { performOperation, performDelete } = useApiOperation()
   
   // Common state
   const entities = ref([])
   const loading = ref(false)
   const error = ref(null)
   
-  // Data fetching
+  // Data fetching with standardized operation handling
   const fetchEntities = async (params = {}) => {
-    loading.value = true
-    try {
-      const response = await entityService.getEntities(params)
-      entities.value = response.data.items || []
-      return entities.value
-    } catch (err) {
-      console.error('Error fetching entities:', err)
-      error.value = 'Failed to load entities. Please try again.'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load entities',
-        life: 3000
-      })
-      return []
-    } finally {
-      loading.value = false
-    }
+    return performOperation(
+      () => entityService.getList(params),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load entities',
+        onSuccess: (response) => {
+          entities.value = response.data.items || []
+          return entities.value
+        }
+      }
+    )
+  }
+  
+  // Delete with standardized operation handling
+  const deleteEntity = async (id, code) => {
+    return performDelete(
+      () => entityService.delete(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to delete entity',
+        entityName: 'Entity',
+        entityIdentifier: code
+      }
+    )
   }
   
   // Other operations and helpers
@@ -185,6 +331,7 @@ export function useEntity() {
     
     // Operations
     fetchEntities,
+    deleteEntity,
     
     // Navigation
     navigateToEntityList,
@@ -192,8 +339,6 @@ export function useEntity() {
   }
 }
 ```
-
-### Entity Composables
 
 The application implements entity-specific composables for each entity type:
 
@@ -203,28 +348,18 @@ The application implements entity-specific composables for each entity type:
 - **useClient**: Encapsulates messaging client operations
 - **useTopicPermission**: Encapsulates MQTT topic permission operations
 
-### Type Management Composables
-
-Type management utilizes a base composable with specializations:
-
-- **useTypeManagement**: Base reusable composable for all type management
-- **useEdgeType**: Specialized for edge type operations
-- **useEdgeRegion**: Specialized for edge region operations
-- **useLocationType**: Specialized for location type operations
-- **useThingType**: Specialized for thing type operations
-
 ### Form Composables
 
-Forms have their own composable pattern:
+Form composables also leverage the `useApiOperation` composable for standardized form submission:
 
 ```javascript
 // src/composables/useEntityForm.js
 import { ref } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
-import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
 import { entityService } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for entity form handling
@@ -234,8 +369,8 @@ import { entityService } from '../services'
  * @returns {Object} - Form methods and state
  */
 export function useEntityForm(mode = 'create') {
-  const toast = useToast()
   const router = useRouter()
+  const { performOperation } = useApiOperation()
   
   // Form data with defaults
   const entity = ref({
@@ -262,48 +397,27 @@ export function useEntityForm(mode = 'create') {
     entity.value = { ...entityData }
   }
   
-  // Handle form submission
+  // Handle form submission with standardized operation handling
   const submitForm = async () => {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
     
-    loading.value = true
-    
-    try {
-      let response
-      
-      if (mode === 'create') {
-        response = await entityService.createEntity(entity.value)
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `Entity has been created`,
-          life: 3000
-        })
-      } else {
-        response = await entityService.updateEntity(entity.value.id, entity.value)
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `Entity has been updated`,
-          life: 3000
-        })
+    return performOperation(
+      () => mode === 'create' 
+        ? entityService.create(entity.value)
+        : entityService.update(entity.value.id, entity.value),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} entity`,
+        successMessage: `Entity ${entity.value.name} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        onSuccess: (response) => {
+          router.push({ name: 'entity-detail', params: { id: response.data.id } })
+          return true
+        },
+        onError: () => false
       }
-      
-      router.push({ name: 'entity-detail', params: { id: response.data.id } })
-      return true
-    } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} entity:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to ${mode === 'create' ? 'create' : 'update'} entity. Please try again.`,
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
-    }
+    )
   }
   
   // Reset form
@@ -323,18 +437,21 @@ export function useEntityForm(mode = 'create') {
 }
 ```
 
-Form composables include:
+### Type Management Composables
 
-- **useEdgeForm**: Form handling for edge entities
-- **useLocationForm**: Form handling for location entities
-- **useThingForm**: Form handling for thing entities
-- **useTypeForm**: Generic form handling for all type entities
-- **useProfileForm**: Form handling for user profile
+Type management utilizes a base composable with specializations:
+
+- **useTypeManagement**: Base reusable composable for all type management
+- **useEdgeType**: Specialized for edge type operations
+- **useEdgeRegion**: Specialized for edge region operations
+- **useLocationType**: Specialized for location type operations
+- **useThingType**: Specialized for thing type operations
 
 ### Utility Composables
 
 The application includes several utility composables:
 
+- **useApiOperation**: Centralizes API operation handling
 - **useConfirmation**: Manages confirmation dialogs
 - **useDeleteConfirmation**: Specialized for delete confirmations
 - **useDashboard**: Handles dashboard data and activities
@@ -347,7 +464,7 @@ The application includes several utility composables:
 
 ### Base Service Class
 
-The application uses a BaseService class for common CRUD operations:
+The application uses a BaseService class for common CRUD operations with enhanced field mapping:
 
 ```javascript
 // src/services/base/BaseService.js
@@ -368,6 +485,7 @@ export class BaseService {
       // Default options
       jsonFields: [], // Fields to be parsed/stringified as JSON
       expandFields: [], // Fields to expand in queries
+      fieldMappings: {}, // Field mappings between API and client fields
       ...options
     }
   }
@@ -379,6 +497,61 @@ export class BaseService {
   update(id, entity) { /* ... */ }
   delete(id) { /* ... */ }
 
+  // Field mapping methods
+  mapApiToClientFields(apiData) {
+    const result = { ...apiData }
+    const mappings = this.options.fieldMappings
+    
+    // Skip if no mappings defined
+    if (!mappings || Object.keys(mappings).length === 0) {
+      return result
+    }
+    
+    // Apply mappings: API field name -> client field name
+    Object.entries(mappings).forEach(([apiField, clientField]) => {
+      if (apiData[apiField] !== undefined) {
+        result[clientField] = apiData[apiField]
+        
+        // Remove the original field if it's different from the client field
+        if (apiField !== clientField) {
+          delete result[apiField]
+        }
+      }
+    })
+    
+    return result
+  }
+
+  mapClientToApiFields(clientData) {
+    const result = { ...clientData }
+    const mappings = this.options.fieldMappings
+    
+    // Skip if no mappings defined
+    if (!mappings || Object.keys(mappings).length === 0) {
+      return result
+    }
+    
+    // Create reverse mappings: client field name -> API field name
+    const reverseMappings = {}
+    Object.entries(mappings).forEach(([apiField, clientField]) => {
+      reverseMappings[clientField] = apiField
+    })
+    
+    // Apply reverse mappings
+    Object.entries(reverseMappings).forEach(([clientField, apiField]) => {
+      if (clientData[clientField] !== undefined) {
+        result[apiField] = clientData[clientField]
+        
+        // Remove the original field if it's different from the API field
+        if (apiField !== clientField) {
+          delete result[clientField]
+        }
+      }
+    })
+    
+    return result
+  }
+
   // Utility methods
   parseJsonFields(entity) { /* ... */ }
   stringifyJsonFields(entity) { /* ... */ }
@@ -386,26 +559,61 @@ export class BaseService {
 }
 ```
 
+The BaseService provides:
+
+- Standardized CRUD operations
+- Automated field mapping between API and client field names
+- JSON field parsing and stringification
+- Query parameter transformation
+- Extension points for entity-specific services
+
 ### Entity Services
 
-Entity services extend the BaseService to provide entity-specific functionality:
+Entity services extend the BaseService to provide entity-specific functionality, focusing on specialized methods only:
 
-1. **EdgeService**: Manages edge entities
-2. **LocationService**: Manages location entities
-3. **ThingService**: Manages thing entities
-4. **ClientService**: Manages messaging client entities
-5. **TopicPermissionService**: Manages topic permission entities
-6. **UserService**: Manages user profile operations
+```javascript
+// Example: Entity Service with Field Mapping
+export class ThingService extends BaseService {
+  constructor() {
+    super(
+      COLLECTIONS.THINGS, 
+      collectionEndpoint,
+      {
+        jsonFields: ['metadata', 'current_state'],
+        expandFields: ['location_id', 'edge_id'],
+        fieldMappings: {
+          'code': 'thing_code',
+          'type': 'thing_type'
+        }
+      }
+    )
+  }
+  
+  // Entity-specific methods only
+  getThingsByLocation(locationId) { /* ... */ }
+  updateThingState(id, state, merge = true) { /* ... */ }
+  updateThingPosition(id, coordinates) { /* ... */ }
+}
+```
+
+Entity services rely on the BaseService for standard CRUD operations and focus on providing only entity-specific functionality:
+
+1. **EdgeService**: Edge-specific operations
+2. **LocationService**: Location-specific operations
+3. **ThingService**: Thing-specific operations
+4. **ClientService**: Client-specific operations
+5. **TopicPermissionService**: Topic permission-specific operations
+6. **UserService**: User profile-specific operations
 
 ### Type Services
 
-Type services manage entity type definitions:
+Type services manage entity type definitions using the same pattern:
 
 1. **TypeService**: Base service for all type entities
-2. **EdgeTypeService**: Manages edge type definitions
-3. **EdgeRegionService**: Manages edge region definitions
-4. **LocationTypeService**: Manages location type definitions
-5. **ThingTypeService**: Manages thing type definitions
+2. **EdgeTypeService**: Edge type-specific functionality
+3. **EdgeRegionService**: Edge region-specific functionality
+4. **LocationTypeService**: Location type-specific functionality
+5. **ThingTypeService**: Thing type-specific functionality
 
 ### Utility Services
 
@@ -415,85 +623,61 @@ Utility services provide additional functionality:
 2. **natsService**: Manages NATS messaging connections
 3. **natsConfigService**: Manages NATS configuration storage
 4. **natsConnectionManager**: Manages NATS connection lifecycle
-5. **toastService**: Centralizes toast notifications
 
-### Central Service Export
+## API Interaction Pattern
 
-All services are exported from a central index.js:
+The application uses a standardized pattern for API interactions:
+
+### Service Layer
+- BaseService handles common CRUD operations
+- Entity services provide entity-specific operations
+- Field mapping is automated based on configuration
+- Parameter transformation follows a strategy pattern
+
+### Composable Layer
+- useApiOperation provides standardized operation handling
+- Entity composables use useApiOperation for API interactions
+- Loading states and error handling are consistent
+- Toast notifications follow a standard pattern
+
+### Component Layer
+- Components use composables instead of calling services directly
+- Components focus on UI rendering and user interaction
+- Business logic is delegated to composables
+
+This pattern ensures:
+- Consistent loading state management
+- Standardized error handling
+- Uniform user feedback through toast notifications
+- DRY code by removing duplicate API handling
+
+## Error Handling
+
+The application uses a consistent approach to error handling through the `useApiOperation` composable:
 
 ```javascript
-// src/services/index.js
-import { apiHelpers } from './api';
-
-// Entity services
-import { edgeService, edgeRegions, edgeTypes, validateEdgeCode, generateEdgeCode } from './edge/edgeService';
-import { locationService, locationTypes, parseLocationPath, validateLocationCode, generateLocationCode, locationLevels, locationZones } from './location/locationService';
-import { thingService, thingTypes, validateThingCode, generateThingCode, getThingTypeAbbreviation } from './thing/thingService';
-import { clientService, generateClientUsername, generateSecurePassword } from './client/clientService';
-import { topicPermissionService, validateTopic } from './topic-permission/topicPermissionService';
-import { userService } from './user/userService';
-
-// Type management services
-import { edgeTypeService } from './type/edgeTypeService';
-import { edgeRegionService } from './type/edgeRegionService';
-import { locationTypeService } from './type/locationTypeService';
-import { thingTypeService } from './type/thingTypeService';
-
-// NATS services
-import natsService from './nats/natsService';
-import { natsConfigService } from './nats/natsConfigService';
-
-// Export all services and utilities
-export {
-  // API helpers
-  apiHelpers,
-  
-  // Entity services
-  edgeService,
-  locationService,
-  thingService,
-  clientService,
-  topicPermissionService,
-  userService,
-  
-  // Edge utilities
-  edgeRegions,
-  edgeTypes,
-  validateEdgeCode,
-  generateEdgeCode,
-  
-  // Location utilities
-  locationTypes,
-  parseLocationPath,
-  validateLocationCode,
-  generateLocationCode,
-  locationLevels,
-  locationZones,
-  
-  // Thing utilities
-  thingTypes,
-  validateThingCode,
-  generateThingCode,
-  getThingTypeAbbreviation,
-  
-  // Client utilities
-  generateClientUsername,
-  generateSecurePassword,
-  
-  // Topic permission utilities
-  validateTopic,
-  
-  // Type management services
-  edgeTypeService,
-  edgeRegionService,
-  locationTypeService,
-  thingTypeService,
-  
-  // NATS services
-  natsService,
-  natsConfigService
-};
+// Standard error handling pattern
+const fetchEntities = async (params = {}) => {
+  return performOperation(
+    () => entityService.getList(params),
+    {
+      loadingRef: loading,
+      errorRef: error,
+      errorMessage: 'Failed to load entities',
+      onSuccess: (response) => {
+        entities.value = response.data.items || []
+        return entities.value
+      }
+    }
+  )
+}
 ```
+
+This ensures:
+1. **Service Layer**: Handles API errors with consistent error transformation
+2. **Composable Layer**: Manages error state and provides user feedback
+3. **Component Layer**: Displays appropriate error messages to users
+4. **Global Handler**: Catches uncaught errors in the Axios interceptors
 
 ## View Patterns
 
@@ -582,251 +766,11 @@ onMounted(async () => {
 
 ### Detail Views
 
-```vue
-<template>
-  <div>
-    <!-- Loading and Error States -->
-    
-    <!-- Entity Details -->
-    <div v-else-if="entityData">
-      <div class="flex justify-between items-start mb-6">
-        <!-- Header with entity title -->
-        
-        <!-- Action Buttons -->
-        <div class="flex space-x-2">
-          <Button icon="pi pi-pencil" label="Edit" @click="navigateToEntityEdit(entityData.id)" />
-          <Button icon="pi pi-trash" label="Delete" @click="handleDeleteClick" />
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Details Card -->
-        <div class="card lg:col-span-2">
-          <!-- Entity details -->
-        </div>
-        
-        <!-- Stats/Info Card -->
-        <div class="card">
-          <!-- Entity metadata -->
-        </div>
-      </div>
-    </div>
-    
-    <!-- Delete Confirmation Dialog -->
-    <ConfirmationDialog />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
-  </div>
-</template>
+Detail views follow a similar pattern with standardized loading and error handling via composables.
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useEntity } from '../../composables/useEntity'
-import { useDeleteConfirmation } from '../../composables/useConfirmation'
-// Other imports...
+### Create and Edit Views
 
-// Entity functionality
-const { 
-  loading, 
-  error, 
-  fetchEntity,
-  deleteEntity,
-  navigateToEntityList,
-  navigateToEntityEdit
-} = useEntity()
-
-// Load entity on mount
-onMounted(async () => {
-  const id = route.params.id
-  if (id) {
-    const data = await fetchEntity(id)
-    if (data) {
-      entityData.value = data
-    }
-  }
-})
-
-// Handle delete operations
-// ...
-</script>
-```
-
-### Create Views
-
-```vue
-<template>
-  <div>
-    <PageHeader title="Create Entity" subtitle="Add a new entity">
-      <template #actions>
-        <Button label="Cancel" icon="pi pi-times" @click="$router.back()" />
-      </template>
-    </PageHeader>
-    
-    <div class="card">
-      <EntityForm
-        title="Entity Information"
-        :loading="loading"
-        submit-label="Create Entity"
-        @submit="submitForm"
-        @cancel="$router.back()"
-      >
-        <!-- Form fields -->
-      </EntityForm>
-    </div>
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
-  </div>
-</template>
-
-<script setup>
-import { useEntityForm } from '../../composables/useEntityForm'
-import { entityService } from '../../services'
-// Other imports...
-
-// Use the entity form composable
-const { 
-  entity, 
-  v$, 
-  loading, 
-  submitForm 
-} = useEntityForm('create')
-</script>
-```
-
-### Edit Views
-
-```vue
-<template>
-  <div>
-    <!-- Loading and Error States -->
-    
-    <!-- Entity Edit Form -->
-    <div v-else>
-      <PageHeader title="Edit Entity" :subtitle="`Updating ${entity.name}`">
-        <template #actions>
-          <Button label="Cancel" icon="pi pi-times" @click="$router.back()" />
-        </template>
-      </PageHeader>
-      
-      <div class="card">
-        <EntityForm
-          title="Entity Information"
-          :loading="loading"
-          submit-label="Save Changes"
-          @submit="submitForm"
-          @cancel="$router.back()"
-        >
-          <!-- Form fields -->
-        </EntityForm>
-      </div>
-      
-      <!-- Toast for success/error messages -->
-      <Toast />
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useEntity } from '../../composables/useEntity'
-import { useEntityForm } from '../../composables/useEntityForm'
-// Other imports...
-
-// Get entity data fetching functionality
-const { fetchEntity, error } = useEntity()
-
-// Use the entity form composable in edit mode
-const { 
-  entity, 
-  v$, 
-  loading, 
-  loadEntity,
-  submitForm 
-} = useEntityForm('edit')
-
-// Initial loading state
-const initialLoading = ref(true)
-
-// Fetch entity data on component mount
-onMounted(async () => {
-  const id = route.params.id
-  if (id) {
-    try {
-      const entityData = await fetchEntity(id)
-      if (entityData) {
-        loadEntity(entityData)
-      }
-    } finally {
-      initialLoading.value = false
-    }
-  }
-})
-</script>
-```
-
-### Type Management Views
-
-Type management views follow a consistent pattern across all entity types (EdgeType, EdgeRegion, LocationType, ThingType):
-
-1. **TypeListView**: Shows a table of all type definitions with actions
-2. **TypeDetailView**: Displays detailed information about a type definition
-3. **TypeCreateView**: Form for creating new type definitions
-4. **TypeEditView**: Form for editing existing type definitions (code is read-only)
-
-These views leverage the common `useTypeManagement` and `useTypeForm` composables, with specialized composables like `useEdgeType`, `useLocationType`, etc. for type-specific functionality.
-
-## API Interaction Pattern
-
-API interactions are managed via the service layer and composables:
-
-1. **Service Layer**: 
-   - Base service class handles common CRUD operations
-   - Entity-specific services extend the base service
-   - JSON field handling is automated based on configuration
-   - Parameter transformation is handled via strategy pattern
-
-2. **Composables**:
-   - Provide a clean API for components to interact with services
-   - Handle loading states and error handling
-   - Provide navigation helpers and utility functions
-   - Manage UI feedback (toasts, etc.)
-
-3. **Component Layer**:
-   - Components use composables instead of calling services directly
-   - Components focus on UI rendering and user interaction
-   - Business logic is delegated to composables
-
-## Error Handling
-
-The application uses a consistent approach to error handling:
-
-1. **Service Layer**: Handles API errors with consistent error transformation
-2. **Composable Layer**: Manages error state and provides user feedback
-3. **Component Layer**: Displays appropriate error messages to users
-4. **Global Handler**: Catches uncaught errors in the Axios interceptors
-
-Example error handling pattern:
-
-```javascript
-try {
-  // API operation
-} catch (error) {
-  console.error('Error description:', error)
-  error.value = 'User-friendly error message'
-  toast.add({
-    severity: 'error',
-    summary: 'Error',
-    detail: 'User-friendly error message',
-    life: 3000
-  })
-} finally {
-  loading.value = false
-}
-```
+Form views use the specialized form composables for handling form state, validation, and submission through the standardized API operation pattern.
 
 ## State Management
 
@@ -836,12 +780,28 @@ The application uses a combination of approaches for state management:
 2. **Composables**: For entity-specific state and operations
 3. **Component State**: For UI-specific state that doesn't need to be shared
 
-## Performance Considerations
+## Best Practices
 
-1. **Lazy Loading**: Routes are lazy-loaded to improve initial load time
-2. **Pagination**: Lists use pagination to limit data transfer
-3. **Caching**: Frequently accessed data may be cached in composables
-4. **Component Optimization**: Heavy components implement performance optimizations
+The architecture enforces several best practices:
+
+1. **DRY Principle**: Common patterns in `useApiOperation` and BaseService field mapping prevent code duplication.
+
+2. **Single Responsibility**: Entity services focus on entity-specific functionality with common CRUD operations handled by the BaseService.
+
+3. **Consistent Error Handling**: The standardized error handling in `useApiOperation` provides a uniform approach across the application.
+
+4. **Field Mapping**: The field mapping mechanism in BaseService handles differences between API and client field names.
+
+5. **Separation of Concerns**: 
+   - Services handle data access and API interactions
+   - Composables manage state and provide business logic
+   - Views focus on UI rendering and user interaction
+
+6. **Extension Over Modification**: Base classes and composables are extended rather than modified or duplicated.
+
+7. **Toast Notification Standardization**: The toast notification pattern in `useApiOperation` ensures consistent user feedback.
+
+8. **Avoid Direct Dependencies**: Composables do not directly depend on specific view components, and views do not directly use services.
 
 ## Feature Development Workflow
 
@@ -850,10 +810,11 @@ When adding a new feature or entity:
 1. **Define Service**:
    - Create a new directory in `services/` for the entity
    - Implement entity service extending BaseService
+   - Configure field mappings if needed
    - Export from central `services/index.js`
 
 2. **Create Composables**:
-   - Create entity composable for common operations
+   - Create entity composable using `useApiOperation`
    - Create form composable for form handling
 
 3. **Implement Views**:
@@ -866,60 +827,8 @@ When adding a new feature or entity:
 5. **Update Navigation**:
    - Add navigation items to sidebar as needed
 
-## Type System Extensions
-
-The application has been extended with a comprehensive type system for managing different entity types:
-
-1. **Edge Types**: Define different types of edge nodes (e.g., Building, Data Center)
-2. **Edge Regions**: Define geographic regions for edges (e.g., North America, Europe)
-3. **Location Types**: Define types of locations (e.g., Meeting Room, Work Area)
-4. **Thing Types**: Define types of IoT devices (e.g., Temperature Sensor, Camera)
-
-Each type system follows a consistent pattern:
-- Create/Edit/List/Detail views
-- Type-specific styling and display in the UI
-- Code generation and validation
-- Usage tracking (showing how many entities use each type)
-
-## UI Consistency Patterns
-
-The application maintains consistent UI patterns across all entity types:
-
-1. **List Views**: DataTable with search, pagination, and row actions
-2. **Detail Views**: Header with actions + grid layout with detailed information
-3. **Form Views**: EntityForm component with consistent field layouts
-4. **Confirmation Dialogs**: Consistent confirmation for destructive actions
-5. **Toast Notifications**: Consistent feedback for user actions
-6. **Loading States**: Spinner for loading, error messages for failures
-7. **Style Previews**: Visual previews of how types will appear in the UI
-
-## Testing Strategy
-
-1. **Component Tests**: Test component rendering and interactions
-2. **Composable Tests**: Test composable logic in isolation
-3. **Service Tests**: Test service modules with mocked API responses
-4. **Integration Tests**: Test key user flows across multiple components
-5. **E2E Tests**: Test critical paths in a production-like environment
-
-## Naming Conventions
-
-1. **Files**:
-   - Components: `PascalCase.vue`
-   - Composables: `use[EntityName].js` or `use[Feature].js`
-   - Services: `[entityName]Service.js`
-   - Service exports: `camelCase` for service instances, `PascalCase` for classes
-
-2. **Variables**:
-   - `camelCase` for variables and functions
-   - `PascalCase` for components and classes
-   - `UPPER_CASE` for constants
-
-3. **CSS**:
-   - Tailwind utility classes for most styling
-   - Custom classes use `kebab-case`
-
 ## Conclusion
 
 This architecture document provides a comprehensive overview of the IoT Platform UI codebase organization and design patterns. By following these established patterns, developers can maintain consistency and improve maintainability when extending the application with new features.
 
-The architecture is based on Vue 3's Composition API, emphasizing reusable composables, a strong service layer, and consistent UI patterns across the application. This approach promotes separation of concerns and makes the codebase more maintainable and extensible.
+The architecture is based on Vue 3's Composition API, emphasizing reusable composables, a strong service layer with field mapping, centralized API operation handling, and consistent UI patterns across the application. This approach promotes separation of concerns and makes the codebase more maintainable and extensible while following DRY principles.
