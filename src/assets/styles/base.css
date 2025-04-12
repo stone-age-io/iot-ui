@@ -1,0 +1,54 @@
+/* src/assets/styles/base.css */
+@tailwind base;
+
+@layer base {
+  :root {
+    /* Light theme variables */
+    --color-bg: 243 244 246;
+    --color-surface: 255 255 255;
+    --color-text: 17 24 39;
+    --color-text-secondary: 107 114 128;
+    --color-border: 229 231 235;
+    --color-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    /* PrimeVue component overrides for light theme */
+    --primary-color: #3B82F6;
+    --text-color: rgb(17 24 39);
+    --text-color-secondary: rgb(107 114 128);
+    --surface-a: rgb(255 255 255);
+    --surface-b: rgb(249 250 251);
+    --surface-c: rgb(229 231 235 / 30%);
+    --surface-d: rgb(229 231 235);
+    --surface-e: rgb(255 255 255);
+    --surface-f: rgb(255 255 255);
+    --surface-hover: rgb(243 244 246);
+  }
+  
+  .dark {
+    /* Dark theme variables */
+    --color-bg: 30 30 45;
+    --color-surface: 42 42 60;
+    --color-text: 243 244 246;
+    --color-text-secondary: 156 163 175;
+    --color-border: 75 85 99;
+    --color-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    
+    /* PrimeVue component overrides for dark theme */
+    --primary-color: #60A5FA;
+    --text-color: rgb(243 244 246);
+    --text-color-secondary: rgb(156 163 175);
+    --surface-a: rgb(42 42 60);
+    --surface-b: rgb(30 30 45);
+    --surface-c: rgb(75 85 99 / 30%);
+    --surface-d: rgb(75 85 99);
+    --surface-e: rgb(42 42 60);
+    --surface-f: rgb(42 42 60);
+    --surface-hover: rgb(55 65 81);
+  }
+  
+  body {
+    @apply antialiased;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+  }
+}

@@ -1,8 +1,9 @@
-<!-- src/components/common/AppSidebar.vue - Updated for scrollable content -->
+<!-- src/components/common/AppSidebar.vue -->
 <template>
   <aside
     :class="[
-      'transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col h-full',
+      'transition-all duration-300 ease-in-out flex flex-col h-full',
+      'bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700',
       open ? 'w-64' : 'w-64 -translate-x-full lg:translate-x-0',
       collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
     ]"
@@ -34,7 +35,7 @@
       <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
         <h3
           v-if="(!collapsed || isMobileView) && section.title"
-          class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3"
+          class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3 dark:text-gray-400"
         >
           {{ section.title }}
         </h3>
@@ -53,11 +54,11 @@
               class="flex items-center px-3 py-2 rounded-md transition-colors"
               :class="[
                 isActive
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               ]"
             >
-              <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600' : 'text-gray-500']"></i>
+              <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400']"></i>
               <span 
                 v-if="!collapsed || isMobileView" 
                 class="ml-3 transition-opacity"
@@ -71,13 +72,13 @@
     </div>
   
     <!-- Bottom section with Grafana link - now properly aligned at bottom -->
-    <div class="mt-auto border-t border-gray-200">
+    <div class="mt-auto border-t border-gray-200 dark:border-gray-700">
       <a 
         :href="grafanaUrl" 
         target="_blank"
-        class="flex items-center px-3 py-4 text-gray-700 hover:bg-gray-100 transition-colors"
+        class="flex items-center px-3 py-4 text-gray-700 hover:bg-gray-100 transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
       >
-        <i class="pi pi-chart-line text-lg text-gray-500"></i>
+        <i class="pi pi-chart-line text-lg text-gray-500 dark:text-gray-400"></i>
         <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
       </a>
     </div>
@@ -210,6 +211,10 @@ const menuSections = [
   scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
+.dark .overflow-y-auto {
+  scrollbar-color: #4b5563 #1f2937;
+}
+
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
 }
@@ -218,18 +223,28 @@ const menuSections = [
   background: #f1f5f9;
 }
 
+.dark .overflow-y-auto::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
 .overflow-y-auto::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 3px;
 }
 
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
 /* Active link highlight animation */
-a.bg-primary-50 {
+a.bg-primary-50,
+a.dark\:bg-primary-900\/20 {
   position: relative;
   overflow: hidden;
 }
 
-a.bg-primary-50::after {
+a.bg-primary-50::after,
+a.dark\:bg-primary-900\/20::after {
   content: '';
   position: absolute;
   left: 0;

@@ -18,8 +18,8 @@
       </div>
       
       <div>
-        <p class="text-gray-800 mb-2">{{ message }}</p>
-        <p v-if="details" class="text-gray-600 text-sm">{{ details }}</p>
+        <p class="text-gray-800 mb-2 dark:text-gray-200">{{ message }}</p>
+        <p v-if="details" class="text-gray-600 text-sm dark:text-gray-400">{{ details }}</p>
       </div>
     </div>
 
@@ -93,13 +93,13 @@ const emit = defineEmits(['confirm', 'update:visible'])
 const iconClass = computed(() => {
   switch (props.type) {
     case 'danger':
-      return 'bg-red-100 text-red-600'
+      return 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
     case 'warning':
-      return 'bg-amber-100 text-amber-600'
+      return 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
     case 'info':
-      return 'bg-blue-100 text-blue-600'
+      return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
     default:
-      return 'bg-gray-100 text-gray-600'
+      return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
   }
 })
 
@@ -134,3 +134,17 @@ const confirm = () => {
   emit('confirm')
 }
 </script>
+
+<style scoped>
+:deep(.p-dialog-header) {
+  @apply dark:bg-gray-800 dark:text-white dark:border-gray-700;
+}
+
+:deep(.p-dialog-content) {
+  @apply dark:bg-gray-800 dark:text-gray-200;
+}
+
+:deep(.p-dialog-footer) {
+  @apply dark:bg-gray-800 dark:border-gray-700;
+}
+</style>

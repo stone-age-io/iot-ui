@@ -1,6 +1,6 @@
-<!-- src/layouts/DefaultLayout.vue - Both header and sidebar fixed -->
+<!-- src/layouts/DefaultLayout.vue - Updated for dark mode -->
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col dark:bg-gray-900">
     <!-- Fixed Header -->
     <AppHeader 
       @toggle-sidebar="sidebarOpen = !sidebarOpen" 
@@ -31,13 +31,13 @@
           @close="closeSidebar"
           :collapsed="sidebarCollapsed"
           @toggle-collapse="toggleSidebar"
-          class="h-full w-full overflow-y-auto bg-white border-r border-gray-200"
+          class="h-full w-full overflow-y-auto"
         />
       </div>
       
       <!-- Main Content - with margin to account for the fixed sidebar -->
       <main 
-        class="w-full min-h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-gray-50 p-4 sm:p-6"
+        class="w-full min-h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-gray-50 p-4 sm:p-6 dark:bg-gray-900"
         :class="{ 
           'lg:ml-64': !sidebarCollapsed && !isMobileView,
           'lg:ml-16': sidebarCollapsed && !isMobileView,

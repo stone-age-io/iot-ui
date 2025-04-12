@@ -1,11 +1,11 @@
 <!-- src/components/common/AppHeader.vue -->
 <template>
-  <header class="bg-white border-b border-gray-200 h-16 flex items-center">
+  <header class="bg-white border-b border-gray-200 h-16 flex items-center dark:bg-gray-800 dark:border-gray-700">
     <div class="flex items-center justify-between px-4 py-3 w-full">
       <!-- Mobile menu button -->
       <button 
         @click="$emit('toggle-sidebar')"
-        class="p-2 rounded-md text-gray-500 lg:hidden touch-target"
+        class="p-2 rounded-md text-gray-500 lg:hidden touch-target dark:text-gray-300"
         aria-label="Toggle navigation menu"
       >
         <i class="pi pi-bars"></i>
@@ -30,12 +30,15 @@
               />
             </svg>
           </div>
-          <h1 class="text-xl font-semibold hidden sm:block whitespace-nowrap">Stone-Age.io</h1>
+          <h1 class="text-xl font-semibold hidden sm:block whitespace-nowrap dark:text-white">Stone-Age.io</h1>
         </router-link>
       </div>
       
       <!-- User Menu -->
       <div class="flex items-center">
+        <!-- Theme Toggle -->
+        <ThemeToggle class="mr-2" />
+        
         <!-- Notifications - hide on small mobile -->
         <Button
           icon="pi pi-bell"
@@ -53,11 +56,11 @@
             @click="toggleUserMenu"
             class="p-button-text p-button-rounded flex items-center"
           >
-            <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center mr-0 sm:mr-2 font-semibold">
+            <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center mr-0 sm:mr-2 font-semibold dark:bg-primary-900 dark:text-primary-300">
               {{ userInitials }}
             </div>
-            <span class="hidden sm:inline-block">{{ userFullName }}</span>
-            <i class="pi pi-angle-down ml-1 hidden sm:block"></i>
+            <span class="hidden sm:inline-block dark:text-white">{{ userFullName }}</span>
+            <i class="pi pi-angle-down ml-1 hidden sm:block dark:text-gray-300"></i>
           </Button>
         </div>
       </div>
@@ -71,6 +74,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
+import ThemeToggle from './ThemeToggle.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

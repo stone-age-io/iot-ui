@@ -3,7 +3,7 @@
   <div class="data-table-wrapper">
     <!-- Table Header with Title, Search and Actions -->
     <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h2 class="text-xl font-semibold text-gray-800 m-0" v-if="title">{{ title }}</h2>
+      <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 m-0" v-if="title">{{ title }}</h2>
       
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center ml-auto">
         <!-- Search Input -->
@@ -21,7 +21,7 @@
       </div>
     </div>
     
-    <!-- Using PrimeVue's built-in responsive capabilities -->
+    <!-- PrimeVue DataTable -->
     <DataTable
       :value="items"
       :paginator="paginated"
@@ -46,42 +46,40 @@
       :selectionMode="selectionMode"
       class="p-datatable-sm"
       filterDisplay="menu"
-      responsiveLayout="stack"
-      breakpoint="768px"
+      tableStyle="min-width: 50rem"
     >
       <!-- Selection Column -->
       <Column selectionMode="multiple" v-if="selectionMode === 'multiple'" headerStyle="width: 3rem" />
       
       <!-- Dynamic Columns -->
-      <template v-for="col in columns" :key="col.field">
-        <Column
-          :field="col.field"
-          :header="col.header"
-          :sortable="col.sortable !== false"
-          :style="col.style"
-          :headerStyle="col.headerStyle"
-          :bodyStyle="col.bodyStyle"
-          :showFilterMenu="!!col.filter"
-        >
-          <template #body="{ data, field }">
-            <slot :name="`${field}-body`" :data="data" :field="field">
-              {{ formatCellValue(data, field, col.format) }}
-            </slot>
-          </template>
-          
-          <template #filter v-if="col.filter">
-            <slot :name="`${col.field}-filter`" :field="col.field"></slot>
-          </template>
-        </Column>
-      </template>
+      <Column 
+        v-for="col in columns" 
+        :key="col.field" 
+        :field="col.field" 
+        :header="col.header"
+        :sortable="col.sortable !== false"
+        :style="col.style || null"
+        :headerStyle="col.headerStyle || null"
+      >
+        <template #body="slotProps">
+          <slot :name="`${col.field}-body`" :data="slotProps.data" :field="col.field">
+            {{ formatCellValue(slotProps.data, col.field, col.format) }}
+          </slot>
+        </template>
+        
+        <template #filter v-if="col.filter">
+          <slot :name="`${col.field}-filter`" :field="col.field"></slot>
+        </template>
+      </Column>
       
       <!-- Row Actions Column - Only included when slot is provided-->
       <Column 
         v-if="hasRowActions" 
         header="Actions" 
-        :style="{ width: '8rem' }" 
-        headerClass="text-center" 
+        headerClass="text-center"
         bodyClass="text-center"
+        headerStyle="width: 8rem; min-width: 8rem"
+        style="width: 8rem; min-width: 8rem"
       >
         <template #body="slotProps">
           <slot name="row-actions" :data="slotProps.data"></slot>
@@ -90,14 +88,14 @@
       
       <!-- Empty Message -->
       <template #empty>
-        <div class="text-center p-4 text-gray-500">
+        <div class="text-center p-4 text-gray-500 dark:text-gray-400">
           {{ emptyMessage || "No records found" }}
         </div>
       </template>
       
       <!-- Loading Message -->
       <template #loading>
-        <div class="text-center p-4 text-gray-500">
+        <div class="text-center p-4 text-gray-500 dark:text-gray-400">
           Loading data...
         </div>
       </template>
@@ -230,3 +228,114 @@ const onSort = (event) => {
   emit('sort', event)
 }
 </script>
+
+<style scoped>
+/* Make sure DataTable uses full width */
+:deep(.p-datatable) {
+  width: 100%;
+}
+
+:deep(.p-datatable-wrapper) {
+  overflow-x: auto;
+}
+
+:deep(.p-datatable-table) {
+  min-width: 100%;
+  table-layout: auto;
+}
+
+/* Custom styling for responsive behavior */
+@media screen and (max-width: 640px) {
+  :deep(.p-datatable-thead) {
+    display: none;
+  }
+  
+  :deep(.p-datatable-tbody > tr) {
+    border-bottom: 1px solid var(--surface-d);
+  }
+  
+  :deep(.p-datatable-tbody > tr > td) {
+    text-align: left;
+    display: block;
+    width: 100%;
+    border: 0 none;
+    padding: 0.5rem 1rem;
+    
+    &:before {
+      content: attr(data-label);
+      font-weight: bold;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+/* Dark mode styles for PrimeVue DataTable */
+:deep(.p-datatable) {
+  @apply dark:bg-gray-800;
+}
+
+:deep(.p-datatable .p-datatable-header) {
+  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+}
+
+:deep(.p-datatable .p-datatable-thead > tr > th) {
+  @apply dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  @apply dark:border-gray-700 dark:text-gray-300;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr:hover) {
+  @apply dark:bg-gray-700;
+}
+
+:deep(.p-paginator) {
+  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+}
+
+:deep(.p-paginator .p-paginator-pages .p-paginator-page) {
+  @apply dark:text-gray-300 dark:hover:bg-gray-700;
+}
+
+:deep(.p-paginator .p-paginator-pages .p-highlight) {
+  @apply dark:bg-primary-700 dark:text-white;
+}
+
+:deep(.p-dropdown-panel) {
+  @apply dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700;
+}
+
+:deep(.p-inputtext) {
+  @apply dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600;
+}
+
+:deep(.p-column-filter-row .p-column-filter-menu-button) {
+  @apply dark:text-gray-400;
+}
+
+:deep(.p-column-filter-row .p-column-filter-menu-button:hover) {
+  @apply dark:bg-gray-700 dark:text-gray-200;
+}
+
+:deep(.p-button.p-button-text) {
+  @apply dark:text-gray-300 dark:hover:bg-gray-700;
+}
+
+:deep(.p-button.p-button-danger.p-button-text) {
+  @apply dark:text-red-400 dark:hover:bg-red-900/20;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr.p-highlight) {
+  @apply dark:bg-primary-900/30 dark:text-primary-200;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr.p-datatable-row-editing) {
+  @apply dark:bg-gray-700;
+}
+</style>

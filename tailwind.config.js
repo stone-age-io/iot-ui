@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -20,6 +21,13 @@ export default {
           '900': '#0c4a6e',
           '950': '#082f49',
         },
+        'theme': {
+          'background': 'rgb(var(--color-bg))',
+          'surface': 'rgb(var(--color-surface))',
+          'border': 'rgb(var(--color-border))',
+          'text': 'rgb(var(--color-text))',
+          'text-secondary': 'rgb(var(--color-text-secondary))',
+        }
       }
     },
   },

@@ -25,7 +25,7 @@
       >
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
-          <div class="font-medium text-primary-700">{{ data.code }}</div>
+          <div class="font-medium text-primary-700 dark:text-primary-400">{{ data.code }}</div>
         </template>
         
         <!-- Type column with badge -->
@@ -52,7 +52,9 @@
         <template #active-body="{ data }">
           <span 
             class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="data.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+            :class="data.active ? 
+              'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
           >
             {{ data.active ? 'Active' : 'Inactive' }}
           </span>
@@ -60,7 +62,7 @@
         
         <!-- Created date column -->
         <template #created-body="{ data }">
-          <div class="text-sm text-gray-600">
+          <div class="text-sm text-gray-600 dark:text-gray-400">
             {{ formatDate(data.created) }}
           </div>
         </template>
@@ -148,14 +150,14 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition - removed metadata column
+// Table columns definition with width styles to ensure proper column widths
 const columns = [
-  { field: 'code', header: 'Code', sortable: true },
-  { field: 'name', header: 'Name', sortable: true },
-  { field: 'type', header: 'Type', sortable: true },
-  { field: 'region', header: 'Region', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'code', header: 'Code', sortable: true, style: 'min-width: 10rem' },
+  { field: 'name', header: 'Name', sortable: true, style: 'min-width: 12rem' },
+  { field: 'type', header: 'Type', sortable: true, style: 'min-width: 8rem' },
+  { field: 'region', header: 'Region', sortable: true, style: 'min-width: 8rem' },
+  { field: 'active', header: 'Status', sortable: true, style: 'min-width: 8rem' },
+  { field: 'created', header: 'Created', sortable: true, style: 'min-width: 10rem' }
 ]
 
 // Fetch edges on component mount
@@ -196,3 +198,30 @@ const handleDeleteConfirm = async () => {
   }
 }
 </script>
+
+<style>
+/* Ensure edge type and region badges get proper dark mode styling */
+.bg-blue-100.text-blue-800 {
+  @apply dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+.bg-purple-100.text-purple-800 {
+  @apply dark:bg-purple-900/30 dark:text-purple-300;
+}
+
+.bg-green-100.text-green-800 {
+  @apply dark:bg-green-900/30 dark:text-green-300;
+}
+
+.bg-amber-100.text-amber-800 {
+  @apply dark:bg-amber-900/30 dark:text-amber-300;
+}
+
+.bg-red-100.text-red-800 {
+  @apply dark:bg-red-900/30 dark:text-red-300;
+}
+
+.bg-gray-100.text-gray-800 {
+  @apply dark:bg-gray-700 dark:text-gray-300;
+}
+</style>

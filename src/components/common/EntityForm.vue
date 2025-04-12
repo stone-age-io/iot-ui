@@ -4,7 +4,7 @@
     <form @submit.prevent="submitForm">
       <div class="card">
         <!-- Form Title -->
-        <h2 v-if="title" class="text-xl font-semibold mb-4">{{ title }}</h2>
+        <h2 v-if="title" class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">{{ title }}</h2>
         
         <!-- Form Fields -->
         <div class="space-y-4">
@@ -58,3 +58,8 @@ const submitForm = () => {
   emit('submit')
 }
 </script>
+
+<style scoped>
+/* The card class is already themed in the global CSS */
+/* But we can add component-specific theme styles here if needed */
+</style>

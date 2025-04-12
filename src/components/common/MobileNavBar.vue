@@ -1,7 +1,7 @@
-<!-- src/components/common/MobileNavBar.vue - Enhanced with active state -->
+<!-- src/components/common/MobileNavBar.vue - Enhanced with dark mode support -->
 <template>
   <nav 
-    class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30"
+    class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30 dark:bg-gray-800 dark:border-gray-700"
     v-if="showMobileNav"
   >
     <div class="flex justify-around items-center py-2">
@@ -10,7 +10,10 @@
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center p-2 touch-target"
-        :class="{ 'text-primary-600': isActive(item.to), 'text-gray-500': !isActive(item.to) }"
+        :class="{ 
+          'text-primary-600 dark:text-primary-400': isActive(item.to), 
+          'text-gray-500 dark:text-gray-400': !isActive(item.to) 
+        }"
       >
         <i :class="[item.icon, 'text-lg']"></i>
         <span class="text-xs mt-1">{{ item.label }}</span>
@@ -55,11 +58,13 @@ const isActive = (path) => {
 }
 
 /* Add subtle animation for active state */
-.text-primary-600 {
+.text-primary-600,
+.dark\:text-primary-400 {
   position: relative;
 }
 
-.text-primary-600::after {
+.text-primary-600::after,
+.dark\:text-primary-400::after {
   content: '';
   position: absolute;
   bottom: -2px;

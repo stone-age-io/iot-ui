@@ -217,15 +217,15 @@ export const useTypesStore = defineStore('types', () => {
    * @returns {string} - CSS class
    */
   function getEdgeTypeClass(typeCode) {
-    // Map of type codes to CSS classes
+    // Map of type codes to CSS classes - Updated with dark mode support
     const classMap = {
-      'bld': 'bg-blue-100 text-blue-800',
-      'srv': 'bg-purple-100 text-purple-800',
-      'gw': 'bg-green-100 text-green-800',
-      'hst': 'bg-amber-100 text-amber-800'
+      'bld': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'srv': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'gw': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'hst': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
     }
     
-    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
   /**
@@ -234,16 +234,16 @@ export const useTypesStore = defineStore('types', () => {
    * @returns {string} - CSS class
    */
   function getEdgeRegionClass(regionCode) {
-    // Map of region codes to CSS classes
+    // Map of region codes to CSS classes - Updated with dark mode support
     const classMap = {
-      'na': 'bg-blue-100 text-blue-800',
-      'eu': 'bg-green-100 text-green-800',
-      'ap': 'bg-purple-100 text-purple-800',
-      'sa': 'bg-amber-100 text-amber-800',
-      'af': 'bg-red-100 text-red-800'
+      'na': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'eu': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'ap': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'sa': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      'af': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
     }
     
-    return classMap[regionCode] || 'bg-gray-100 text-gray-800'
+    return classMap[regionCode] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
   /**
@@ -252,21 +252,21 @@ export const useTypesStore = defineStore('types', () => {
    * @returns {string} - CSS class
    */
   function getLocationTypeClass(typeCode) {
-    // Map of location type codes to CSS classes
+    // Map of location type codes to CSS classes - Updated with dark mode support
     const classMap = {
-      'entrance': 'bg-blue-100 text-blue-800',
-      'work-area': 'bg-green-100 text-green-800',
-      'meeting-room': 'bg-purple-100 text-purple-800',
-      'break-area': 'bg-amber-100 text-amber-800',
-      'reception': 'bg-indigo-100 text-indigo-800',
-      'security': 'bg-red-100 text-red-800',
-      'server-room': 'bg-cyan-100 text-cyan-800',
-      'utility-room': 'bg-teal-100 text-teal-800',
-      'storage': 'bg-gray-100 text-gray-800',
-      'entrance-hall': 'bg-blue-100 text-blue-800'
+      'entrance': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'work-area': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'meeting-room': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'break-area': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      'reception': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+      'security': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      'server-room': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+      'utility-room': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+      'storage': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+      'entrance-hall': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
     }
     
-    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
   /**
@@ -275,21 +275,21 @@ export const useTypesStore = defineStore('types', () => {
    * @returns {string} - CSS class
    */
   function getThingTypeClass(typeCode) {
-    // Map of thing type codes to CSS classes
+    // Map of thing type codes to CSS classes - Updated with dark mode support
     const classMap = {
-      'reader': 'bg-blue-100 text-blue-800',
-      'controller': 'bg-purple-100 text-purple-800',
-      'lock': 'bg-amber-100 text-amber-800',
-      'temperature-sensor': 'bg-green-100 text-green-800',
-      'humidity-sensor': 'bg-cyan-100 text-cyan-800',
-      'hvac': 'bg-teal-100 text-teal-800',
-      'lighting': 'bg-yellow-100 text-yellow-800',
-      'camera': 'bg-red-100 text-red-800',
-      'motion-sensor': 'bg-indigo-100 text-indigo-800',
-      'occupancy-sensor': 'bg-orange-100 text-orange-800'
+      'reader': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'controller': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'lock': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      'temperature-sensor': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'humidity-sensor': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+      'hvac': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+      'lighting': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      'camera': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      'motion-sensor': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+      'occupancy-sensor': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
     }
     
-    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
   // Return public API

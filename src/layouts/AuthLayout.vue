@@ -1,6 +1,6 @@
 <!-- src/layouts/AuthLayout.vue -->
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4 py-8">
+  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4 py-8 dark:bg-gray-900">
     <div class="w-full max-w-md">
       <!-- Company Branding -->
       <div class="mb-8">
@@ -24,12 +24,12 @@
               </svg>
             </div>
             <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-primary-700 whitespace-nowrap">Stone-Age.io</h1>
+              <h1 class="text-2xl sm:text-3xl font-bold text-primary-700 whitespace-nowrap dark:text-primary-300">Stone-Age.io</h1>
             </div>
           </div>
         </div>
         <!-- Tagline -->
-        <p class="text-gray-600 text-center">Physical Access Control & Building Automation</p>
+        <p class="text-gray-600 text-center dark:text-gray-400">Physical Access Control & Building Automation</p>
       </div>
       
       <!-- Auth Content Container -->
@@ -42,7 +42,7 @@
       </div>
       
       <!-- Footer -->
-      <div class="text-center mt-6 text-sm text-gray-500">
+      <div class="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
         &copy; {{ currentYear }} Stone-Age.io. All rights reserved.
       </div>
     </div>
@@ -69,5 +69,9 @@ const currentYear = computed(() => new Date().getFullYear())
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.logo-image {
+  fill: var(--primary-color);
 }
 </style>

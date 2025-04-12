@@ -4,9 +4,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useThemeStore } from '../../stores/theme';
 
 // Props definition
 const props = defineProps({
@@ -32,6 +33,13 @@ const props = defineProps({
 const mapId = `map-${Math.random().toString(36).substring(2, 9)}`;
 const map = ref(null);
 const markersLayer = ref(null);
+const themeStore = useThemeStore();
+
+// Detect if dark mode is active
+const isDarkMode = computed(() => {
+  return themeStore.theme === 'dark' || 
+    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+});
 
 // Initialize map on mount
 onMounted(() => {
@@ -59,6 +67,13 @@ watch(() => props.markers, () => {
   renderMarkers();
 }, { deep: true });
 
+// Watch for theme changes
+watch(() => isDarkMode.value, (darkMode) => {
+  if (map.value) {
+    updateMapTiles(darkMode);
+  }
+});
+
 // Create the map
 const initMap = () => {
   // Fix icon paths (common Leaflet issue in bundled apps)
@@ -73,13 +88,37 @@ const initMap = () => {
   // Initialize the map
   map.value = L.map(mapId).setView(centerPoint, props.zoom);
   
-  // Add OpenStreetMap tiles
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map.value);
+  // Add appropriate tiles based on theme
+  updateMapTiles(isDarkMode.value);
   
   // Create a layer for markers
   markersLayer.value = L.layerGroup().addTo(map.value);
+};
+
+// Update map tiles based on theme
+const updateMapTiles = (darkMode) => {
+  if (!map.value) return;
+  
+  // Remove any existing tile layers
+  map.value.eachLayer((layer) => {
+    if (layer instanceof L.TileLayer) {
+      map.value.removeLayer(layer);
+    }
+  });
+  
+  // Add appropriate tiles based on theme
+  if (darkMode) {
+    // Dark theme tiles - using a dark theme from Stadia Maps
+    // This is a fallback - in production, consider using a proper dark theme provider
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map.value);
+  } else {
+    // Light theme tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map.value);
+  }
 };
 
 // Render markers on the map
@@ -105,7 +144,7 @@ const renderMarkers = () => {
       markerObj.bindPopup(marker.popup);
     } else {
       markerObj.bindPopup(`
-        <div class="popup-content">
+        <div class="popup-content ${isDarkMode.value ? 'popup-dark' : ''}">
           <strong>${marker.name || 'Unnamed'}</strong>
           ${marker.type ? `<br><span class="badge badge-${marker.type}">${marker.type}</span>` : ''}
         </div>
@@ -152,6 +191,11 @@ const fixLeafletIconPaths = () => {
   margin: 10px;
 }
 
+:deep(.popup-dark) {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
 :deep(.badge) {
   display: inline-block;
   font-size: 0.75rem;
@@ -159,5 +203,21 @@ const fixLeafletIconPaths = () => {
   padding: 0.125rem 0.375rem;
   border-radius: 9999px;
   margin-top: 4px;
+}
+
+/* Dark mode overrides for Leaflet controls */
+:global(.dark) .leaflet-map :deep(.leaflet-control-attribution) {
+  background-color: rgba(31, 41, 55, 0.8);
+  color: #d1d5db;
+}
+
+:global(.dark) .leaflet-map :deep(.leaflet-control-zoom a) {
+  background-color: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+:global(.dark) .leaflet-map :deep(.leaflet-control-zoom a:hover) {
+  background-color: #4b5563;
 }
 </style>

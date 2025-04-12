@@ -3,38 +3,50 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import './assets/main.css'
-import './assets/responsive-utilities.css' // Import responsive utilities
+
+// Import our unified CSS
+import './assets/styles/index.css'
 
 // PrimeVue
 import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
-import 'primevue/resources/themes/lara-light-blue/theme.css'
 import 'primevue/resources/primevue.min.css'
 import 'primeicons/primeicons.css'
-import 'primeflex/primeflex.css'
-import Tooltip from 'primevue/tooltip';
+import Tooltip from 'primevue/tooltip'
 
 // Import NATS connection manager
 import natsConnectionManager from './services/nats/natsConnectionManager'
 
-// Import type store
+// Import stores
 import { useTypesStore } from './stores/types'
+import { useThemeStore } from './stores/theme'
+import { setupPrimeVueTheme } from './utils/primeThemeHandler'
+import { watch } from 'vue'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
+
+// Initialize theme before mounting
+const themeStore = useThemeStore()
+setupPrimeVueTheme(themeStore.theme)
+
+// Watch for theme changes to update PrimeVue theme
+watch(() => themeStore.theme, (newTheme) => {
+  setupPrimeVueTheme(newTheme)
+})
+
+// Initialize NATS connection manager
+natsConnectionManager.initialize()
+
+// Setup the rest of the app
 app.use(router)
 app.use(PrimeVue, { ripple: true })
 app.use(ConfirmationService)
 app.use(ToastService)
-
-app.directive('tooltip', Tooltip);
-
-// Initialize NATS connection manager
-natsConnectionManager.initialize()
+app.directive('tooltip', Tooltip)
 
 // Initialize type store after Pinia is installed
 const initializeStores = () => {
@@ -56,4 +68,5 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
+// Mount the app
 app.mount('#app')
