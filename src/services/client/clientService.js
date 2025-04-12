@@ -4,6 +4,8 @@ import {
   COLLECTIONS, 
   collectionEndpoint 
 } from '../pocketbase-config'
+import configService from '../config/configService'
+import { apiHelpers } from '../api'
 
 /**
  * Service for Client entity operations
@@ -36,28 +38,18 @@ export class ClientService extends BaseService {
    * @returns {Promise<string>} - Hashed password
    */
   hashPassword(password) {
-    return fetch('http://100.98.139.111:9000/sec/api/hash-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ password })
+    return apiHelpers.axiosInstance.post(configService.endpoints.HASH_PASSWORD, { 
+      password 
     })
     .then(response => {
-      if (!response.ok) {
-        throw new Error(`Hash password request failed with status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(responseData => {
-      if (!responseData.hash) {
+      if (!response.data?.hash) {
         throw new Error('Invalid response format: missing hash property');
       }
-      return responseData.hash;
+      return response.data.hash;
     })
     .catch(error => {
       console.error('Error hashing password:', error);
-      throw new Error('Failed to hash password: ' + error.message);
+      throw new Error('Failed to hash password: ' + (error.message || 'Unknown error'));
     });
   }
 }

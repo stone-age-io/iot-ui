@@ -1,10 +1,11 @@
 // Updated src/services/api.js with exposed Axios instance
 import axios from 'axios'
+import configService from './config/configService'
 
 // Create axios instance with default config
 const apiService = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
-  timeout: 30000,
+  baseURL: configService.getApiBaseUrl(),
+  timeout: configService.env.API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'

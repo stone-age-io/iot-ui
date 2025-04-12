@@ -6,6 +6,7 @@ import { useEdge } from './useEdge'
 import { useLocation } from './useLocation' 
 import { useThing } from './useThing'
 import { useApiOperation } from './useApiOperation'
+import configService from '../services/config/configService'
 
 /**
  * Composable for dashboard-related functionality
@@ -139,47 +140,70 @@ export function useDashboard() {
   
   /**
    * Format log message for display
+   * Extract meaningful info from log message
    * @param {Object} log - PocketBase log entry
    * @returns {string} - Formatted message
    */
   const formatLogMessage = (log) => {
-    // Extract meaningful info from log message
-    let message = log.message
-    
     // Clean up common log prefixes
-    message = message.replace(/^\[[^\]]+\]\s+/, '')
+    let message = log.message.replace(/^\[[^\]]+\]\s+/, '')
     
     // Handle API specific messages
     if (log.data && log.data.url) {
-      const url = log.data.url
-      
-      // Extract collection and operation from URL
-      if (url.includes('/api/collections/')) {
-        const urlParts = url.split('/')
-        const collectionIndex = urlParts.findIndex(part => part === 'collections')
-        
-        if (collectionIndex >= 0 && collectionIndex + 1 < urlParts.length) {
-          const collection = urlParts[collectionIndex + 1]
-          const isRecord = urlParts.includes('records')
-          
-          // Format based on HTTP method
-          if (log.data.method === 'POST' && isRecord) {
-            message = `New ${collection.slice(0, -1)} created`
-          } else if (log.data.method === 'PATCH' && isRecord) {
-            message = `${collection.slice(0, -1).charAt(0).toUpperCase() + collection.slice(0, -1).slice(1)} updated`
-          } else if (log.data.method === 'DELETE' && isRecord) {
-            message = `${collection.slice(0, -1).charAt(0).toUpperCase() + collection.slice(0, -1).slice(1)} deleted`
-          }
-        }
-      }
-      
-      // Handle auth related messages
-      if (url.includes('/auth-with-password')) {
-        message = 'User logged in'
-      }
+      message = parseApiLogMessage(log.data)
     }
     
     return message
+  }
+  
+  /**
+   * Parse API log messages to extract meaningful information
+   * @param {Object} logData - Log data containing API details
+   * @returns {string} - Formatted message
+   */
+  const parseApiLogMessage = (logData) => {
+    const url = logData.url
+    
+    // Handle auth related messages
+    if (url.includes('/auth-with-password')) {
+      return 'User logged in'
+    }
+    
+    // Extract collection and operation from URL
+    if (url.includes('/api/collections/')) {
+      return parseCollectionApiLogMessage(url, logData.method)
+    }
+    
+    // Default fallback
+    return `API request: ${logData.method} ${url}`
+  }
+  
+  /**
+   * Parse collection API log messages
+   * @param {string} url - API URL
+   * @param {string} method - HTTP method
+   * @returns {string} - Formatted message
+   */
+  const parseCollectionApiLogMessage = (url, method) => {
+    const urlParts = url.split('/')
+    const collectionIndex = urlParts.findIndex(part => part === 'collections')
+    
+    if (collectionIndex >= 0 && collectionIndex + 1 < urlParts.length) {
+      const collection = urlParts[collectionIndex + 1]
+      const isRecord = urlParts.includes('records')
+      const entityName = collection.slice(0, -1).charAt(0).toUpperCase() + collection.slice(0, -1).slice(1)
+      
+      // Format based on HTTP method
+      if (method === 'POST' && isRecord) {
+        return `New ${entityName} created`
+      } else if (method === 'PATCH' && isRecord) {
+        return `${entityName} updated`
+      } else if (method === 'DELETE' && isRecord) {
+        return `${entityName} deleted`
+      }
+    }
+    
+    return `API request to ${url}`
   }
   
   /**
@@ -244,7 +268,7 @@ export function useDashboard() {
    * Open Grafana dashboard
    */
   const openGrafana = () => {
-    window.open(import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com', '_blank')
+    window.open(configService.env.GRAFANA_URL, '_blank')
   }
   
   return {

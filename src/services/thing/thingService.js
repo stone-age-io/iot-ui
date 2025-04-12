@@ -94,6 +94,27 @@ export class ThingService extends BaseService {
   }
   
   /**
+   * Create a new thing with proper field mapping
+   * @param {Object} thingData - Thing data with client-side field names
+   * @returns {Promise} - Axios promise with created thing
+   */
+  createThing(thingData) {
+    // Let the BaseService handle the field mapping
+    return this.create(thingData)
+  }
+  
+  /**
+   * Update an existing thing with proper field mapping
+   * @param {string} id - Thing ID
+   * @param {Object} thingData - Updated thing data with client-side field names
+   * @returns {Promise} - Axios promise with updated thing
+   */
+  updateThing(id, thingData) {
+    // Let the BaseService handle the field mapping
+    return this.update(id, thingData)
+  }
+  
+  /**
    * Custom parameter transformation for thing specific filters
    * @override
    */

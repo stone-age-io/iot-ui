@@ -1,30 +1,16 @@
 // src/services/pocketbase-config.js
+import configService from './config/configService'
+
 /**
  * PocketBase API configuration
  * Maps entity types to their corresponding PocketBase collections
  */
 
-// Collections
-export const COLLECTIONS = {
-  EDGES: 'edges',
-  LOCATIONS: 'locations',
-  THINGS: 'things',
-  CLIENTS: 'clients',
-  TOPIC_PERMISSIONS: 'topic_permissions',
-  USERS: 'users'  
-}
+// Collections - Re-export from configService
+export const COLLECTIONS = configService.collections
 
-// API Endpoints (relative to base URL)
-export const ENDPOINTS = {
-  AUTH: {
-    LOGIN: '/collections/users/auth-with-password',
-    REFRESH: '/collections/users/auth-refresh',
-    PROFILE: '/collections/users/auth-refresh'
-  }
-  
-  // CRUD endpoints are automatically constructed using collection names
-  // e.g., /collections/edges/records
-}
+// API Endpoints - Re-export from configService
+export const ENDPOINTS = configService.endpoints.AUTH
 
 /**
  * Generate a PocketBase collection endpoint URL with proper /pb/ prefix
@@ -33,8 +19,7 @@ export const ENDPOINTS = {
  * @returns {string} - API endpoint URL
  */
 export function collectionEndpoint(collection, recordId = null) {
-  const base = `/pb/api/collections/${collection}/records`
-  return recordId ? `${base}/${recordId}` : base
+  return configService.getCollectionEndpoint(collection, recordId)
 }
 
 /**

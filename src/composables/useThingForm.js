@@ -2,7 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
-import { useToast } from 'primevue/usetoast'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   thingService, 
@@ -11,6 +10,7 @@ import {
   validateThingCode, 
   getThingTypeAbbreviation 
 } from '../services'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for thing form handling
@@ -20,9 +20,9 @@ import {
  * @returns {Object} - Form methods and state
  */
 export function useThingForm(mode = 'create') {
-  const toast = useToast()
   const router = useRouter()
   const route = useRoute()
+  const { performOperation } = useApiOperation()
   
   // Form data with defaults
   const thing = ref({
@@ -63,6 +63,8 @@ export function useThingForm(mode = 'create') {
         validateThingCode
       )
     }
+    rules.type = { required: helpers.withMessage('Type is required', required) }
+    rules.path = { required: helpers.withMessage('Path is required', required) }
   }
   
   // Initialize Vuelidate
@@ -73,30 +75,29 @@ export function useThingForm(mode = 'create') {
    * @param {Object} params - Optional query parameters
    */
   const fetchLocations = async (params = {}) => {
-    locationsLoading.value = true
-    try {
-      // If edge_id is provided as a query param, filter locations by edge
-      const queryParams = {}
-      if (route.query.edge_id) {
-        queryParams.edge_id = route.query.edge_id
+    return performOperation(
+      () => {
+        // If edge_id is provided as a query param, filter locations by edge
+        const queryParams = {}
+        if (route.query.edge_id) {
+          queryParams.edge_id = route.query.edge_id
+        }
+        
+        // Merge with any additional params
+        Object.assign(queryParams, params)
+        
+        return locationService.getLocations(queryParams)
+      },
+      {
+        loadingRef: locationsLoading,
+        errorRef: null,
+        errorMessage: 'Failed to load locations',
+        onSuccess: (response) => {
+          locations.value = response.data.items || []
+          return locations.value
+        }
       }
-      
-      // Merge with any additional params
-      Object.assign(queryParams, params)
-      
-      const response = await locationService.getLocations(queryParams)
-      locations.value = response.data.items || []
-    } catch (error) {
-      console.error('Error fetching locations:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load locations',
-        life: 3000
-      })
-    } finally {
-      locationsLoading.value = false
-    }
+    )
   }
   
   /**
@@ -173,67 +174,42 @@ export function useThingForm(mode = 'create') {
    * @returns {Promise<boolean>} - Success status
    */
   const submitForm = async () => {
-  // Validate form
-  const isValid = await v$.value.$validate()
-  if (!isValid) return false
-  
-  loading.value = true
-  
-  try {
-    // Prepare data for API - Map form fields to API fields
+    // Validate form
+    const isValid = await v$.value.$validate()
+    if (!isValid) return false
+    
+    // Prepare data for API
     const thingData = {
       name: thing.value.name,
       description: thing.value.description,
       active: thing.value.active
     }
     
-    // Add fields for create mode - map to the correct API field names
+    // Add fields for create mode
     if (mode === 'create') {
       thingData.location_id = thing.value.location_id
-      thingData.type = thing.value.thing_type  // Changed from thing_type to type
-      thingData.code = thing.value.thing_code  // Changed from thing_code to code
+      thingData.thing_type = thing.value.thing_type
+      thingData.thing_code = thing.value.thing_code
     }
     
-    let response
-    
-    if (mode === 'create') {
-      // Create new thing
-      response = await thingService.createThing(thingData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Thing ${thingData.code} has been created`,
-        life: 3000
-      })
-    } else {
-      // Update existing thing
-      response = await thingService.updateThing(thing.value.id, thingData)
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Thing ${thing.value.thing_code} has been updated`,
-        life: 3000
-      })
-    }
-    
-    // Navigate to thing detail view
-    router.push({ name: 'thing-detail', params: { id: response.data.id } })
-    return true
-  } catch (error) {
-    console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} thing:`, error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Failed to ${mode === 'create' ? 'create' : 'update'} thing. Please try again.`,
-      life: 3000
-    })
-    return false
-  } finally {
-    loading.value = false
+    return performOperation(
+      () => mode === 'create' 
+        ? thingService.createThing(thingData)
+        : thingService.updateThing(thing.value.id, thingData),
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} thing`,
+        successMessage: `Thing ${mode === 'create' ? thingData.thing_code : thing.value.thing_code} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        onSuccess: (response) => {
+          // Navigate to thing detail view
+          router.push({ name: 'thing-detail', params: { id: response.data.id } })
+          return true
+        },
+        onError: () => false
+      }
+    )
   }
-}
 
   /**
    * Reset form to initial state
