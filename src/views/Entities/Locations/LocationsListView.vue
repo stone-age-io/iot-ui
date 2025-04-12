@@ -24,14 +24,7 @@
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Location" 
-            icon="pi pi-plus" 
-            @click="navigateToLocationCreate()" 
-          />
-        </template>
+        <!-- Remove duplicate create button from table actions -->
         
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
@@ -161,6 +154,7 @@ const {
   getTypeName,
   getTypeClass,
   parseLocationPath,
+  deleteLocation,
   navigateToLocationCreate,
   navigateToLocationDetail,
   navigateToLocationEdit
@@ -174,7 +168,7 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition - UPDATED to include parent_id column
+// Table columns definition
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
@@ -207,7 +201,7 @@ const handleDeleteConfirm = async () => {
   
   updateDeleteDialog({ loading: true })
   
-  const { deleteLocation } = useLocation()
+  // Use the deleteLocation function from the useLocation composable
   const success = await deleteLocation(
     deleteDialog.value.item.id, 
     deleteDialog.value.item.code

@@ -73,10 +73,20 @@
                 placeholder="Select Edge"
                 class="w-full"
                 disabled
-              />
+              >
+                <template #value="slotProps">
+                  <div v-if="slotProps.value" class="flex align-items-center">
+                    <div>
+                      {{ getEdgeName(slotProps.value) }}
+                      <span class="text-xs text-gray-500 ml-2">{{ getEdgeCode(slotProps.value) }}</span>
+                    </div>
+                  </div>
+                  <span v-else>Select Edge</span>
+                </template>
+              </Dropdown>
             </FormField>
             
-            <!-- Parent Location (NEW) -->
+            <!-- Parent Location -->
             <FormField
               id="parent_id"
               label="Parent Location"
@@ -119,14 +129,14 @@
               id="name"
               label="Name"
               :required="true"
-              :error-message="v$.name && v$.name.$errors.length ? v$.name.$errors[0].$message : ''"
+              :error-message="validationErrors.name"
             >
               <InputText
                 id="name"
                 v-model="location.name"
                 placeholder="North Reception Area"
                 class="w-full"
-                :class="{ 'p-invalid': v$.name && v$.name.$error }"
+                :class="{ 'p-invalid': validationErrors.name }"
               />
             </FormField>
             
@@ -135,7 +145,7 @@
               id="type"
               label="Type"
               :required="true"
-              :error-message="v$.type && v$.type.$errors.length ? v$.type.$errors[0].$message : ''"
+              :error-message="validationErrors.type"
             >
               <Dropdown
                 id="type"
@@ -145,7 +155,7 @@
                 optionValue="value"
                 placeholder="Select Type"
                 class="w-full"
-                :class="{ 'p-invalid': v$.type && v$.type.$error }"
+                :class="{ 'p-invalid': validationErrors.type }"
               />
             </FormField>
             
@@ -154,7 +164,7 @@
               id="path"
               label="Path"
               :required="true"
-              :error-message="v$.path && v$.path.$errors.length ? v$.path.$errors[0].$message : ''"
+              :error-message="validationErrors.path"
               class="md:col-span-2"
             >
               <InputText
@@ -162,7 +172,7 @@
                 v-model="location.path"
                 placeholder="floor-1/north-wing/reception"
                 class="w-full"
-                :class="{ 'p-invalid': v$.path && v$.path.$error }"
+                :class="{ 'p-invalid': validationErrors.path }"
               />
             </FormField>
             
@@ -170,7 +180,7 @@
             <FormField
               id="description"
               label="Description"
-              :error-message="v$.description && v$.description.$errors.length ? v$.description.$errors[0].$message : ''"
+              :error-message="validationErrors.description"
               class="md:col-span-2"
             >
               <Textarea
@@ -179,7 +189,7 @@
                 rows="3"
                 placeholder="Enter a description for this location"
                 class="w-full"
-                :class="{ 'p-invalid': v$.description && v$.description.$error }"
+                :class="{ 'p-invalid': validationErrors.description }"
               />
             </FormField>
           </div>
@@ -204,10 +214,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useLocation } from '../../../composables/useLocation'
 import { useLocationForm } from '../../../composables/useLocationForm'
+import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -219,9 +230,11 @@ import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
+const router = useRouter()
+const toast = useToast()
 
-// Get location functionality and error handling from location composable
-const { error: locationError, fetchLocation } = useLocation()
+// Get location functionality from location composable
+const { fetchLocation } = useLocation()
 
 // Use the location form composable in edit mode
 const { 
@@ -237,13 +250,27 @@ const {
   fetchEdges,
   fetchPotentialParents,
   loadLocation,
+  getEdgeName,
+  getEdgeCode,
   getParentDisplay,
   submitForm
 } = useLocationForm('edit')
 
-// Local state
+// Local state for initial loading and error handling
 const initialLoading = ref(true)
 const error = ref(null)
+
+// Computed property to safely extract validation errors
+const validationErrors = computed(() => {
+  if (!v$.value) return {}
+  
+  return {
+    name: v$.value.name && v$.value.name.$errors.length ? v$.value.name.$errors[0].$message : '',
+    type: v$.value.type && v$.value.type.$errors.length ? v$.value.type.$errors[0].$message : '',
+    path: v$.value.path && v$.value.path.$errors.length ? v$.value.path.$errors[0].$message : '',
+    description: v$.value.description && v$.value.description.$errors.length ? v$.value.description.$errors[0].$message : ''
+  }
+})
 
 // Fetch location data on component mount
 onMounted(async () => {
@@ -255,23 +282,31 @@ onMounted(async () => {
   }
   
   try {
-    // Fetch edges first, needed for the dropdown
+    // Fetch edges first
     await fetchEdges()
     
     // Fetch location data
     const locationData = await fetchLocation(id)
     
-    // Load data into form
+    // Load data into form if location exists
     if (locationData) {
       loadLocation(locationData)
       
-      // Now fetch potential parent locations, excluding self and children
+      // Fetch potential parent locations, excluding self and children
       await fetchPotentialParents(id)
+      
+      // Don't show toast during initial load to avoid the error
+      // toast.add({
+      //   severity: 'info',
+      //   summary: 'Location Loaded',
+      //   detail: `Editing location ${locationData.code}`,
+      //   life: 3000
+      // })
     } else {
       error.value = 'Location not found'
     }
   } catch (err) {
-    error.value = locationError.value || 'Failed to load location data'
+    error.value = 'Failed to load location data'
     console.error('Error in LocationEditView:', err)
   } finally {
     initialLoading.value = false

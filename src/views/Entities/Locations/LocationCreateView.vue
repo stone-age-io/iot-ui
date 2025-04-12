@@ -63,7 +63,7 @@
             </Dropdown>
           </FormField>
           
-          <!-- Parent Location (NEW) -->
+          <!-- Parent Location -->
           <FormField
             id="parent_id"
             label="Parent Location"
@@ -258,6 +258,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocationForm } from '../../../composables/useLocationForm'
+import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
@@ -268,6 +269,7 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
 const route = useRoute()
+const toast = useToast()
 
 // Use the location form composable in create mode
 const { 
@@ -289,26 +291,32 @@ const {
   getEdgeName,
   getEdgeCode,
   getParentDisplay,
-  submitForm
+  submitForm,
+  resetForm
 } = useLocationForm('create')
 
-// If edge_id is provided as a query param, set it
+// Initialize the form when component is mounted
 onMounted(async () => {
+  // Reset form to ensure clean state
+  resetForm()
+  
+  // Fetch edges and potential parent locations in parallel
   await Promise.all([
     fetchEdges(),
     fetchPotentialParents()
   ])
   
+  // Set edge_id if provided as a query param
   if (route.query.edge_id) {
     location.value.edge_id = route.query.edge_id
   }
   
-  // If parent_id is provided as a query param, set it
+  // Set parent_id if provided as a query param
   if (route.query.parent_id) {
     location.value.parent_id = route.query.parent_id
   }
   
-  // Update the path when edge_id is set
+  // Update the path when level, zone, and identifier are set
   updatePathFromLevelZone()
 })
 </script>

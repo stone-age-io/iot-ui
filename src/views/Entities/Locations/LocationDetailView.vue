@@ -110,7 +110,7 @@
               </router-link>
             </div>
             
-            <!-- Parent Location (NEW) -->
+            <!-- Parent Location -->
             <div>
               <div class="text-sm text-gray-500 mb-1">Parent Location</div>
               <router-link 
@@ -160,7 +160,7 @@
               />
             </div>
             
-            <!-- Child Locations (NEW) -->
+            <!-- Child Locations -->
             <div>
               <div class="text-sm text-gray-500 mb-1">Child Locations</div>
               <div class="flex items-center">
@@ -209,7 +209,7 @@
         </div>
       </div>
       
-      <!-- Child Locations Card (NEW) -->
+      <!-- Child Locations Card -->
       <div class="card mt-6" v-if="childLocations.length > 0">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Child Locations</h2>
@@ -347,17 +347,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocation } from '../../../composables/useLocation'
 import { useThing } from '../../../composables/useThing'
+import { useConfirmation } from '../../../composables/useConfirmation'
+import { useToast } from 'primevue/usetoast'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 import FloorPlanMap from '../../../components/map/FloorPlanMap.vue'
-import { useToast } from 'primevue/usetoast'
 
 const route = useRoute()
 const router = useRouter()
@@ -374,6 +375,7 @@ const {
   getTypeClass,
   parseLocationPath,
   hasMetadata,
+  hasFloorPlan,
   hasParent,
   fetchLocation,
   fetchChildLocations,
@@ -391,23 +393,22 @@ const {
 const { 
   getTypeName: getThingTypeName, 
   getTypeClass: getThingTypeClass,
-  fetchThings: fetchThingsByParams,
+  fetchThings,
   updateThingPosition: updateThingPositionMethod,
-  hasMetadata: hasThingMetadata
+  navigateToThingDetail
 } = useThing()
+
+// Get confirmation dialog functionality
+const { dialog: deleteDialog, updateDialog } = useConfirmation()
 
 // Local state
 const location = ref(null)
 const things = ref([])
 const thingsLoading = ref(false)
-const deleteDialog = ref({
-  visible: false,
-  loading: false
-})
 
 // Get unique thing types
 const uniqueThingTypes = computed(() => {
-  return [...new Set(things.value.map(thing => thing.type))]
+  return [...new Set(things.value.map(thing => thing.type || thing.thing_type))]
 })
 
 // Thing columns for the table
@@ -432,6 +433,13 @@ onMounted(async () => {
   await loadLocationDetail()
 })
 
+// Watch for route changes to reload data when navigating between locations
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadLocationDetail()
+  }
+})
+
 // Methods
 const loadLocationDetail = async () => {
   const id = route.params.id
@@ -444,26 +452,27 @@ const loadLocationDetail = async () => {
       location.value = locationData
       
       // Now fetch associated things
-      await fetchThings()
+      await loadThings()
       
       // Now fetch child locations
       await fetchChildLocations(id)
     }
   } catch (err) {
     // Error handling is done in the composable
+    console.error('Error loading location detail:', err)
   }
 }
 
 // Fetch things using the useThing composable
-const fetchThings = async () => {
+const loadThings = async () => {
   if (!location.value) return
   
   thingsLoading.value = true
   try {
     // Use the thing composable to fetch things by location
-    const thingsData = await fetchThingsByParams({ location_id: location.value.id })
+    const thingsData = await fetchThings({ location_id: location.value.id })
     
-    // Normalize field names if needed
+    // Normalize field names if needed (thing_code to code, thing_type to type)
     things.value = thingsData.map(item => ({
       ...item,
       code: item.code || item.thing_code,
@@ -477,7 +486,7 @@ const fetchThings = async () => {
   }
 }
 
-// Update thing position on the floor plan using the composable
+// Update thing position on the floor plan
 const updateThingPosition = async ({ thingId, coordinates }) => {
   const thing = things.value.find(t => t.id === thingId)
   if (!thing) return
@@ -501,24 +510,48 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
     })
   } catch (error) {
     console.error('Error updating thing position:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update thing position',
+      life: 3000
+    })
   }
 }
 
 // Handle floor plan upload
 const handleUploadFloorPlan = async (file) => {
   if (!location.value) return
-  await uploadFloorPlan(location.value.id, file)
   
-  // Refresh location data to get updated floorplan field
-  const locationData = await fetchLocation(location.value.id)
-  if (locationData) {
-    location.value = locationData
+  try {
+    await uploadFloorPlan(location.value.id, file)
+    
+    // Refresh location data to get updated floorplan field
+    const locationData = await fetchLocation(location.value.id)
+    if (locationData) {
+      location.value = locationData
+    }
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Floor plan uploaded successfully',
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Error uploading floor plan:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to upload floor plan',
+      life: 3000
+    })
   }
 }
 
 // Check if a thing has indoor positioning coordinates
 const hasIndoorPosition = (thing) => {
-  return hasThingMetadata(thing) && 
+  return thing.metadata && 
          thing.metadata.coordinates && 
          typeof thing.metadata.coordinates.x !== 'undefined' && 
          typeof thing.metadata.coordinates.y !== 'undefined'
@@ -533,19 +566,6 @@ const formatPosition = (thing) => {
   return `x: ${x}, y: ${y}`
 }
 
-const navigateToThingDetail = (thing) => {
-  if (!thing) return;
-  
-  // Ensure we have an ID
-  const id = typeof thing === 'object' ? thing.id : thing;
-  if (!id) {
-    console.error('Cannot navigate to thing detail: Invalid ID', thing);
-    return;
-  }
-  
-  router.push({ name: 'thing-detail', params: { id } });
-}
-
 // Handle delete button click
 const handleDeleteClick = () => {
   deleteDialog.value.visible = true
@@ -555,14 +575,24 @@ const handleDeleteClick = () => {
 const handleDeleteConfirm = async () => {
   if (!location.value) return
   
-  deleteDialog.value.loading = true
+  updateDialog({ loading: true })
   
-  const success = await deleteLocation(location.value.id, location.value.code)
-  
-  if (success) {
-    router.push({ name: 'locations' })
-  } else {
-    deleteDialog.value.loading = false
+  try {
+    const success = await deleteLocation(location.value.id, location.value.code)
+    
+    if (success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Deleted',
+        detail: `Location ${location.value.code} has been deleted`,
+        life: 3000
+      })
+      router.push({ name: 'locations' })
+    }
+  } catch (error) {
+    console.error('Error deleting location:', error)
+  } finally {
+    updateDialog({ loading: false })
   }
 }
 </script>
