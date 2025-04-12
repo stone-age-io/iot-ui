@@ -1,18 +1,19 @@
-<!-- src/components/map/GlobalMap.vue (Updated) -->
+<!-- src/components/map/GlobalMap.vue (Fixed marker visibility) -->
 <template>
   <div :id="mapId" class="global-map" style="height: 100%; width: 100%"></div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import 'leaflet.markercluster/dist/leaflet.markercluster.js'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import { useGlobalMap } from '../../composables/useGlobalMap'
+import { useTypesStore } from '../../stores/types'
 
-// Import from the new service layer
-import { locationService } from '../../services'
+// Initialize composables and store
+const mapComposable = useGlobalMap()
+const typesStore = useTypesStore()
+
+// Ensure location types are loaded
+typesStore.loadLocationTypes()
 
 const props = defineProps({
   locations: {
@@ -29,433 +30,83 @@ const emit = defineEmits(['location-click'])
 
 // Generate unique map ID
 const mapId = `global-map-${Math.random().toString(36).substring(2, 9)}`
-const map = ref(null)
-const markersLayer = ref(null)
-const locationMarkers = ref({}) // Store markers by location ID
-const mapInitialized = ref(false)
-const savedMapState = ref(null)
 
-// Initialize map
+// Track when markers should be rendered
+const shouldRenderMarkers = ref(false)
+
+// Initialize map on mount
 onMounted(() => {
   nextTick(() => {
-    initMap();
-  });
+    // Initialize map with the uniquely generated ID
+    mapComposable.initMap(mapId, {
+      center: [39.8283, -98.5795], // Default center on US
+      zoom: 5,
+      zoomControl: true,
+      zoomAnimationThreshold: 4,
+      zoomSnap: 0.5,
+      wheelPxPerZoomLevel: 120,
+      maxBoundsViscosity: 0.8
+    })
+    
+    // Setup custom event for location clicks
+    document.addEventListener('location-click', handleLocationClickEvent)
+    
+    // Render markers after initialization
+    shouldRenderMarkers.value = true
+  })
 })
 
-// Clean up on unmount
+// Clean up event listener on component unmount
 onBeforeUnmount(() => {
-  if (map.value) {
-    map.value.remove();
-    map.value = null;
-  }
-  
-  window.removeEventListener('resize', handleResize);
+  document.removeEventListener('location-click', handleLocationClickEvent)
 })
 
-// Re-render markers when locations or edges change
-watch(() => props.locations, () => {
-  if (mapInitialized.value) {
-    renderMarkers();
+// Event handler for location clicks from popup
+const handleLocationClickEvent = (event) => {
+  if (event.detail && event.detail.location) {
+    emit('location-click', event.detail.location)
+  }
+}
+
+// Watch for changes in locations and edges to update map
+watch(() => [props.locations, props.edges], () => {
+  if (shouldRenderMarkers.value && mapComposable.mapInitialized.value) {
+    renderMarkers()
   }
 }, { deep: true })
 
-watch(() => props.edges, () => {
-  if (mapInitialized.value) {
-    renderMarkers();
+// Watch for map initialization to render markers
+watch(() => mapComposable.mapInitialized.value, (initialized) => {
+  if (initialized && shouldRenderMarkers.value) {
+    renderMarkers()
   }
-}, { deep: true })
+})
 
-// Handle resize events
-const handleResize = () => {
-  if (!map.value) return;
-  
-  // If a zoom animation is in progress, defer the resize
-  if (map.value._isZooming) {
-    setTimeout(() => handleResize(), 300);
-    return;
-  }
-  
-  // Force a map redraw when container resizes
-  // Use try-catch to handle potential errors during invalidation
-  try {
-    // Stop any current animations before invalidating
-    if (map.value._pathZoom) {
-      map.value._pathZoom = null;
-    }
-    
-    map.value.invalidateSize({ animate: false, pan: false, debounceMoveend: true });
-    
-    if (savedMapState.value && savedMapState.value.bounds && savedMapState.value.bounds.isValid()) {
-      // Re-fit to bounds after resize, but avoid animation
-      map.value.fitBounds(savedMapState.value.bounds, {
-        padding: [50, 50],
-        maxZoom: 8,
-        animate: false
-      });
-    }
-  } catch (err) {
-    console.error('Error handling resize:', err);
-  }
-}
-
-// Initialize the map
-const initMap = () => {
-  // Fix Leaflet icon paths
-  fixLeafletIconPaths();
-  
-  // Initialize map with improved options
-  map.value = L.map(mapId, {
-    center: [39.8283, -98.5795], // Default center on US
-    zoom: 5, // Higher default zoom level
-    zoomControl: true,
-    zoomAnimationThreshold: 4, // Prevent animation for big zoom changes
-    zoomSnap: 0.5,
-    wheelPxPerZoomLevel: 120, // Improve mouse wheel zoom sensitivity
-    maxBoundsViscosity: 0.8
-  });
-  
-  // Add tile layer
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-    minZoom: 2,
-    noWrap: true // Prevent wrapping around the globe
-  }).addTo(map.value);
-  
-  // Initialize marker cluster group with improved settings
-  markersLayer.value = L.markerClusterGroup({
-    disableClusteringAtZoom: 19,
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true,
-    maxClusterRadius: 50,
-    animate: false, // Disable animation to prevent marker positioning issues
-    animateAddingMarkers: false, // Disable animation when adding markers
-    iconCreateFunction: (cluster) => {
-      // Custom cluster icon with more visible styling
-      const count = cluster.getChildCount();
-      let size, className;
-      
-      if (count < 10) {
-        size = 'small';
-        className = 'marker-cluster-small';
-      } else if (count < 50) {
-        size = 'medium';
-        className = 'marker-cluster-medium';
-      } else {
-        size = 'large';
-        className = 'marker-cluster-large';
-      }
-      
-      return new L.DivIcon({
-        html: `<div><span>${count}</span></div>`,
-        className: `marker-cluster ${className}`,
-        iconSize: new L.Point(40, 40)
-      });
-    }
-  }).addTo(map.value);
-  
-  // Add a home button to reset the view
-  addHomeControl();
-  
-  // Render initial markers
-  renderMarkers();
-  
-  // Add window resize listener
-  window.addEventListener('resize', handleResize);
-  
-  // Handle zoom events to prevent issues with marker positioning
-  map.value.on('zoomstart', () => {
-    // Set a flag to indicate zoom is in progress
-    map.value._isZooming = true;
-  });
-  
-  map.value.on('zoomend', () => {
-    // Clear the zooming flag
-    map.value._isZooming = false;
-  });
-  
-  // Mark map as initialized
-  mapInitialized.value = true;
-}
-
-// Add home button for resetting view
-const addHomeControl = () => {
-  const homeControl = L.control({ position: 'topleft' });
-  homeControl.onAdd = function() {
-    const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
-    const button = L.DomUtil.create('a', '', div);
-    button.href = '#';
-    button.title = 'Show All Locations';
-    button.innerHTML = '<i class="pi pi-home"></i>';
-    button.role = 'button';
-    button.style.fontWeight = 'bold';
-    button.style.display = 'flex';
-    button.style.alignItems = 'center';
-    button.style.justifyContent = 'center';
-    
-    L.DomEvent.disableClickPropagation(div);
-    L.DomEvent.on(button, 'click', (e) => {
-      L.DomEvent.preventDefault(e);
-      centerMapToAllLocations();
-    });
-    
-    return div;
-  };
-  homeControl.addTo(map.value);
-}
-
-// Render location markers
+// Render location markers using the composable
 const renderMarkers = () => {
-  if (!map.value || !markersLayer.value) return;
-  
-  // If a zoom animation is in progress, defer marker rendering
-  if (map.value._isZooming) {
-    setTimeout(() => renderMarkers(), 300);
-    return;
-  }
-  
-  // Clear existing markers with animation disabled
-  markersLayer.value.clearLayers();
-  locationMarkers.value = {};
-  
-  // Track valid marker coordinates for bounds calculation
-  const validMarkerPositions = [];
-  
-  // Add markers for each location
-  props.locations.forEach(location => {
-    // Skip if no valid coordinates
-    if (!hasValidCoordinates(location)) return;
+  // Get location type names from Types store for each marker
+  const renderLocations = props.locations.map(location => {
+    // Create a copy of the location to avoid modifying props
+    const locationCopy = { ...location }
     
-    // Get coordinates
-    const lat = location.metadata.coordinates.lat;
-    const lng = location.metadata.coordinates.lng || location.metadata.coordinates.long;
-    
-    // Track position for bounds calculation
-    validMarkerPositions.push([lat, lng]);
-    
-    // Find the edge for this location
-    const edge = props.edges.find(e => e.id === location.edge_id);
-    
-    // Create a custom icon based on location type
-    const icon = createCustomIcon(location.type);
-    
-    // Create marker with custom icon
-    const marker = L.marker([lat, lng], {
-      title: location.name,
-      icon: icon,
-      // Improve marker behavior
-      riseOnHover: true,
-      riseOffset: 250
-    });
-    
-    // Build popup content
-    const edgeName = edge ? edge.name : 'Unknown Edge';
-    
-    marker.bindPopup(`
-      <div class="location-popup">
-        <h3>${location.name}</h3>
-        <p class="code">${location.code || ''}</p>
-        <p class="edge"><strong>Edge:</strong> ${edgeName}</p>
-        <div class="badge badge-${location.type}">${getLocationTypeName(location.type)}</div>
-        <button class="view-button" data-location-id="${location.id}">View Details</button>
-      </div>
-    `, {
-      maxWidth: 300,
-      minWidth: 200
-    });
-    
-    // Handle popup open with improved event handling
-    marker.on('popupopen', (e) => {
-      setTimeout(() => {
-        // Find the view button in the popup
-        const button = document.querySelector(`.view-button[data-location-id="${location.id}"]`);
-        if (button) {
-          // Remove any existing event listeners to prevent duplicates
-          const newButton = button.cloneNode(true);
-          button.parentNode.replaceChild(newButton, button);
-          
-          // Add click event
-          newButton.addEventListener('click', () => {
-            emit('location-click', location);
-          });
-        }
-      }, 10);
-    });
-    
-    // Add to marker layer (no animation)
-    markersLayer.value.addLayer(marker);
-    
-    // Store marker reference
-    locationMarkers.value[location.id] = marker;
-  });
-  
-  // Center map to show all markers if there are any
-  if (validMarkerPositions.length > 0) {
-    try {
-      const bounds = L.latLngBounds(validMarkerPositions);
-      
-      // Only perform bounds fitting if we have a reasonable map area
-      if (bounds.isValid()) {
-        map.value.fitBounds(bounds, {
-          padding: [50, 50],
-          maxZoom: 8, // Limit zoom to a more reasonable level
-          animate: false // Disable animation to prevent issues
-        });
-        
-        // Save these bounds for later recentering
-        savedMapState.value = {
-          bounds: bounds
-        };
-      } else {
-        console.warn('Invalid bounds created from markers');
-      }
-    } catch (err) {
-      console.error('Error fitting bounds:', err);
+    // Add a function that will be used by the composable to get the type name
+    locationCopy._getTypeName = () => {
+      return typesStore.getTypeName(location.type, 'locationTypes')
     }
-  }
-}
-
-// Center map to show all locations
-const centerMapToAllLocations = () => {
-  if (!map.value) return;
-  
-  // If a zoom animation is in progress, defer this operation
-  if (map.value._isZooming) {
-    setTimeout(() => centerMapToAllLocations(), 300);
-    return;
-  }
-  
-  if (!savedMapState.value || !savedMapState.value.bounds) {
-    // If we don't have saved bounds, recalculate from current markers
-    const validMarkerPositions = props.locations
-      .filter(location => hasValidCoordinates(location))
-      .map(location => [
-        location.metadata.coordinates.lat,
-        location.metadata.coordinates.lng || location.metadata.coordinates.long
-      ]);
     
-    if (validMarkerPositions.length > 0) {
-      try {
-        const bounds = L.latLngBounds(validMarkerPositions);
-        
-        if (bounds.isValid()) {
-          map.value.fitBounds(bounds, {
-            padding: [50, 50],
-            maxZoom: 8, // More reasonable max zoom
-            animate: false // Disable animation to prevent issues
-          });
-          
-          // Save the new bounds
-          savedMapState.value = { bounds };
-        }
-      } catch (err) {
-        console.error('Error calculating bounds:', err);
-      }
-    }
-  } else {
-    // Use saved bounds
-    try {
-      map.value.fitBounds(savedMapState.value.bounds, {
-        padding: [50, 50],
-        maxZoom: 8, // More reasonable max zoom
-        animate: false // Disable animation to prevent issues
-      });
-    } catch (err) {
-      console.error('Error fitting to saved bounds:', err);
-    }
-  }
-}
-
-// Center to a specific location
-const centerMapToLocation = (coordinates) => {
-  if (!map.value || !coordinates) return;
+    return locationCopy
+  })
   
-  try {
-    map.value.setView([coordinates.lat, coordinates.lng], 14, {
-      animate: true,
-      duration: 0.5
-    });
-  } catch (err) {
-    console.error('Error centering map to location:', err);
-  }
+  // Render markers using the composable
+  mapComposable.renderMarkers(renderLocations, props.edges)
 }
 
-// Find a marker by location ID
-const findMarkerById = (locationId) => {
-  return locationMarkers.value[locationId];
-}
-
-// Create custom icon based on location type
-const createCustomIcon = (locationType) => {
-  // Pick color based on location type
-  const colorMap = {
-    'entrance': '#3b82f6',      // blue
-    'work-area': '#10b981',     // green
-    'meeting-room': '#8b5cf6',  // purple
-    'break-area': '#f59e0b',    // amber
-    'reception': '#6366f1',     // indigo
-    'security': '#ef4444',      // red
-    'server-room': '#06b6d4',   // cyan
-    'utility-room': '#0d9488',  // teal
-    'storage': '#6b7280',       // gray
-    'entrance-hall': '#3b82f6'  // blue
-  };
-  
-  const color = colorMap[locationType] || '#6b7280';
-  
-  return L.divIcon({
-    className: 'custom-location-marker',
-    html: `<div class="location-marker-dot" style="background-color: ${color}"></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -10]
-  });
-}
-
-// Check if location has valid coordinates
-const hasValidCoordinates = (location) => {
-  return location.metadata && 
-         location.metadata.coordinates && 
-         location.metadata.coordinates.lat && 
-         (location.metadata.coordinates.lng || location.metadata.coordinates.long);
-}
-
-// Fix Leaflet icon paths (common issue in bundled apps)
-const fixLeafletIconPaths = () => {
-  delete L.Icon.Default.prototype._getIconUrl;
-  
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-  });
-}
-
-// Get location type name from code
-const getLocationTypeName = (typeCode) => {
-  const types = {
-    'entrance': 'Entrance',
-    'work-area': 'Work Area',
-    'meeting-room': 'Meeting Room',
-    'break-area': 'Break Area',
-    'reception': 'Reception',
-    'security': 'Security',
-    'server-room': 'Server Room',
-    'utility-room': 'Utility Room',
-    'storage': 'Storage',
-    'entrance-hall': 'Entrance Hall'
-  }
-  
-  return types[typeCode] || typeCode;
-}
-
-// Expose methods for parent components
+// Expose methods for parent components to use
 defineExpose({
-  centerMapToAllLocations,
-  centerMapToLocation,
-  findMarkerById
-});
+  centerMapToAllLocations: mapComposable.centerToAllLocations,
+  centerMapToLocation: mapComposable.centerToLocation,
+  findMarkerById: mapComposable.findMarkerById
+})
 </script>
 
 <style scoped>
@@ -465,6 +116,7 @@ defineExpose({
   z-index: 1; /* Lower z-index to prevent overlay issues with sidebar */
 }
 
+/* Custom marker styling - IMPORTANT for marker visibility */
 :deep(.custom-location-marker) {
   background: none;
   border: none;

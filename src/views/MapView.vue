@@ -196,33 +196,47 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { FilterMatchMode } from 'primevue/api'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
-// Import from new service structure
-import { 
-  locationService, 
-  locationTypes, 
-  edgeService
-} from '../services'
+// Import composables and store
+import { useLocation } from '../composables/useLocation'
+import { useTypesStore } from '../stores/types'
 
 // Import components
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
 import GlobalMap from '../components/map/GlobalMap.vue'
 import DataTable from '../components/common/DataTable.vue'
 
-const router = useRouter()
+// Initialize composables and store
+const { 
+  locations, 
+  loading, 
+  error, 
+  locationTypes,
+  formatPath,
+  getTypeName,
+  getTypeClass,
+  hasMetadata,
+  fetchLocations,
+  fetchRootLocations,
+  navigateToLocationDetail,
+  navigateToLocationEdit
+} = useLocation()
+
+// Get types store for types management
+const typesStore = useTypesStore()
+
+// Load location types
+typesStore.loadLocationTypes()
+
 const globalMapRef = ref(null)
 
 // Data
-const locations = ref([])
 const edges = ref([])
-const loading = ref(true)
 
 // Filters
 const selectedEdge = ref(null)
@@ -261,7 +275,7 @@ const edgeOptions = computed(() => {
 const locationTypeOptions = computed(() => {
   return [
     { label: 'All Types', value: null },
-    ...locationTypes.map(type => ({
+    ...typesStore.locationTypes.map(type => ({
       label: type.label,
       value: type.value
     }))
@@ -284,8 +298,9 @@ const filteredLocations = computed(() => {
 
 // Fetch data on component mount
 onMounted(async () => {
+  // Load data using the composable methods
   await Promise.all([
-    fetchLocations(),
+    fetchLocations({ expand: 'edge_id', sort: 'name', limit: 100 }),
     fetchEdges()
   ])
 })
@@ -301,28 +316,13 @@ watch([selectedEdge, selectedType], () => {
   }
 })
 
-// Fetch location data
-const fetchLocations = async () => {
-  loading.value = true
-  try {
-    const response = await locationService.getLocations({
-      expand: 'edge_id',
-      sort: 'name',
-      limit: 100 // Get more items for the map view
-    })
-    
-    locations.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching locations:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// Fetch edge data
+// Fetch edge data - still needs edgeService since we haven't created a composable for it yet
 const fetchEdges = async () => {
   try {
-    const response = await edgeService.getEdges({
+    // Import the edgeService directly for this specific action
+    const { edgeService } = await import('../services')
+    
+    const response = await edgeService.getList({
       sort: 'name'
     })
     
@@ -392,33 +392,6 @@ const formatCoordinates = (location) => {
   return `${lat}, ${lng}`
 }
 
-const formatPath = (path) => {
-  if (!path) return ''
-  return path.split('/').join(' > ')
-}
-
-const getTypeName = (type) => {
-  const locationType = locationTypes.find(t => t.value === type)
-  return locationType ? locationType.label : type
-}
-
-const getTypeClass = (type) => {
-  const classes = {
-    'entrance': 'bg-blue-100 text-blue-800',
-    'work-area': 'bg-green-100 text-green-800',
-    'meeting-room': 'bg-purple-100 text-purple-800',
-    'break-area': 'bg-amber-100 text-amber-800',
-    'reception': 'bg-indigo-100 text-indigo-800',
-    'security': 'bg-red-100 text-red-800',
-    'server-room': 'bg-cyan-100 text-cyan-800',
-    'utility-room': 'bg-teal-100 text-teal-800',
-    'storage': 'bg-gray-100 text-gray-800',
-    'entrance-hall': 'bg-blue-100 text-blue-800'
-  }
-  
-  return classes[type] || 'bg-gray-100 text-gray-800'
-}
-
 const getIconColorClass = (type) => {
   const classes = {
     'entrance': 'text-blue-600',
@@ -453,12 +426,12 @@ const navigateToDetail = (id) => {
     id = id.id;
   }
   locationDialog.value.visible = false
-  router.push({ name: 'location-detail', params: { id } })
+  navigateToLocationDetail(id)
 }
 
 const navigateToEdit = (id) => {
   locationDialog.value.visible = false
-  router.push({ name: 'edit-location', params: { id } })
+  navigateToLocationEdit(id)
 }
 </script>
 

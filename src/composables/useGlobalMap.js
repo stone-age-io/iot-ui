@@ -1,4 +1,4 @@
-// src/composables/useGlobalMap.js
+// src/composables/useGlobalMap.js - Fixed marker visibility issue
 import { ref, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -6,6 +6,7 @@ import 'leaflet.markercluster/dist/leaflet.markercluster.js'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for global map operations
@@ -13,6 +14,10 @@ import { useApiOperation } from './useApiOperation'
  */
 export function useGlobalMap() {
   const { performOperation } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Ensure types are loaded
+  typesStore.loadLocationTypes()
   
   // State
   const map = ref(null)
@@ -223,6 +228,11 @@ export function useGlobalMap() {
         riseOffset: 250
       })
       
+      // Get location type name - use the function provided by the component if available
+      const typeName = location._getTypeName 
+        ? location._getTypeName() 
+        : getLocationTypeName(location.type)
+      
       // Build popup content
       const edgeName = edge ? edge.name : 'Unknown Edge'
       
@@ -231,7 +241,7 @@ export function useGlobalMap() {
           <h3>${location.name}</h3>
           <p class="code">${location.code || ''}</p>
           <p class="edge"><strong>Edge:</strong> ${edgeName}</p>
-          <div class="badge badge-${location.type}">${getLocationTypeName(location.type)}</div>
+          <div class="badge badge-${location.type}">${typeName}</div>
           <button class="view-button" data-location-id="${location.id}">View Details</button>
         </div>
       `, {
@@ -261,10 +271,10 @@ export function useGlobalMap() {
         }, 10)
       })
       
-      // Add to marker layer
+      // IMPORTANT FIX: Add marker directly to the marker layer
       markersLayer.value.addLayer(marker)
       
-      // Store marker reference
+      // Store marker reference for later use
       locationMarkers.value[location.id] = marker
     })
     
@@ -368,6 +378,7 @@ export function useGlobalMap() {
     
     const color = colorMap[locationType] || '#6b7280'
     
+    // IMPORTANT FIX: Ensure the HTML structure matches what the CSS expects
     return L.divIcon({
       className: 'custom-location-marker',
       html: `<div class="location-marker-dot" style="background-color: ${color}"></div>`,
@@ -395,6 +406,12 @@ export function useGlobalMap() {
    * @returns {string} - Display name
    */
   const getLocationTypeName = (typeCode) => {
+    // Try to get name from the types store first
+    if (typesStore.locationTypes && typesStore.locationTypes.length > 0) {
+      return typesStore.getTypeName(typeCode, 'locationTypes')
+    }
+    
+    // Fallback to hardcoded types
     const types = {
       'entrance': 'Entrance',
       'work-area': 'Work Area',
@@ -458,7 +475,6 @@ export function useGlobalMap() {
     centerToAllLocations,
     centerToLocation,
     findMarkerById,
-    getLocationTypeName,
     hasValidCoordinates,
     cleanup
   }

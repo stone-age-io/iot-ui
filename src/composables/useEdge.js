@@ -3,7 +3,11 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
-import { edgeService, validateEdgeCode, generateEdgeCode } from '../services'
+import { 
+  edgeService, 
+  validateEdgeCode, 
+  generateEdgeCode
+} from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
 
@@ -17,7 +21,7 @@ export function useEdge() {
   const { performOperation, performDelete } = useApiOperation()
   const typesStore = useTypesStore()
   
-  // Ensure edge types and regions are loaded
+  // Load edge types and regions
   typesStore.loadEdgeTypes()
   typesStore.loadEdgeRegions()
   
@@ -51,7 +55,7 @@ export function useEdge() {
   
   /**
    * Get edge region display name
-   * @param {string} regionCode - Region code
+   * @param {string} regionCode - Edge region code
    * @returns {string} - Display name
    */
   const getRegionName = (regionCode) => {
@@ -68,49 +72,12 @@ export function useEdge() {
   }
   
   /**
-   * Get CSS class for region badge
-   * @param {string} regionCode - Region code
+   * Get CSS class for edge region badge
+   * @param {string} regionCode - Edge region code
    * @returns {string} - CSS class
    */
   const getRegionClass = (regionCode) => {
     return typesStore.getEdgeRegionClass(regionCode)
-  }
-  
-  /**
-   * Get a summary of metadata for display
-   * @param {Object} metadata - Metadata object
-   * @returns {string} - Summary text
-   */
-  const getMetadataSummary = (metadata) => {
-    if (!metadata || typeof metadata !== 'object') {
-      return 'No metadata'
-    }
-    
-    const keys = Object.keys(metadata)
-    if (keys.length === 0) {
-      return 'Empty metadata'
-    }
-    
-    // Display a summary of the first few keys
-    const displayKeys = keys.slice(0, 2)
-    const summary = displayKeys.map(key => {
-      const value = metadata[key]
-      return `${key}: ${typeof value === 'object' ? '{...}' : value}`
-    }).join(', ')
-    
-    return keys.length > 2 ? `${summary}, +${keys.length - 2} more` : summary
-  }
-  
-  /**
-   * Check if an edge has metadata
-   * @param {Object} edge - Edge object
-   * @returns {boolean} - True if metadata exists
-   */
-  const hasMetadata = (edge) => {
-    return edge && 
-           edge.metadata && 
-           typeof edge.metadata === 'object' && 
-           Object.keys(edge.metadata).length > 0
   }
   
   /**
@@ -120,11 +87,7 @@ export function useEdge() {
    */
   const fetchEdges = async (params = {}) => {
     return performOperation(
-      () => edgeService.getList({ 
-        withMetadata: true,
-        sort: '-created',
-        ...params
-      }),
+      () => edgeService.getList(params),
       {
         loadingRef: loading,
         errorRef: error,
@@ -154,6 +117,54 @@ export function useEdge() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load edge details',
+        onSuccess: (response) => {
+          // Parse metadata if it's a string
+          if (response.data.metadata && typeof response.data.metadata === 'string') {
+            try {
+              response.data.metadata = JSON.parse(response.data.metadata)
+            } catch (e) {
+              console.warn('Failed to parse metadata for edge:', response.data.code)
+              response.data.metadata = {}
+            }
+          }
+          return response.data
+        }
+      }
+    )
+  }
+  
+  /**
+   * Create a new edge
+   * @param {Object} edge - Edge data
+   * @returns {Promise<Object>} - Created edge
+   */
+  const createEdge = async (edge) => {
+    return performOperation(
+      () => edgeService.create(edge),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to create edge',
+        successMessage: `Edge ${edge.code} has been created`,
+        onSuccess: (response) => response.data
+      }
+    )
+  }
+  
+  /**
+   * Update an existing edge
+   * @param {string} id - Edge ID
+   * @param {Object} edge - Updated edge data
+   * @returns {Promise<Object>} - Updated edge
+   */
+  const updateEdge = async (id, edge) => {
+    return performOperation(
+      () => edgeService.update(id, edge),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update edge',
+        successMessage: `Edge ${edge.code} has been updated`,
         onSuccess: (response) => response.data
       }
     )
@@ -179,22 +190,32 @@ export function useEdge() {
   }
   
   /**
-   * Open Grafana dashboard for an edge
-   * @param {string} edgeId - Edge ID
+   * Update edge metadata
+   * @param {string} id - Edge ID
+   * @param {Object} metadata - Metadata to update or replace
+   * @param {boolean} merge - Whether to merge with existing metadata
+   * @returns {Promise<Object>} - Updated edge
    */
-  const openInGrafana = (edgeId) => {
-    const grafanaUrl = import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com'
-    const dashboardUrl = `${grafanaUrl}/d/edge-overview/edge-overview?var-edge_id=${edgeId}`
-    window.open(dashboardUrl, '_blank')
+  const updateEdgeMetadata = async (id, metadata, merge = true) => {
+    return performOperation(
+      () => edgeService.updateEdgeMetadata(id, metadata, merge),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update edge metadata',
+        successMessage: 'Edge metadata has been updated',
+        onSuccess: (response) => response.data
+      }
+    )
   }
   
   // Navigation methods
-  const navigateToEdgeList = () => router.push({ name: 'edges' })
+  const navigateToEdgeList = (query = {}) => router.push({ name: 'edges', query })
   const navigateToEdgeDetail = (id) => router.push({ name: 'edge-detail', params: { id } })
   const navigateToEdgeEdit = (id) => router.push({ name: 'edit-edge', params: { id } })
-  const navigateToEdgeCreate = () => router.push({ name: 'create-edge' })
+  const navigateToEdgeCreate = (query = {}) => router.push({ name: 'create-edge', query })
   const navigateToLocations = (edgeId) => router.push({ name: 'locations', query: { edge: edgeId } })
-  const navigateToThings = (edgeId) => router.push({ name: 'things', query: { edge: edgeId } })
+  const navigateToCreateLocation = (edgeId) => router.push({ name: 'create-location', query: { edge_id: edgeId } })
   
   return {
     // State
@@ -210,16 +231,16 @@ export function useEdge() {
     getRegionName,
     getTypeClass,
     getRegionClass,
-    getMetadataSummary,
-    hasMetadata,
     validateEdgeCode,
     generateEdgeCode,
     
     // Operations
     fetchEdges,
     fetchEdge,
+    createEdge,
+    updateEdge,
     deleteEdge,
-    openInGrafana,
+    updateEdgeMetadata,
     
     // Navigation
     navigateToEdgeList,
@@ -227,6 +248,6 @@ export function useEdge() {
     navigateToEdgeEdit,
     navigateToEdgeCreate,
     navigateToLocations,
-    navigateToThings
+    navigateToCreateLocation
   }
 }
