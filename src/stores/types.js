@@ -9,22 +9,26 @@ import {
 } from '../services/type/typeServices'
 
 /**
- * Centralized store for type management
- * Handles edge types, edge regions, location types, and thing types
- * Provides consistent loading, caching, and error handling
+ * Centralized Pinia store for managing all entity type data.
+ * This store provides a single source of truth for all type-related data,
+ * including edge types, edge regions, location types, and thing types.
  */
 export const useTypesStore = defineStore('types', () => {
-  // State
+  // State for all entity types
   const edgeTypes = ref([])
   const edgeRegions = ref([])
   const locationTypes = ref([])
   const thingTypes = ref([])
+
+  // Loading states
   const loading = ref({
     edgeTypes: false,
     edgeRegions: false,
     locationTypes: false,
     thingTypes: false
   })
+
+  // Error states
   const error = ref({
     edgeTypes: null,
     edgeRegions: null,
@@ -32,7 +36,7 @@ export const useTypesStore = defineStore('types', () => {
     thingTypes: null
   })
 
-  // Computed properties
+  // Computed properties for aggregate status
   const isLoading = computed(() => 
     loading.value.edgeTypes || 
     loading.value.edgeRegions || 
@@ -47,8 +51,12 @@ export const useTypesStore = defineStore('types', () => {
     error.value.thingTypes
   )
 
-  // Actions for loading types
+  /**
+   * Load edge types with caching
+   * @returns {Promise<Array>} - Edge types
+   */
   async function loadEdgeTypes() {
+    // Return cached types if available
     if (edgeTypes.value.length > 0) return edgeTypes.value
     
     loading.value.edgeTypes = true
@@ -67,7 +75,12 @@ export const useTypesStore = defineStore('types', () => {
     }
   }
 
+  /**
+   * Load edge regions with caching
+   * @returns {Promise<Array>} - Edge regions
+   */
   async function loadEdgeRegions() {
+    // Return cached regions if available
     if (edgeRegions.value.length > 0) return edgeRegions.value
     
     loading.value.edgeRegions = true
@@ -86,7 +99,12 @@ export const useTypesStore = defineStore('types', () => {
     }
   }
 
+  /**
+   * Load location types with caching
+   * @returns {Promise<Array>} - Location types
+   */
   async function loadLocationTypes() {
+    // Return cached types if available
     if (locationTypes.value.length > 0) return locationTypes.value
     
     loading.value.locationTypes = true
@@ -105,7 +123,12 @@ export const useTypesStore = defineStore('types', () => {
     }
   }
 
+  /**
+   * Load thing types with caching
+   * @returns {Promise<Array>} - Thing types
+   */
   async function loadThingTypes() {
+    // Return cached types if available
     if (thingTypes.value.length > 0) return thingTypes.value
     
     loading.value.thingTypes = true
@@ -124,7 +147,10 @@ export const useTypesStore = defineStore('types', () => {
     }
   }
 
-  // Utility function to load all types simultaneously
+  /**
+   * Load all type collections at once
+   * @returns {Promise<Array>} - All type collections
+   */
   async function loadAllTypes() {
     return Promise.all([
       loadEdgeTypes(),
@@ -134,7 +160,9 @@ export const useTypesStore = defineStore('types', () => {
     ])
   }
 
-  // Reset store state (useful for logout)
+  /**
+   * Reset store state (useful for logout)
+   */
   function resetTypes() {
     edgeTypes.value = []
     edgeRegions.value = []
@@ -150,11 +178,17 @@ export const useTypesStore = defineStore('types', () => {
     }
   }
 
-  // Utility functions for getting type names and classes
+  /**
+   * Get type name from code
+   * @param {string} typeCode - Type code
+   * @param {string} collection - Collection name (edgeTypes, edgeRegions, locationTypes, thingTypes)
+   * @returns {string} - Type name or code if not found
+   */
   function getTypeName(typeCode, collection) {
     if (!typeCode) return ''
     
-    let types = []
+    // Get the appropriate collection
+    let types
     switch (collection) {
       case 'edgeTypes':
         types = edgeTypes.value
@@ -172,35 +206,93 @@ export const useTypesStore = defineStore('types', () => {
         return typeCode
     }
     
+    // Find matching type
     const type = types.find(t => t.value === typeCode)
     return type ? type.label : typeCode
   }
 
-  // Get css class for edge type badge
+  /**
+   * Get CSS class for edge type badge
+   * @param {string} typeCode - Edge type code
+   * @returns {string} - CSS class
+   */
   function getEdgeTypeClass(typeCode) {
-    switch (typeCode) {
-      case 'bld': return 'bg-blue-100 text-blue-800'
-      case 'dc': return 'bg-purple-100 text-purple-800'
-      case 'wh': return 'bg-amber-100 text-amber-800'
-      case 'camp': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
+    // Map of type codes to CSS classes
+    const classMap = {
+      'bld': 'bg-blue-100 text-blue-800',
+      'srv': 'bg-purple-100 text-purple-800',
+      'gw': 'bg-green-100 text-green-800',
+      'hst': 'bg-amber-100 text-amber-800'
     }
+    
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
   }
 
-  // Get css class for edge region badge
+  /**
+   * Get CSS class for edge region badge
+   * @param {string} regionCode - Edge region code
+   * @returns {string} - CSS class
+   */
   function getEdgeRegionClass(regionCode) {
-    switch (regionCode) {
-      case 'na': return 'bg-red-100 text-red-800'
-      case 'eu': return 'bg-blue-100 text-blue-800'
-      case 'ap': return 'bg-green-100 text-green-800'
-      case 'sa': return 'bg-yellow-100 text-yellow-800'
-      case 'af': return 'bg-orange-100 text-orange-800'
-      case 'me': return 'bg-purple-100 text-purple-800'
-      case 'aus': return 'bg-teal-100 text-teal-800'
-      default: return 'bg-gray-100 text-gray-800'
+    // Map of region codes to CSS classes
+    const classMap = {
+      'na': 'bg-blue-100 text-blue-800',
+      'eu': 'bg-green-100 text-green-800',
+      'ap': 'bg-purple-100 text-purple-800',
+      'sa': 'bg-amber-100 text-amber-800',
+      'af': 'bg-red-100 text-red-800'
     }
+    
+    return classMap[regionCode] || 'bg-gray-100 text-gray-800'
   }
 
+  /**
+   * Get CSS class for location type badge
+   * @param {string} typeCode - Location type code
+   * @returns {string} - CSS class
+   */
+  function getLocationTypeClass(typeCode) {
+    // Map of location type codes to CSS classes
+    const classMap = {
+      'entrance': 'bg-blue-100 text-blue-800',
+      'work-area': 'bg-green-100 text-green-800',
+      'meeting-room': 'bg-purple-100 text-purple-800',
+      'break-area': 'bg-amber-100 text-amber-800',
+      'reception': 'bg-indigo-100 text-indigo-800',
+      'security': 'bg-red-100 text-red-800',
+      'server-room': 'bg-cyan-100 text-cyan-800',
+      'utility-room': 'bg-teal-100 text-teal-800',
+      'storage': 'bg-gray-100 text-gray-800',
+      'entrance-hall': 'bg-blue-100 text-blue-800'
+    }
+    
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
+  }
+
+  /**
+   * Get CSS class for thing type badge
+   * @param {string} typeCode - Thing type code
+   * @returns {string} - CSS class
+   */
+  function getThingTypeClass(typeCode) {
+    // Map of thing type codes to CSS classes
+    const classMap = {
+      'reader': 'bg-blue-100 text-blue-800',
+      'controller': 'bg-purple-100 text-purple-800',
+      'lock': 'bg-amber-100 text-amber-800',
+      'temperature-sensor': 'bg-green-100 text-green-800',
+      'humidity-sensor': 'bg-cyan-100 text-cyan-800',
+      'hvac': 'bg-teal-100 text-teal-800',
+      'lighting': 'bg-yellow-100 text-yellow-800',
+      'camera': 'bg-red-100 text-red-800',
+      'motion-sensor': 'bg-indigo-100 text-indigo-800',
+      'occupancy-sensor': 'bg-orange-100 text-orange-800'
+    }
+    
+    return classMap[typeCode] || 'bg-gray-100 text-gray-800'
+  }
+
+  // Return public API
   return {
     // State
     edgeTypes,
@@ -209,8 +301,6 @@ export const useTypesStore = defineStore('types', () => {
     thingTypes,
     loading,
     error,
-    
-    // Computed
     isLoading,
     hasError,
     
@@ -225,6 +315,8 @@ export const useTypesStore = defineStore('types', () => {
     // Helpers
     getTypeName,
     getEdgeTypeClass,
-    getEdgeRegionClass
+    getEdgeRegionClass,
+    getLocationTypeClass,
+    getThingTypeClass
   }
 })

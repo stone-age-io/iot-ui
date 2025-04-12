@@ -224,7 +224,7 @@
       :modal="true"
       :style="{ width: '90%', maxWidth: '900px' }"
     >
-      <div v-if="loading" class="flex justify-center items-center p-4">
+      <div v-if="messagesLoading" class="flex justify-center items-center p-4">
         <ProgressSpinner strokeWidth="4" />
       </div>
       <div v-else>
@@ -385,7 +385,6 @@ const {
   messages,
   hasMoreMessages,
   loading: messagesLoading,
-  formatTime: formatMessageTime,
   loadMessages,
   loadMoreMessages,
   toggleMessageDetails
@@ -441,6 +440,7 @@ const loadThingDetail = async () => {
     }
   } catch (err) {
     // Error handling is done in the composable
+    console.error('Error in loadThingDetail:', err)
   }
 }
 

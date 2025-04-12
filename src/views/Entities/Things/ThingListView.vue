@@ -16,34 +16,25 @@
         :columns="columns"
         :loading="loading"
         :searchable="true"
-        :searchFields="['code', 'name', 'type', 'expand.location_id.code', 'expand.edge_id.code']"
-        title="IoT Things"
+        :searchFields="['thing_code', 'name', 'thing_type', 'expand.location_id.code', 'expand.edge_id.code']"
+        title="Things"
         empty-message="No things found"
         @row-click="(data) => navigateToThingDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Thing" 
-            icon="pi pi-plus" 
-            @click="navigateToThingCreate(routeQuery)" 
-          />
-        </template>
-        
         <!-- Code column with custom formatting -->
-        <template #code-body="{ data }">
-          <div class="font-medium text-primary-700 font-mono">{{ data.code }}</div>
+        <template #thing_code-body="{ data }">
+          <div class="font-medium text-primary-700 font-mono">{{ data.thing_code }}</div>
         </template>
         
         <!-- Type column with badge -->
-        <template #type-body="{ data }">
+        <template #thing_type-body="{ data }">
           <span 
             class="px-2 py-1 text-xs rounded-full font-medium"
-            :class="getTypeClass(data.type)"
+            :class="getTypeClass(data.thing_type)"
           >
-            {{ getTypeName(data.type) }}
+            {{ getTypeName(data.thing_type) }}
           </span>
         </template>
         
@@ -154,11 +145,11 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - updated to use correct field names
 const columns = [
-  { field: 'code', header: 'Code', sortable: true },
+  { field: 'thing_code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'type', header: 'Type', sortable: true },
+  { field: 'thing_type', header: 'Type', sortable: true },
   { field: 'location_id', header: 'Location', sortable: true },
   { field: 'edge_id', header: 'Edge', sortable: true }
 ]
@@ -178,7 +169,7 @@ onMounted(async () => {
 
 // Handle delete button click
 const handleDeleteClick = (thing) => {
-  confirmDelete(thing, 'thing', 'code')
+  confirmDelete(thing, 'thing', 'thing_code')
 }
 
 // Handle delete confirmation
@@ -189,7 +180,7 @@ const handleDeleteConfirm = async () => {
   
   const success = await deleteThing(
     deleteDialog.value.item.id, 
-    deleteDialog.value.item.code
+    deleteDialog.value.item.thing_code
   )
   
   if (success) {

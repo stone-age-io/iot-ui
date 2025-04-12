@@ -154,10 +154,10 @@
           </div>
         </EntityForm>
       </div>
-      
-      <!-- Toast for success/error messages -->
-      <Toast />
     </div>
+    
+    <!-- Toast for success/error messages -->
+    <Toast />
   </div>
 </template>
 
@@ -179,7 +179,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 
-// Get thing type options
+// Get thing type options and fetch function
 const { thingTypes, fetchThing, error } = useThing()
 
 // Use the thing form composable in edit mode
@@ -215,6 +215,8 @@ onMounted(async () => {
     if (thingData) {
       loadThing(thingData)
     }
+  } catch (error) {
+    console.error('Error loading thing data:', error)
   } finally {
     initialLoading.value = false
   }

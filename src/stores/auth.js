@@ -47,8 +47,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      // Use the endpoint from the config
-      const response = await apiService.post('/pb/api' + ENDPOINTS.AUTH.LOGIN, credentials)
+      // Fixed endpoint access - ENDPOINTS is already the AUTH object from configService
+      const response = await apiService.post('/pb/api' + ENDPOINTS.LOGIN, credentials)
       
       // Store the token and user info
       token.value = response.data.token
@@ -126,7 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
-  // Update user information - NEW METHOD
+  // Update user information
   function updateUser(userData) {
     if (!userData) return
     
