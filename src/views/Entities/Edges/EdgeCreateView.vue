@@ -161,7 +161,6 @@
 </template>
 
 <script setup>
-import { useEdge } from '../../../composables/useEdge'
 import { useEdgeForm } from '../../../composables/useEdgeForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -174,9 +173,6 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-// Get edge type and region options
-const { edgeTypes, edgeRegions } = useEdge()
-
-// Use the edge form composable in create mode
-const { edge, v$, loading, updateCode, submitForm } = useEdgeForm('create')
+// Use the edge form composable in create mode - now uses the Types store
+const { edge, v$, loading, edgeTypes, edgeRegions, updateCode, submitForm } = useEdgeForm('create')
 </script>

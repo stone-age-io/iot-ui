@@ -142,7 +142,7 @@ import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vu
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
-// Get edge functionality from composable
+// Get edge functionality from composable - now uses the Types store internally
 const { 
   edges,
   loading,

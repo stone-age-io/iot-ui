@@ -1,11 +1,11 @@
 // src/composables/useEdgeForm.js
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, minLength, helpers } from '@vuelidate/validators'
-import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
-import { edgeService, generateEdgeCode, validateEdgeCode } from '../services'
+import { edgeService, validateEdgeCode, generateEdgeCode } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for edge form handling
@@ -15,9 +15,17 @@ import { useApiOperation } from './useApiOperation'
  * @returns {Object} - Form methods and state
  */
 export function useEdgeForm(mode = 'create') {
-  const toast = useToast()
   const router = useRouter()
   const { performOperation } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Load edge types and regions
+  typesStore.loadEdgeTypes()
+  typesStore.loadEdgeRegions()
+  
+  // Access edge types and regions from the store
+  const edgeTypes = computed(() => typesStore.edgeTypes)
+  const edgeRegions = computed(() => typesStore.edgeRegions)
   
   // Form data with defaults
   const edge = ref({
@@ -76,12 +84,27 @@ export function useEdgeForm(mode = 'create') {
       name: edgeData.name || '',
       description: edgeData.description || '',
       active: edgeData.active ?? true,
-      metadata: edgeData.metadata || {}
+      metadata: edgeData.metadata || {},
+      number: extractNumberFromCode(edgeData.code)
     }
   }
   
   /**
-   * Generate edge code when type, region, or number changes
+   * Extract number part from edge code
+   * @param {string} code - Edge code (format: type-region-number)
+   * @returns {number|null} - Extracted number or null
+   */
+  const extractNumberFromCode = (code) => {
+    if (!code) return null
+    const parts = code.split('-')
+    if (parts.length !== 3) return null
+    
+    const num = parseInt(parts[2], 10)
+    return isNaN(num) ? null : num
+  }
+  
+  /**
+   * Generate edge code from type, region, and number
    */
   const updateCode = () => {
     if (edge.value.type && edge.value.region && edge.value.number) {
@@ -110,7 +133,7 @@ export function useEdgeForm(mode = 'create') {
       active: edge.value.active
     }
     
-    // Add fields for create mode
+    // Add type and region for create mode
     if (mode === 'create') {
       edgeData.type = edge.value.type
       edgeData.region = edge.value.region
@@ -157,6 +180,8 @@ export function useEdgeForm(mode = 'create') {
     edge,
     v$,
     loading,
+    edgeTypes,
+    edgeRegions,
     loadEdge,
     updateCode,
     submitForm,

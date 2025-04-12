@@ -5,7 +5,6 @@ import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { 
   locationService, 
-  locationTypes, 
   parseLocationPath, 
   validateLocationCode, 
   generateLocationCode, 
@@ -13,6 +12,7 @@ import {
   locationZones 
 } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for location-related functionality
@@ -22,6 +22,10 @@ export function useLocation() {
   const router = useRouter()
   const toast = useToast()
   const { performOperation, performDelete } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Load location types
+  typesStore.loadLocationTypes()
   
   // Common state
   const locations = ref([])
@@ -29,6 +33,9 @@ export function useLocation() {
   const loading = ref(false)
   const childrenLoading = ref(false)
   const error = ref(null)
+  
+  // Location types from the store
+  const locationTypes = computed(() => typesStore.locationTypes)
   
   /**
    * Format date for display
@@ -46,8 +53,7 @@ export function useLocation() {
    * @returns {string} - Display name
    */
   const getTypeName = (typeCode) => {
-    const type = locationTypes.find(t => t.value === typeCode)
-    return type ? type.label : typeCode
+    return typesStore.getTypeName(typeCode, 'locationTypes')
   }
   
   /**
@@ -159,6 +165,7 @@ export function useLocation() {
   /**
    * Fetch child locations for a given parent
    * @param {string} parentId - Parent location ID
+   * @param {Object} params - Additional query parameters
    * @returns {Promise<Array>} - List of child locations
    */
   const fetchChildLocations = async (parentId) => {
@@ -186,13 +193,15 @@ export function useLocation() {
   
   /**
    * Fetch root locations (locations without parents)
+   * @param {Object} params - Additional query parameters
    * @returns {Promise<Array>} - List of root locations
    */
-  const fetchRootLocations = async () => {
+  const fetchRootLocations = async (params = {}) => {
     return performOperation(
       () => locationService.getRootLocations({
         expand: 'edge_id,parent_id',
-        sort: 'name'
+        sort: 'name',
+        ...params
       }),
       {
         loadingRef: loading,

@@ -3,8 +3,9 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
-import { edgeService, edgeRegions, edgeTypes, generateEdgeCode, validateEdgeCode } from '../services'
+import { edgeService, validateEdgeCode, generateEdgeCode } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for edge-related functionality
@@ -14,11 +15,20 @@ export function useEdge() {
   const router = useRouter()
   const toast = useToast()
   const { performOperation, performDelete } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Ensure edge types and regions are loaded
+  typesStore.loadEdgeTypes()
+  typesStore.loadEdgeRegions()
   
   // Common state
   const edges = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Edge types and regions from the store
+  const edgeTypes = computed(() => typesStore.edgeTypes)
+  const edgeRegions = computed(() => typesStore.edgeRegions)
   
   /**
    * Format date for display
@@ -36,8 +46,7 @@ export function useEdge() {
    * @returns {string} - Display name
    */
   const getTypeName = (typeCode) => {
-    const type = edgeTypes.find(t => t.value === typeCode)
-    return type ? type.label : typeCode
+    return typesStore.getTypeName(typeCode, 'edgeTypes')
   }
   
   /**
@@ -46,8 +55,7 @@ export function useEdge() {
    * @returns {string} - Display name
    */
   const getRegionName = (regionCode) => {
-    const region = edgeRegions.find(r => r.value === regionCode)
-    return region ? region.label : regionCode
+    return typesStore.getTypeName(regionCode, 'edgeRegions')
   }
   
   /**
@@ -56,13 +64,7 @@ export function useEdge() {
    * @returns {string} - CSS class
    */
   const getTypeClass = (typeCode) => {
-    switch (typeCode) {
-      case 'bld': return 'bg-blue-100 text-blue-800'
-      case 'dc': return 'bg-purple-100 text-purple-800'
-      case 'wh': return 'bg-amber-100 text-amber-800'
-      case 'camp': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+    return typesStore.getEdgeTypeClass(typeCode)
   }
   
   /**
@@ -71,16 +73,7 @@ export function useEdge() {
    * @returns {string} - CSS class
    */
   const getRegionClass = (regionCode) => {
-    switch (regionCode) {
-      case 'na': return 'bg-red-100 text-red-800'
-      case 'eu': return 'bg-blue-100 text-blue-800'
-      case 'ap': return 'bg-green-100 text-green-800'
-      case 'sa': return 'bg-yellow-100 text-yellow-800'
-      case 'af': return 'bg-orange-100 text-orange-800'
-      case 'me': return 'bg-purple-100 text-purple-800'
-      case 'aus': return 'bg-teal-100 text-teal-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+    return typesStore.getEdgeRegionClass(regionCode)
   }
   
   /**
@@ -219,8 +212,8 @@ export function useEdge() {
     getRegionClass,
     getMetadataSummary,
     hasMetadata,
-    generateEdgeCode,
     validateEdgeCode,
+    generateEdgeCode,
     
     // Operations
     fetchEdges,

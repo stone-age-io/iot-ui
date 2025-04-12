@@ -2,9 +2,9 @@
 import { apiHelpers } from './api';
 
 // Entity services
-import { edgeService, edgeRegions, edgeTypes, validateEdgeCode, generateEdgeCode } from './edge/edgeService';
-import { locationService, locationTypes, parseLocationPath, validateLocationCode, generateLocationCode, locationLevels, locationZones } from './location/locationService';
-import { thingService, thingTypes, validateThingCode, generateThingCode, getThingTypeAbbreviation } from './thing/thingService';
+import { edgeService, validateEdgeCode, generateEdgeCode } from './edge/edgeService';
+import { locationService, parseLocationPath, validateLocationCode, generateLocationCode, locationLevels, locationZones } from './location/locationService';
+import { thingService, validateThingCode, generateThingCode, getThingTypeAbbreviation } from './thing/thingService';
 import { clientService, generateClientUsername, generateSecurePassword } from './client/clientService';
 import { topicPermissionService, validateTopic } from './topic-permission/topicPermissionService';
 import { userService } from './user/userService';
@@ -18,6 +18,12 @@ import { thingTypeService } from './type/thingTypeService';
 // NATS services
 import natsService from './nats/natsService';
 import { natsConfigService } from './nats/natsConfigService';
+
+// Legacy type exports (empty arrays for backward compatibility)
+export const edgeTypes = [];
+export const edgeRegions = [];
+export const locationTypes = [];
+export const thingTypes = [];
 
 // Export all services and utilities
 export {
@@ -33,13 +39,10 @@ export {
   userService,
   
   // Edge utilities
-  edgeRegions,
-  edgeTypes,
   validateEdgeCode,
   generateEdgeCode,
   
   // Location utilities
-  locationTypes,
   parseLocationPath,
   validateLocationCode,
   generateLocationCode,
@@ -47,7 +50,6 @@ export {
   locationZones,
   
   // Thing utilities
-  thingTypes,
   validateThingCode,
   generateThingCode,
   getThingTypeAbbreviation,

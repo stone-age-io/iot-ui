@@ -5,12 +5,12 @@ import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { 
   thingService, 
-  thingTypes, 
   generateThingCode, 
   validateThingCode,
   getThingTypeAbbreviation 
 } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for thing-related functionality
@@ -20,11 +20,18 @@ export function useThing() {
   const router = useRouter()
   const toast = useToast()
   const { performOperation, performDelete } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Load thing types
+  typesStore.loadThingTypes()
   
   // Common state
   const things = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Thing types from store
+  const thingTypes = computed(() => typesStore.thingTypes)
   
   /**
    * Format date for display
@@ -52,8 +59,7 @@ export function useThing() {
    * @returns {string} - Display name
    */
   const getTypeName = (thingType) => {
-    const type = thingTypes.find(t => t.value === thingType)
-    return type ? type.label : thingType
+    return typesStore.getTypeName(thingType, 'thingTypes')
   }
   
   /**

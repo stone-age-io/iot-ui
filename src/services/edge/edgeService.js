@@ -115,32 +115,3 @@ export const generateEdgeCode = (type, region, number) => {
   const paddedNumber = String(number).padStart(3, '0')
   return `${type}-${region}-${paddedNumber}`
 }
-
-// Export edge types/regions references for backward compatibility
-// These will now be loaded dynamically from the service
-export const edgeTypes = []
-export const edgeRegions = []
-
-// Dynamic loading of edge types and regions
-// We initialize them empty and will load them in components when needed
-const initializeEdgeTypes = async () => {
-  try {
-    const types = await edgeService.getEdgeTypes()
-    edgeTypes.splice(0, edgeTypes.length, ...types)
-  } catch (error) {
-    console.error('Error initializing edge types:', error)
-  }
-}
-
-const initializeEdgeRegions = async () => {
-  try {
-    const regions = await edgeService.getEdgeRegions()
-    edgeRegions.splice(0, edgeRegions.length, ...regions)
-  } catch (error) {
-    console.error('Error initializing edge regions:', error)
-  }
-}
-
-// Initialize types and regions
-initializeEdgeTypes()
-initializeEdgeRegions()

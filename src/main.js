@@ -19,9 +19,13 @@ import Tooltip from 'primevue/tooltip';
 // Import NATS connection manager
 import natsConnectionManager from './services/nats/natsConnectionManager'
 
-const app = createApp(App)
+// Import type store
+import { useTypesStore } from './stores/types'
 
-app.use(createPinia())
+const app = createApp(App)
+const pinia = createPinia()
+
+app.use(pinia)
 app.use(router)
 app.use(PrimeVue, { ripple: true })
 app.use(ConfirmationService)
@@ -32,12 +36,22 @@ app.directive('tooltip', Tooltip);
 // Initialize NATS connection manager
 natsConnectionManager.initialize()
 
+// Initialize type store after Pinia is installed
+const initializeStores = () => {
+  const typesStore = useTypesStore()
+  // Preload type data that's used across the app
+  typesStore.loadAllTypes()
+}
+
 // Add navigation guard to check if user is logged in
 // and initialize NATS connection
 router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && localStorage.getItem('token')) {
     // User is logged in, attempt to connect NATS if auto-connect is enabled
     natsConnectionManager.attemptAutoConnect()
+    
+    // Initialize stores if not already done
+    initializeStores()
   }
   next()
 })

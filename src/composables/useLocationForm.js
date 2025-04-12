@@ -1,12 +1,10 @@
 // src/composables/useLocationForm.js
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
-import { useToast } from 'primevue/usetoast'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { 
   locationService, 
-  locationTypes, 
   locationLevels, 
   locationZones,
   generateLocationCode, 
@@ -14,6 +12,7 @@ import {
 } from '../services'
 import { edgeService } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for location form handling
@@ -23,15 +22,19 @@ import { useApiOperation } from './useApiOperation'
  * @returns {Object} - Form methods and state
  */
 export function useLocationForm(mode = 'create') {
-  const toast = useToast()
   const router = useRouter()
+  const route = useRoute()
   const { performOperation } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Load location types
+  typesStore.loadLocationTypes()
   
   // Form data with defaults
   const location = ref({
     id: '',
-    edge_id: '',
-    parent_id: '', // Added parent_id field
+    edge_id: route.query.edge_id || '',
+    parent_id: route.query.parent_id || '', 
     level: '',
     zone: '',
     identifier: '',
@@ -42,6 +45,9 @@ export function useLocationForm(mode = 'create') {
     description: '',
     metadata: {}
   })
+  
+  // Location types from store
+  const locationTypes = computed(() => typesStore.locationTypes)
   
   // Edges data for dropdown
   const edges = ref([])
@@ -84,11 +90,23 @@ export function useLocationForm(mode = 'create') {
   const v$ = useVuelidate(rules, location)
   
   /**
-   * Fetch edges for the dropdown
+   * Fetch edges for dropdown
+   * @param {Object} params - Optional query parameters
    */
-  const fetchEdges = async () => {
+  const fetchEdges = async (params = {}) => {
     return performOperation(
-      () => edgeService.getList(),
+      () => {
+        // If edge_id is provided as a query param, filter locations by edge
+        const queryParams = {}
+        if (route.query.edge_id) {
+          queryParams.edge_id = route.query.edge_id
+        }
+        
+        // Merge with any additional params
+        Object.assign(queryParams, params)
+        
+        return edgeService.getList(queryParams)
+      },
       {
         loadingRef: edgesLoading,
         errorRef: null,
@@ -316,8 +334,8 @@ export function useLocationForm(mode = 'create') {
   const resetForm = () => {
     location.value = {
       id: '',
-      edge_id: '',
-      parent_id: '',
+      edge_id: route.query.edge_id || '',
+      parent_id: route.query.parent_id || '',
       level: '',
       zone: '',
       identifier: '',
