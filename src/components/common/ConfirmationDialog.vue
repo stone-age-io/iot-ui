@@ -8,18 +8,19 @@
     :closeOnEscape="!loading"
     @update:visible="$emit('update:visible', $event)"
     :header="title"
+    class="confirmation-dialog theme-transition"
   >
     <div class="flex items-start">
       <div 
-        class="w-10 h-10 rounded-full flex items-center justify-center mr-4" 
-        :class="iconClass"
+        class="w-10 h-10 rounded-full flex items-center justify-center mr-4 theme-transition" 
+        :class="iconBackgroundClass"
       >
-        <i :class="[iconName, 'text-lg']"></i>
+        <i :class="[iconName, 'text-lg']" :style="{ color: iconColor }"></i>
       </div>
       
       <div>
-        <p class="text-gray-800 mb-2 dark:text-gray-200">{{ message }}</p>
-        <p v-if="details" class="text-gray-600 text-sm dark:text-gray-400">{{ details }}</p>
+        <p class="text-theme-primary dark:text-gray-200 mb-2">{{ message }}</p>
+        <p v-if="details" class="text-theme-secondary dark:text-gray-400 text-sm">{{ details }}</p>
       </div>
     </div>
 
@@ -50,6 +51,7 @@
 import { computed } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
+import { useTheme } from '../../composables/useTheme'
 
 const props = defineProps({
   visible: {
@@ -89,18 +91,40 @@ const props = defineProps({
 
 const emit = defineEmits(['confirm', 'update:visible'])
 
-// Computed based on type
-const iconClass = computed(() => {
-  switch (props.type) {
-    case 'danger':
-      return 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-    case 'warning':
-      return 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-    case 'info':
-      return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-  }
+// Access theme system
+const { isDarkMode, themeValue } = useTheme()
+
+// Get the appropriate classes and colors based on type and theme
+const iconBackgroundClass = computed(() => {
+  // Use the themeValue helper to get theme-specific values
+  return themeValue.class(
+    // Light theme classes
+    {
+      danger: 'bg-red-100',
+      warning: 'bg-amber-100',
+      info: 'bg-blue-100'
+    }[props.type] || 'bg-gray-100',
+    // Dark theme classes
+    {
+      danger: 'bg-red-900/30',
+      warning: 'bg-amber-900/30',
+      info: 'bg-blue-900/30'
+    }[props.type] || 'bg-gray-700'
+  )
+})
+
+const iconColor = computed(() => {
+  return isDarkMode.value 
+    ? {
+        danger: 'var(--red-400, #f87171)',
+        warning: 'var(--amber-400, #fbbf24)',
+        info: 'var(--blue-400, #60a5fa)'
+      }[props.type] || 'var(--gray-400, #9ca3af)'
+    : {
+        danger: 'var(--red-600, #dc2626)',
+        warning: 'var(--amber-600, #d97706)',
+        info: 'var(--blue-600, #2563eb)'
+      }[props.type] || 'var(--gray-600, #4b5563)'
 })
 
 const iconName = computed(() => {
@@ -137,14 +161,26 @@ const confirm = () => {
 
 <style scoped>
 :deep(.p-dialog-header) {
-  @apply dark:bg-gray-800 dark:text-white dark:border-gray-700;
+  background-color: rgb(var(--color-surface));
+  color: rgb(var(--color-text));
+  border-color: rgb(var(--color-border));
 }
 
 :deep(.p-dialog-content) {
-  @apply dark:bg-gray-800 dark:text-gray-200;
+  background-color: rgb(var(--color-surface));
+  color: rgb(var(--color-text));
 }
 
 :deep(.p-dialog-footer) {
-  @apply dark:bg-gray-800 dark:border-gray-700;
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
+}
+
+/* Add smooth transitions for theme changes */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease;
 }
 </style>

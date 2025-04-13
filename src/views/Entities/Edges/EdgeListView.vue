@@ -17,7 +17,6 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['code', 'name', 'description', 'type', 'region']"
-        title="Edge Installations"
         empty-message="No edges found"
         @row-click="(data) => navigateToEdgeDetail(data.id)"
         :paginated="true"
@@ -91,25 +90,6 @@
               @click.stop="handleDeleteClick(data)"
               tooltip="Delete"
               tooltipOptions="{ position: 'top' }"
-            />
-          </div>
-        </template>
-
-        <!-- Table actions slot for adding custom filters -->
-        <template #table-actions>
-          <div class="flex gap-2">
-            <Button 
-              label="Refresh" 
-              icon="pi pi-refresh" 
-              class="p-button-outlined p-button-sm"
-              @click="refreshData"
-              :loading="loading"
-            />
-            <Button
-              icon="pi pi-filter"
-              class="p-button-outlined p-button-sm"
-              @click="toggleFilters"
-              :class="{'p-button-secondary': isFilterActive}"
             />
           </div>
         </template>

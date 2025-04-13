@@ -1,0 +1,118 @@
+/* src/assets/styles/theme-variables.css */
+/**
+ * Centralized theme variables for the IoT Platform UI
+ * This file defines all theme-related CSS variables and utilities
+ */
+
+:root {
+  /* Light theme variables (default) */
+  --color-bg: 249, 250, 251; /* bg-gray-50 */
+  --color-surface: 255, 255, 255; /* white */
+  --color-border: 229, 231, 235; /* border-gray-200 */
+  --color-text: 17, 24, 39; /* text-gray-900 */
+  --color-text-secondary: 107, 114, 128; /* text-gray-500 */
+  
+  /* Light theme PrimeVue overrides */
+  --primary-color: #3B82F6;
+  --primary-color-text: #ffffff;
+  --surface-ground: rgb(249, 250, 251);
+  --surface-section: rgb(255, 255, 255);
+  --surface-card: rgb(255, 255, 255);
+  --surface-overlay: rgb(255, 255, 255);
+  --surface-border: rgb(229, 231, 235);
+  --surface-hover: rgb(243, 244, 246);
+  --text-color: rgb(17, 24, 39);
+  --text-color-secondary: rgb(107, 114, 128);
+  --focus-ring: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+  
+  /* Animation durations for theme transitions */
+  --theme-transition-duration: 0.2s;
+  --theme-transition-timing: ease;
+}
+
+/* Dark theme variables */
+.dark {
+  --color-bg: 17, 24, 39; /* bg-gray-900 */
+  --color-surface: 31, 41, 55; /* bg-gray-800 */
+  --color-border: 75, 85, 99; /* border-gray-600 */
+  --color-text: 229, 231, 235; /* text-gray-200 */
+  --color-text-secondary: 156, 163, 175; /* text-gray-400 */
+  
+  /* Dark theme PrimeVue overrides */
+  --primary-color: #60A5FA;
+  --primary-color-text: #1e293b;
+  --surface-ground: rgb(17, 24, 39);
+  --surface-section: rgb(31, 41, 55);
+  --surface-card: rgb(31, 41, 55);
+  --surface-overlay: rgb(31, 41, 55);
+  --surface-border: rgb(75, 85, 99);
+  --surface-hover: rgb(55, 65, 81);
+  --text-color: rgb(229, 231, 235);
+  --text-color-secondary: rgb(156, 163, 175);
+  --focus-ring: 0 0 0 0.2rem rgba(96, 165, 250, 0.25);
+}
+
+/* Theme utility classes */
+.bg-theme-background {
+  background-color: rgb(var(--color-bg));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-surface {
+  background-color: rgb(var(--color-surface));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-primary {
+  color: rgb(var(--color-text));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-secondary {
+  color: rgb(var(--color-text-secondary));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.border-theme {
+  border-color: rgb(var(--color-border));
+  transition: border-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Transitions for smooth theme changes */
+.theme-transition,
+.theme-transition * {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: var(--theme-transition-timing);
+  transition-duration: var(--theme-transition-duration);
+}
+
+/* PrimeVue component theme helpers */
+.p-component-theme {
+  background-color: var(--surface-card, rgb(var(--color-surface)));
+  color: var(--text-color, rgb(var(--color-text)));
+  border-color: var(--surface-border, rgb(var(--color-border)));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing),
+              border-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Badge variants consistent with theme */
+.badge-theme-default {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300;
+}
+
+.badge-theme-primary {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+.badge-theme-success {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300;
+}
+
+.badge-theme-warning {
+  @apply bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300;
+}
+
+.badge-theme-danger {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300;
+}

@@ -17,20 +17,11 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['type', 'code', 'description']"
-        title="Location Types"
         empty-message="No location types found"
         @row-click="(data) => navigateToTypeDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Location Type" 
-            icon="pi pi-plus" 
-            @click="navigateToTypeCreate" 
-          />
-        </template>
         
         <!-- Type column -->
         <template #type-body="{ data }">

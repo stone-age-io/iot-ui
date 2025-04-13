@@ -4,7 +4,7 @@
 @import 'tailwindcss/utilities';
 
 /* Import theme-specific styles */
-@import './prime-toast.css';
+@import './primevue-components.css';
 @import './dark-mode.css';
 
 /* Global CSS Variables */

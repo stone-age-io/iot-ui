@@ -18,7 +18,6 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['username', 'expand.role_id.name']"
-        title="Messaging Clients"
         empty-message="No clients found"
         @row-click="(data) => navigateToClientDetail(data.id)"
       >

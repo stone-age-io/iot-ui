@@ -1,6 +1,10 @@
 <!-- src/components/common/LocationMap.vue -->
 <template>
-  <div :id="mapId" :style="{ height: height || '400px', width: '100%' }" class="leaflet-map"></div>
+  <div 
+    :id="mapId" 
+    :style="{ height: height || '400px', width: '100%' }" 
+    class="leaflet-map rounded-lg overflow-hidden border border-theme-border dark:border-gray-700"
+  ></div>
 </template>
 
 <script setup>
@@ -35,7 +39,7 @@ const map = ref(null);
 const markersLayer = ref(null);
 const themeStore = useThemeStore();
 
-// Detect if dark mode is active
+// Detect if dark mode is active - use the theme store for this
 const isDarkMode = computed(() => {
   return themeStore.theme === 'dark' || 
     (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -108,13 +112,14 @@ const updateMapTiles = (darkMode) => {
   
   // Add appropriate tiles based on theme
   if (darkMode) {
-    // Dark theme tiles - using a dark theme from Stadia Maps
-    // This is a fallback - in production, consider using a proper dark theme provider
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    // Dark theme tiles - using CartoDB Dark Matter
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
     }).addTo(map.value);
   } else {
-    // Light theme tiles
+    // Light theme tiles - using OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map.value);
@@ -139,14 +144,24 @@ const renderMarkers = () => {
       marker.lng || marker.long
     ]);
     
+    // Style marker popups based on theme
+    const popupClassName = isDarkMode.value ? 'popup-dark' : 'popup-light';
+    
     // Add popup if provided
     if (marker.popup) {
-      markerObj.bindPopup(marker.popup);
+      markerObj.bindPopup(`<div class="popup-content ${popupClassName}">${marker.popup}</div>`);
     } else {
+      // Create a formatted popup with type badge if available
+      let badgeHtml = '';
+      if (marker.type) {
+        const badgeClass = getBadgeClass(marker.type);
+        badgeHtml = `<span class="badge ${badgeClass}">${marker.type}</span>`;
+      }
+      
       markerObj.bindPopup(`
-        <div class="popup-content ${isDarkMode.value ? 'popup-dark' : ''}">
+        <div class="popup-content ${popupClassName}">
           <strong>${marker.name || 'Unnamed'}</strong>
-          ${marker.type ? `<br><span class="badge badge-${marker.type}">${marker.type}</span>` : ''}
+          ${badgeHtml ? `<br>${badgeHtml}` : ''}
         </div>
       `);
     }
@@ -165,6 +180,24 @@ const renderMarkers = () => {
   }
 };
 
+// Get badge class based on type
+const getBadgeClass = (type) => {
+  // Map of types to badge classes
+  const classMap = {
+    'entrance': 'badge-blue',
+    'work-area': 'badge-green',
+    'meeting-room': 'badge-purple',
+    'break-area': 'badge-amber',
+    'reception': 'badge-cyan',
+    'security': 'badge-red',
+    'server-room': 'badge-indigo',
+    'utility-room': 'badge-teal',
+    'storage': 'badge-gray'
+  };
+  
+  return classMap[type] || 'badge-gray';
+};
+
 // Fix Leaflet icon paths (common issue in bundled apps)
 const fixLeafletIconPaths = () => {
   delete L.Icon.Default.prototype._getIconUrl;
@@ -177,26 +210,25 @@ const fixLeafletIconPaths = () => {
 };
 </script>
 
-<style scoped>
-.leaflet-map {
+<style>
+/* Popup styling with dark mode support */
+.leaflet-popup-content-wrapper {
   border-radius: 4px;
-  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
-:deep(.leaflet-popup-content-wrapper) {
-  border-radius: 4px;
-}
-
-:deep(.leaflet-popup-content) {
-  margin: 10px;
-}
-
-:deep(.popup-dark) {
+.popup-dark {
   background-color: #374151;
   color: #f3f4f6;
 }
 
-:deep(.badge) {
+.popup-light {
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+/* Badge styling consistent with our app */
+.badge {
   display: inline-block;
   font-size: 0.75rem;
   font-weight: 500;
@@ -205,19 +237,46 @@ const fixLeafletIconPaths = () => {
   margin-top: 4px;
 }
 
+.badge-blue { @apply bg-blue-100 text-blue-800; }
+.badge-green { @apply bg-green-100 text-green-800; }
+.badge-purple { @apply bg-purple-100 text-purple-800; }
+.badge-amber { @apply bg-amber-100 text-amber-800; }
+.badge-cyan { @apply bg-cyan-100 text-cyan-800; }
+.badge-red { @apply bg-red-100 text-red-800; }
+.badge-indigo { @apply bg-indigo-100 text-indigo-800; }
+.badge-teal { @apply bg-teal-100 text-teal-800; }
+.badge-gray { @apply bg-gray-100 text-gray-800; }
+
+/* Dark mode badge versions */
+.popup-dark .badge-blue { @apply bg-blue-900/30 text-blue-300; }
+.popup-dark .badge-green { @apply bg-green-900/30 text-green-300; }
+.popup-dark .badge-purple { @apply bg-purple-900/30 text-purple-300; }
+.popup-dark .badge-amber { @apply bg-amber-900/30 text-amber-300; }
+.popup-dark .badge-cyan { @apply bg-cyan-900/30 text-cyan-300; }
+.popup-dark .badge-red { @apply bg-red-900/30 text-red-300; }
+.popup-dark .badge-indigo { @apply bg-indigo-900/30 text-indigo-300; }
+.popup-dark .badge-teal { @apply bg-teal-900/30 text-teal-300; }
+.popup-dark .badge-gray { @apply bg-gray-700 text-gray-300; }
+
 /* Dark mode overrides for Leaflet controls */
-:global(.dark) .leaflet-map :deep(.leaflet-control-attribution) {
-  background-color: rgba(31, 41, 55, 0.8);
-  color: #d1d5db;
+:global(.dark) .leaflet-control-attribution {
+  background-color: rgba(31, 41, 55, 0.8) !important;
+  color: #d1d5db !important;
 }
 
-:global(.dark) .leaflet-map :deep(.leaflet-control-zoom a) {
-  background-color: #374151;
-  color: #d1d5db;
-  border-color: #4b5563;
+:global(.dark) .leaflet-control-zoom a {
+  background-color: #374151 !important;
+  color: #d1d5db !important;
+  border-color: #4b5563 !important;
 }
 
-:global(.dark) .leaflet-map :deep(.leaflet-control-zoom a:hover) {
-  background-color: #4b5563;
+:global(.dark) .leaflet-control-zoom a:hover {
+  background-color: #4b5563 !important;
+}
+
+/* Smooth transitions for theme changes */
+.leaflet-control-attribution,
+.leaflet-control-zoom a {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 </style>

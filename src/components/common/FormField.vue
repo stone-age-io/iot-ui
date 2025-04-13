@@ -1,11 +1,11 @@
 <template>
   <div class="form-field-wrapper mb-4">
     <div class="flex justify-between items-start mb-1 flex-wrap">
-      <label :for="id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label :for="id" class="block text-sm font-medium text-theme-primary dark:text-gray-300">
         {{ label }}
         <span v-if="required" class="text-red-500 dark:text-red-400">*</span>
       </label>
-      <small v-if="hint" class="text-gray-500 dark:text-gray-400 w-full sm:w-auto">{{ hint }}</small>
+      <small v-if="hint" class="text-theme-secondary dark:text-gray-400 w-full sm:w-auto">{{ hint }}</small>
     </div>
     
     <slot></slot>
@@ -14,14 +14,17 @@
       {{ errorMessage }}
     </small>
     
-    <small v-if="helpText" class="text-gray-500 dark:text-gray-400 mt-1 block">
+    <small v-if="helpText" class="text-theme-secondary dark:text-gray-400 mt-1 block">
       {{ helpText }}
     </small>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { useThemeStore } from '../../stores/theme';
+
+const props = defineProps({
   id: {
     type: String,
     required: true
@@ -46,11 +49,20 @@ defineProps({
     type: String,
     default: ''
   }
-})
+});
+
+// Access the theme store - this allows components to react to theme changes
+const themeStore = useThemeStore();
+
+// Computed property to determine if we're in dark mode
+const isDarkMode = computed(() => {
+  return themeStore.theme === 'dark' || 
+    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+});
 </script>
 
-<style scoped>
-/* Using CSS variables from our theming system */
+<style>
+/* Using the theme variables consistently */
 .form-field-wrapper label {
   color: rgb(var(--color-text));
 }
@@ -63,5 +75,12 @@ defineProps({
 :deep(.p-error) {
   @apply dark:text-red-400;
 }
-</style>
 
+/* Ensure form fields have appropriate focus styles in both themes */
+:deep(input:focus),
+:deep(textarea:focus),
+:deep(select:focus) {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  @apply dark:ring-primary-400 dark:ring-offset-gray-800;
+}
+</style>

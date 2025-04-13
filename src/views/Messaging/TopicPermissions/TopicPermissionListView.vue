@@ -18,7 +18,6 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['name']"
-        title="Permission Roles"
         empty-message="No permission roles found"
         @row-click="handleRowClick"
       >

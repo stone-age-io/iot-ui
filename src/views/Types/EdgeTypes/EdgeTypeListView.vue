@@ -17,20 +17,11 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['code', 'type', 'description']"
-        title="Edge Types"
         empty-message="No edge types found"
         @row-click="(data) => navigateToTypeDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Edge Type" 
-            icon="pi pi-plus" 
-            @click="navigateToTypeCreate" 
-          />
-        </template>
         
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">

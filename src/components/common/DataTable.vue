@@ -3,7 +3,7 @@
   <div class="data-table-wrapper">
     <!-- Table Header with Title, Search and Actions -->
     <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h2 v-if="title" class="text-xl font-semibold text-gray-800 dark:text-gray-200 m-0">{{ title }}</h2>
+      <h2 v-if="title" class="text-xl font-semibold text-theme-primary dark:text-gray-200 m-0">{{ title }}</h2>
       
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center ml-auto">
         <!-- Search Input -->
@@ -12,7 +12,7 @@
           <InputText 
             v-model="filters.global.value" 
             placeholder="Search..." 
-            class="p-inputtext-sm w-full"
+            class="p-inputtext-sm w-full p-component-theme"
           />
         </span>
         
@@ -44,10 +44,10 @@
       stripedRows
       v-model:selection="selectedItems"
       :selectionMode="selectionMode"
-      class="p-datatable-sm custom-datatable"
+      class="p-datatable-sm custom-datatable theme-transition"
+      :class="{ 'mobile-view': isMobileView }"
       filterDisplay="menu"
       dataKey="id"
-      :class="{ 'mobile-view': isMobileView }"
     >
       <!-- Selection Column -->
       <Column selectionMode="multiple" v-if="selectionMode === 'multiple'" headerStyle="width: 3rem" />
@@ -65,7 +65,7 @@
         <template #body="slotProps">
           <div class="cell-content">
             <!-- Column Header in Mobile View -->
-            <span v-if="isMobileView" class="column-header">{{ col.header }}</span>
+            <span v-if="isMobileView" class="column-header text-theme-secondary">{{ col.header }}</span>
             
             <!-- Actual Content -->
             <div class="cell-value">
@@ -94,7 +94,7 @@
         <template #body="slotProps">
           <div class="cell-content actions-cell">
             <!-- Column Header in Mobile View -->
-            <span v-if="isMobileView" class="column-header">Actions</span>
+            <span v-if="isMobileView" class="column-header text-theme-secondary">Actions</span>
             
             <!-- Actions -->
             <div @click.stop class="action-buttons">
@@ -106,14 +106,14 @@
       
       <!-- Empty Message -->
       <template #empty>
-        <div class="text-center p-4 text-gray-500 dark:text-gray-400">
+        <div class="text-center p-4 text-theme-secondary">
           {{ emptyMessage || "No records found" }}
         </div>
       </template>
       
       <!-- Loading Message -->
       <template #loading>
-        <div class="text-center p-4 text-gray-500 dark:text-gray-400">
+        <div class="text-center p-4 text-theme-secondary">
           Loading data...
         </div>
       </template>
@@ -127,6 +127,7 @@ import { FilterMatchMode } from 'primevue/api'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import InputText from 'primevue/inputtext'
+import { useTheme } from '../../composables/useTheme'
 
 const props = defineProps({
   title: {
@@ -216,6 +217,9 @@ const emit = defineEmits([
 const slots = useSlots();
 const hasRowActions = computed(() => !!slots['row-actions']);
 
+// Access theme system
+const { isDarkMode } = useTheme();
+
 // Reactive state
 const selectedItems = ref([]);
 const sortField = ref(props.defaultSortField);
@@ -284,9 +288,11 @@ const onSort = (event) => {
 </script>
 
 <style>
-/* Base datatable styles */
+/* Base datatable styles using theme variables */
 .custom-datatable {
-  @apply w-full border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden;
+  @apply w-full border-collapse border rounded-lg overflow-hidden;
+  border-color: rgb(var(--color-border) / 0.5);
+  background-color: rgb(var(--color-surface));
 }
 
 .custom-datatable .p-datatable-wrapper {
@@ -299,21 +305,31 @@ const onSort = (event) => {
 
 /* Row styles */
 .custom-datatable .p-datatable-tbody > tr {
-  @apply transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50;
+  @apply transition-colors;
+  background-color: rgb(var(--color-surface));
+}
+
+.custom-datatable .p-datatable-tbody > tr:hover {
+  background-color: var(--surface-hover);
 }
 
 .custom-datatable .p-datatable-tbody > tr:nth-child(even) {
-  @apply bg-gray-50/50 dark:bg-gray-800/50;
+  background-color: rgba(var(--color-bg), 0.5);
 }
 
 /* Header styles */
 .custom-datatable .p-datatable-thead > tr > th {
-  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium p-3 text-left border-b border-gray-200 dark:border-gray-600;
+  @apply font-medium p-3 text-left border-b;
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text-secondary));
+  border-color: rgb(var(--color-border));
 }
 
 /* Cell styles */
 .custom-datatable .p-datatable-tbody > tr > td {
-  @apply p-3 border-b border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300;
+  @apply p-3 whitespace-nowrap border-b;
+  color: rgb(var(--color-text));
+  border-color: rgb(var(--color-border));
 }
 
 /* Cell Content Layout */
@@ -344,11 +360,14 @@ const onSort = (event) => {
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr {
-  @apply flex flex-col mb-4 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden shadow-sm hover:shadow bg-white dark:bg-gray-800 w-full;
+  @apply flex flex-col mb-4 border rounded-lg overflow-hidden shadow-sm hover:shadow w-full;
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr > td {
-  @apply flex w-full border-0 border-b border-gray-200 dark:border-gray-700 p-3;
+  @apply flex w-full border-0 border-b p-3;
+  border-color: rgb(var(--color-border));
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr > td:last-child {
@@ -360,7 +379,8 @@ const onSort = (event) => {
 }
 
 .custom-datatable.mobile-view .column-header {
-  @apply block font-medium text-gray-500 dark:text-gray-400 text-sm w-1/3 text-left;
+  @apply block font-medium text-sm w-1/3 text-left;
+  color: rgb(var(--color-text-secondary));
 }
 
 .custom-datatable.mobile-view .cell-value {
@@ -381,7 +401,9 @@ const onSort = (event) => {
 
 /* Paginator Styling */
 .p-paginator {
-  @apply flex justify-center items-center p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 gap-1;
+  @apply flex justify-center items-center p-3 border-t gap-1;
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
 }
 
 .p-paginator .p-paginator-first,
@@ -389,7 +411,10 @@ const onSort = (event) => {
 .p-paginator .p-paginator-next,
 .p-paginator .p-paginator-last,
 .p-paginator .p-paginator-page {
-  @apply inline-flex justify-center items-center min-w-[2.5rem] h-10 rounded-md text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+  @apply inline-flex justify-center items-center min-w-[2.5rem] h-10 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+  color: rgb(var(--color-text-secondary));
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
 }
 
 .p-paginator .p-paginator-first.p-disabled,
@@ -403,14 +428,6 @@ const onSort = (event) => {
   @apply bg-blue-600 dark:bg-blue-600 text-white border-blue-600 dark:border-blue-600;
 }
 
-.p-paginator .p-dropdown {
-  @apply border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300;
-}
-
-.p-paginator .p-dropdown-label {
-  @apply px-3 py-2;
-}
-
 /* Action buttons styling */
 .action-buttons {
   @apply flex justify-center gap-1;
@@ -420,31 +437,12 @@ const onSort = (event) => {
   @apply w-8 h-8 p-0;
 }
 
-/* PrimeVue Button Overrides */
-.p-button.p-button-text {
-  @apply text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700;
-}
-
-.p-button.p-button-danger.p-button-text {
-  @apply text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20;
-}
-
-.p-button.p-button-text .p-button-icon {
-  @apply text-gray-500 dark:text-gray-400;
-}
-
-.p-button.p-button-danger.p-button-text .p-button-icon {
-  @apply text-red-600 dark:text-red-400;
-}
-
-/* Badge styling for consistent types */
-.badge {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-
 /* Form controls in tables */
 .custom-datatable .p-inputtext {
-  @apply p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md;
+  @apply p-2 rounded-md;
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
+  color: rgb(var(--color-text));
 }
 
 /* Fix for selection checkbox */
@@ -458,38 +456,20 @@ const onSort = (event) => {
 }
 
 .custom-datatable .p-sortable-column .p-sortable-column-icon {
-  @apply ml-2 text-gray-400 dark:text-gray-500;
+  @apply ml-2;
+  color: rgb(var(--color-text-secondary) / 0.7);
 }
 
 .custom-datatable .p-sortable-column.p-highlight {
-  @apply bg-gray-100 dark:bg-gray-700;
+  background-color: rgb(var(--color-bg));
 }
 
 .custom-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
-  @apply text-blue-600 dark:text-blue-400;
-}
-
-/* Transition for theme changes */
-.custom-datatable,
-.custom-datatable * {
-  @apply transition-colors duration-200;
-}
-
-/* Fix mobile view in dark mode */
-.dark .custom-datatable.mobile-view .p-datatable-tbody > tr {
-  @apply bg-gray-800 border-gray-600;
-}
-
-.dark .custom-datatable.mobile-view .p-datatable-tbody > tr > td {
-  @apply border-gray-700;
-}
-
-.dark .p-paginator {
-  @apply bg-gray-800 border-gray-700;
+  color: var(--primary-color);
 }
 
 /* Fix for loading overlay */
 .p-datatable .p-datatable-loading-overlay {
-  @apply bg-white/70 dark:bg-gray-900/70;
+  background-color: rgba(var(--color-surface), 0.7);
 }
 </style>

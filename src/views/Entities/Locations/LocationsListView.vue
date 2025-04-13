@@ -18,7 +18,6 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['code', 'name', 'path', 'type', 'expand.edge_id.code', 'expand.parent_id.code']"
-        title="Physical Locations"
         empty-message="No locations found"
         @row-click="(data) => navigateToLocationDetail(data.id)"
         :paginated="true"

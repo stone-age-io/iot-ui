@@ -17,7 +17,6 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['thing_code', 'name', 'thing_type', 'expand.location_id.code', 'expand.edge_id.code']"
-        title="Things"
         empty-message="No things found"
         @row-click="(data) => navigateToThingDetail(data.id)"
         :paginated="true"

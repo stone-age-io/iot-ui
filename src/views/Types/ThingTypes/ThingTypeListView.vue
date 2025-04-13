@@ -17,20 +17,11 @@
         :loading="loading"
         :searchable="true"
         :searchFields="['type', 'code', 'description']"
-        title="Thing Types"
         empty-message="No thing types found"
         @row-click="(data) => navigateToTypeDetail(data.id)"
         :paginated="true"
         :rows="10"
       >
-        <!-- Table action buttons -->
-        <template #table-actions>
-          <Button 
-            label="Create Thing Type" 
-            icon="pi pi-plus" 
-            @click="navigateToTypeCreate" 
-          />
-        </template>
         
         <!-- Type column -->
         <template #type-body="{ data }">

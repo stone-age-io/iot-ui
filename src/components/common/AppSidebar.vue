@@ -3,7 +3,7 @@
   <aside
     :class="[
       'transition-all duration-300 ease-in-out flex flex-col h-full',
-      'bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700',
+      'bg-theme-surface border-r border-theme border-r-theme-border theme-transition',
       open ? 'w-64' : 'w-64 -translate-x-full lg:translate-x-0',
       collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
     ]"
@@ -24,7 +24,7 @@
       <Button
         @click="$emit('toggle-collapse')"
         :icon="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
-        class="p-button-text p-button-rounded transition-transform"
+        class="p-button-text p-button-rounded transition-transform theme-transition"
         aria-label="Toggle Sidebar"
       />
     </div>
@@ -35,7 +35,7 @@
       <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
         <h3
           v-if="(!collapsed || isMobileView) && section.title"
-          class="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 px-3 dark:text-gray-400"
+          class="text-xs uppercase tracking-wider font-semibold mb-2 px-3 text-theme-secondary dark:text-gray-400"
         >
           {{ section.title }}
         </h3>
@@ -54,11 +54,19 @@
               class="flex items-center px-3 py-2 rounded-md transition-colors"
               :class="[
                 isActive
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  ? activeItemClass
+                  : inactiveItemClass
               ]"
             >
-              <i :class="[item.icon, 'text-lg', isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400']"></i>
+              <i 
+                :class="[
+                  item.icon, 
+                  'text-lg', 
+                  isActive 
+                    ? 'text-primary-600 dark:text-primary-400' 
+                    : 'text-gray-500 dark:text-gray-400'
+                ]"
+              ></i>
               <span 
                 v-if="!collapsed || isMobileView" 
                 class="ml-3 transition-opacity"
@@ -72,11 +80,12 @@
     </div>
   
     <!-- Bottom section with Grafana link - now properly aligned at bottom -->
-    <div class="mt-auto border-t border-gray-200 dark:border-gray-700">
+    <div class="mt-auto border-t border-theme-border dark:border-gray-700">
       <a 
         :href="grafanaUrl" 
         target="_blank"
-        class="flex items-center px-3 py-4 text-gray-700 hover:bg-gray-100 transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
+        class="flex items-center px-3 py-4 transition-colors"
+        :class="externalLinkClass"
       >
         <i class="pi pi-chart-line text-lg text-gray-500 dark:text-gray-400"></i>
         <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
@@ -88,6 +97,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Button from 'primevue/button'
+import { useTheme } from '../../composables/useTheme'
 
 const props = defineProps({
   open: {
@@ -101,6 +111,28 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'toggle-collapse'])
+
+// Access the theme system
+const { isDarkMode, themeValue } = useTheme()
+
+// Theme-specific classes
+const activeItemClass = computed(() => 
+  isDarkMode.value 
+    ? 'bg-primary-900/20 text-primary-300' 
+    : 'bg-primary-50 text-primary-700'
+)
+
+const inactiveItemClass = computed(() => 
+  isDarkMode.value 
+    ? 'text-gray-300 hover:bg-gray-700' 
+    : 'text-gray-700 hover:bg-gray-100'
+)
+
+const externalLinkClass = computed(() => 
+  isDarkMode.value 
+    ? 'text-gray-300 hover:bg-gray-700' 
+    : 'text-gray-700 hover:bg-gray-100'
+)
 
 // Responsive state
 const windowWidth = ref(window.innerWidth)
@@ -208,11 +240,6 @@ const menuSections = [
 /* Custom scrollbar styling for better appearance */
 .overflow-y-auto {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
-}
-
-.dark .overflow-y-auto {
-  scrollbar-color: #4b5563 #1f2937;
 }
 
 .overflow-y-auto::-webkit-scrollbar {
@@ -220,20 +247,12 @@ const menuSections = [
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.dark .overflow-y-auto::-webkit-scrollbar-track {
-  background: #1f2937;
+  background-color: rgba(var(--color-bg), 0.5);
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: rgba(var(--color-text-secondary), 0.3);
   border-radius: 3px;
-}
-
-.dark .overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: #4b5563;
 }
 
 /* Active link highlight animation */
@@ -254,22 +273,10 @@ a.dark\:bg-primary-900\/20::after {
   background-color: var(--primary-color, #3B82F6);
 }
 
-/* Dark mode button styling */
-.dark .p-button.p-button-text {
-  color: rgb(209, 213, 219); /* text-gray-300 */
-}
-
-.dark .p-button.p-button-text:hover {
-  background-color: rgba(55, 65, 81, 0.5); /* bg-gray-700 with opacity */
-}
-
-.dark .p-button.p-button-text:focus {
-  box-shadow: 0 0 0 2px rgb(31, 41, 55), 0 0 0 4px rgb(59, 130, 246);
-}
-
-/* Transition improvements */
-.transition-all {
-  transition-property: all;
+/* Theme transition */
+.theme-transition,
+.theme-transition * {
+  transition-property: background-color, border-color, color, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }

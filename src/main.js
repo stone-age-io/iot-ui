@@ -4,8 +4,12 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-// Import our unified CSS
-import './assets/styles/index.css'
+// Import CSS in the correct order
+import './assets/styles/theme-variables.css'     // Theme variables first
+import './assets/styles/index.css'              // Main CSS
+import './assets/styles/primevue-components.css' // PrimeVue components styling
+import './assets/styles/dark-mode.css'          // Additional dark mode overrides
+import './assets/responsive-utilities.css'       // Responsive utilities
 
 // PrimeVue
 import PrimeVue from 'primevue/config'
@@ -27,6 +31,22 @@ const pinia = createPinia()
 
 app.use(pinia)
 
+// Register global directives
+app.directive('tooltip', Tooltip)
+app.directive('click-outside', {
+  mounted(el, binding) {
+    el._clickOutside = (event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value(event);
+      }
+    };
+    document.addEventListener('click', el._clickOutside);
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el._clickOutside);
+  }
+})
+
 // Initialize theme before mounting
 const themeStore = useThemeStore()
 
@@ -38,10 +58,19 @@ natsConnectionManager.initialize()
 
 // Setup the rest of the app
 app.use(router)
-app.use(PrimeVue, { ripple: true })
+app.use(PrimeVue, { 
+  ripple: true,
+  // Initialize PrimeVue with custom style for the Menu component
+  pt: {
+    menu: {
+      root: {
+        style: 'z-index: 99999'
+      }
+    }
+  }
+})
 app.use(ConfirmationService)
 app.use(ToastService)
-app.directive('tooltip', Tooltip)
 
 // Initialize type store after Pinia is installed
 const initializeStores = () => {

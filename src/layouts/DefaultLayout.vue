@@ -3,9 +3,8 @@
   <div class="min-h-screen flex flex-col bg-theme-background dark:bg-gray-900">
     <!-- Fixed Header -->
     <AppHeader 
-      @toggle-sidebar="sidebarOpen = !sidebarOpen" 
+      @toggle-sidebar="toggleSidebar" 
       :sidebar-open="sidebarOpen"
-      class="fixed top-0 left-0 right-0 z-40 shadow-sm"
     />
     
     <!-- Content area with offset for fixed header -->
@@ -20,7 +19,7 @@
       <!-- Fixed Sidebar -->
       <div 
         :class="[
-          'fixed top-16 left-0 z-40 h-[calc(100vh-4rem)]',
+          'fixed top-16 left-0 z-30 h-[calc(100vh-4rem)]',
           'transition-all duration-300 ease-in-out',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0', 
           sidebarCollapsed && !isMobileView ? 'w-16' : 'w-64'
@@ -30,7 +29,7 @@
           :open="sidebarOpen"
           @close="closeSidebar"
           :collapsed="sidebarCollapsed"
-          @toggle-collapse="toggleSidebar"
+          @toggle-collapse="toggleSidebarCollapse"
           class="h-full w-full overflow-y-auto"
         />
       </div>
@@ -90,8 +89,13 @@ const closeSidebar = () => {
   }, 50);
 }
 
-// Toggle sidebar collapse state
+// Toggle sidebar open/closed
 const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value;
+}
+
+// Toggle sidebar collapse state (expanded/collapsed)
+const toggleSidebarCollapse = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
   // Persist this setting in localStorage
   localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString());
@@ -100,9 +104,7 @@ const toggleSidebar = () => {
 // Now provide the state and methods to child components
 provide('sidebarOpen', sidebarOpen)
 provide('sidebarCollapsed', sidebarCollapsed)
-provide('toggleSidebar', () => {
-  sidebarOpen.value = !sidebarOpen.value
-})
+provide('toggleSidebar', toggleSidebar)
 provide('closeSidebar', closeSidebar)
 provide('theme', themeStore.theme)
 
@@ -157,8 +159,29 @@ const handleResize = () => {
   opacity: 0;
 }
 
-/* Additional styles for shadow on scroll */
+/* Fix z-index for components */
 main {
   z-index: 1;
+}
+
+/* Ensure all overlay components appear on top */
+.p-component-overlay, 
+.p-dialog-mask,
+.p-overlaypanel,
+.p-dropdown-panel,
+.p-multiselect-panel {
+  z-index: 1000 !important;
+}
+
+/* Fix for mobile */
+@media (max-width: 1023px) {
+  .mobile-menu-button {
+    display: flex !important;
+  }
+}
+@media (min-width: 1024px) {
+  .mobile-menu-button {
+    display: none !important;
+  }
 }
 </style>
