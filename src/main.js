@@ -21,8 +21,6 @@ import natsConnectionManager from './services/nats/natsConnectionManager'
 // Import stores
 import { useTypesStore } from './stores/types'
 import { useThemeStore } from './stores/theme'
-import { setupPrimeVueTheme } from './utils/primeThemeHandler'
-import { watch } from 'vue'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -31,12 +29,9 @@ app.use(pinia)
 
 // Initialize theme before mounting
 const themeStore = useThemeStore()
-setupPrimeVueTheme(themeStore.theme)
 
-// Watch for theme changes to update PrimeVue theme
-watch(() => themeStore.theme, (newTheme) => {
-  setupPrimeVueTheme(newTheme)
-})
+// Initialize the theme system
+themeStore.init()
 
 // Initialize NATS connection manager
 natsConnectionManager.initialize()

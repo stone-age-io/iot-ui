@@ -44,12 +44,10 @@
       stripedRows
       v-model:selection="selectedItems"
       :selectionMode="selectionMode"
-      class="p-datatable-sm datatable-responsive"
+      class="p-datatable-sm custom-datatable"
       filterDisplay="menu"
-      responsiveLayout="stack"
-      breakpoint="960px"
-      tableClass="custom-datatable"
       dataKey="id"
+      :class="{ 'mobile-view': isMobileView }"
     >
       <!-- Selection Column -->
       <Column selectionMode="multiple" v-if="selectionMode === 'multiple'" headerStyle="width: 3rem" />
@@ -65,9 +63,17 @@
         :headerStyle="col.headerStyle || null"
       >
         <template #body="slotProps">
-          <slot :name="`${col.field}-body`" :data="slotProps.data" :field="col.field">
-            {{ formatCellValue(slotProps.data, col.field, col.format) }}
-          </slot>
+          <div class="cell-content">
+            <!-- Column Header in Mobile View -->
+            <span v-if="isMobileView" class="column-header">{{ col.header }}</span>
+            
+            <!-- Actual Content -->
+            <div class="cell-value">
+              <slot :name="`${col.field}-body`" :data="slotProps.data" :field="col.field">
+                {{ formatCellValue(slotProps.data, col.field, col.format) }}
+              </slot>
+            </div>
+          </div>
         </template>
         
         <template #filter v-if="col.filter">
@@ -86,8 +92,14 @@
         :exportable="false"
       >
         <template #body="slotProps">
-          <div @click.stop class="action-buttons">
-            <slot name="row-actions" :data="slotProps.data"></slot>
+          <div class="cell-content actions-cell">
+            <!-- Column Header in Mobile View -->
+            <span v-if="isMobileView" class="column-header">Actions</span>
+            
+            <!-- Actions -->
+            <div @click.stop class="action-buttons">
+              <slot name="row-actions" :data="slotProps.data"></slot>
+            </div>
           </div>
         </template>
       </Column>
@@ -110,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, computed, useSlots } from 'vue'
+import { ref, computed, useSlots, onMounted, onUnmounted } from 'vue'
 import { FilterMatchMode } from 'primevue/api'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -184,8 +196,12 @@ const props = defineProps({
   defaultSortOrder: {
     type: Number,
     default: 1 // 1 for ascending, -1 for descending
+  },
+  mobileBreakpoint: {
+    type: Number,
+    default: 960
   }
-})
+});
 
 const emit = defineEmits([
   'update:selection',
@@ -194,33 +210,59 @@ const emit = defineEmits([
   'row-click',
   'row-select',
   'row-unselect'
-])
+]);
 
 // Get slot information
-const slots = useSlots()
-const hasRowActions = computed(() => !!slots['row-actions'])
+const slots = useSlots();
+const hasRowActions = computed(() => !!slots['row-actions']);
 
 // Reactive state
-const selectedItems = ref([])
-const sortField = ref(props.defaultSortField)
-const sortOrder = ref(props.defaultSortOrder)
+const selectedItems = ref([]);
+const sortField = ref(props.defaultSortField);
+const sortOrder = ref(props.defaultSortOrder);
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-})
+});
+const windowWidth = ref(window.innerWidth);
+const isMobileView = computed(() => windowWidth.value < props.mobileBreakpoint);
 
-// Format cell value based on format function or type
+// Handle window resize for responsive detection
+const handleResize = () => {
+  windowWidth.value = window.innerWidth;
+};
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
+
+/**
+ * Format cell value based on format function or type
+ * Handles nested paths like 'expand.location_id.code'
+ */
 const formatCellValue = (data, field, format) => {
-  // Handle nested paths like 'expand.location_id.code'
-  const value = field.split('.').reduce((obj, key) => obj?.[key], data)
+  if (!data || !field) return '';
   
-  if (format) {
-    return format(value, data)
+  // Handle nested paths
+  const value = field.split('.').reduce((obj, key) => {
+    return obj && obj[key] !== undefined ? obj[key] : undefined;
+  }, data);
+  
+  if (value === undefined) return '';
+  
+  if (format && typeof format === 'function') {
+    return format(value, data);
   }
   
-  return value
-}
+  return value;
+};
 
-// Handle row click - pass through the data directly
+/**
+ * Handle row click but ignore clicks on action buttons
+ */
 const onRowClick = (event) => {
   // Don't trigger row click when clicking action buttons
   const target = event.originalEvent.target;
@@ -228,198 +270,226 @@ const onRowClick = (event) => {
     return;
   }
   
-  emit('row-click', event.data)
-}
+  emit('row-click', event.data);
+};
 
 // Pagination and sorting handlers
 const onPage = (event) => {
-  emit('page', event)
-}
+  emit('page', event);
+};
 
 const onSort = (event) => {
-  emit('sort', event)
-}
+  emit('sort', event);
+};
 </script>
 
 <style>
 /* Base datatable styles */
-.p-datatable {
-  width: 100%;
+.custom-datatable {
+  @apply w-full border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden;
 }
 
-.p-datatable-wrapper {
-  overflow-x: auto;
+.custom-datatable .p-datatable-wrapper {
+  @apply overflow-x-auto;
 }
 
-.p-datatable-table {
-  min-width: 100%;
-  table-layout: auto;
+.custom-datatable .p-datatable-table {
+  @apply min-w-full table-auto;
 }
 
-/* Dark mode styles */
-.dark .p-datatable {
-  background-color: rgb(31, 41, 55); /* bg-gray-800 */
+/* Row styles */
+.custom-datatable .p-datatable-tbody > tr {
+  @apply transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50;
 }
 
-.dark .p-datatable .p-datatable-header,
-.dark .p-datatable .p-datatable-footer {
-  background-color: rgb(31, 41, 55); /* bg-gray-800 */
-  color: rgb(229, 231, 235); /* text-gray-200 */
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
+.custom-datatable .p-datatable-tbody > tr:nth-child(even) {
+  @apply bg-gray-50/50 dark:bg-gray-800/50;
 }
 
-.dark .p-datatable .p-datatable-thead > tr > th {
-  background-color: rgb(55, 65, 81); /* bg-gray-700 */
-  color: rgb(229, 231, 235); /* text-gray-200 */
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
+/* Header styles */
+.custom-datatable .p-datatable-thead > tr > th {
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium p-3 text-left border-b border-gray-200 dark:border-gray-600;
 }
 
-.dark .p-datatable .p-datatable-tbody > tr {
-  background-color: rgb(31, 41, 55); /* bg-gray-800 */
-  color: rgb(229, 231, 235); /* text-gray-200 */
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
+/* Cell styles */
+.custom-datatable .p-datatable-tbody > tr > td {
+  @apply p-3 border-b border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300;
 }
 
-.dark .p-datatable .p-datatable-tbody > tr > td {
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
-  color: rgb(209, 213, 219); /* text-gray-300 */
+/* Cell Content Layout */
+.cell-content {
+  @apply flex items-center;
 }
 
-/* Stack layout CRITICAL fixes */
-/* Fix for stack view (responsive mobile layout) */
-.p-datatable.datatable-responsive .p-datatable-tbody > tr.p-datatable-row > td .p-column-title {
-  display: none !important;
+.column-header {
+  @apply hidden;
 }
 
-/* Only show column titles in stack view */
-@media screen and (max-width: 960px) {
-  .p-datatable.datatable-responsive .p-datatable-thead {
-    /* Keep the header visible in all modes */
-    display: table-header-group !important;
-  }
-  
-  .p-datatable.datatable-responsive .p-datatable-tbody > tr {
-    /* Use flexbox for rows in stack mode */
-    display: flex !important;
-    flex-wrap: wrap !important;
-    border: 1px solid #dee2e6;
-    margin-bottom: 1rem;
-    border-radius: 0.25rem;
-  }
-  
-  .dark .p-datatable.datatable-responsive .p-datatable-tbody > tr {
-    border-color: rgb(75, 85, 99); /* border-gray-600 */
-  }
-  
-  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td {
-    /* Style of each cell in stack mode */
-    width: 100% !important;
-    display: flex !important;
-    align-items: center;
-    border-width: 0;
-    border-bottom-width: 1px;
-    padding: 0.75rem 1rem;
-  }
-  
-  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td:last-child {
-    border-bottom-width: 0;
-  }
-  
-  .p-datatable.datatable-responsive .p-datatable-tbody > tr > td[data-pc-section="bodycell"]:last-child {
-    justify-content: center;
-    padding: 0.75rem;
-  }
+/* Links within table cells */
+.custom-datatable a {
+  @apply text-blue-600 dark:text-blue-400 hover:underline;
 }
 
-/* Badge styling in dark mode */
-.dark .bg-blue-100.text-blue-800,
-.dark .bg-blue-900\/30.text-blue-300 {
-  background-color: rgba(37, 99, 235, 0.2);
-  color: rgb(147, 197, 253);
+/* Custom Mobile View */
+.custom-datatable.mobile-view {
+  @apply border-0 bg-transparent overflow-visible w-full;
 }
 
-.dark .bg-green-100.text-green-800,
-.dark .bg-green-900\/30.text-green-300 {
-  background-color: rgba(22, 163, 74, 0.2);
-  color: rgb(134, 239, 172);
+.custom-datatable.mobile-view .p-datatable-wrapper {
+  @apply overflow-visible w-full;
 }
 
-.dark .bg-amber-100.text-amber-800,
-.dark .bg-amber-900\/30.text-amber-300 {
-  background-color: rgba(217, 119, 6, 0.2);
-  color: rgb(252, 211, 77);
+.custom-datatable.mobile-view .p-datatable-thead {
+  @apply hidden;
 }
 
-.dark .bg-purple-100.text-purple-800,
-.dark .bg-purple-900\/30.text-purple-300 {
-  background-color: rgba(126, 34, 206, 0.2);
-  color: rgb(216, 180, 254);
+.custom-datatable.mobile-view .p-datatable-tbody > tr {
+  @apply flex flex-col mb-4 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden shadow-sm hover:shadow bg-white dark:bg-gray-800 w-full;
 }
 
-.dark .bg-red-100.text-red-800,
-.dark .bg-red-900\/30.text-red-300 {
-  background-color: rgba(220, 38, 38, 0.2);
-  color: rgb(252, 165, 165);
+.custom-datatable.mobile-view .p-datatable-tbody > tr > td {
+  @apply flex w-full border-0 border-b border-gray-200 dark:border-gray-700 p-3;
 }
 
-.dark .bg-gray-100.text-gray-800,
-.dark .bg-gray-700.text-gray-300 {
-  background-color: rgba(75, 85, 99, 0.2);
-  color: rgb(209, 213, 219);
+.custom-datatable.mobile-view .p-datatable-tbody > tr > td:last-child {
+  @apply border-b-0;
 }
 
-/* Paginator styling */
-.dark .p-paginator {
-  background-color: rgb(31, 41, 55); /* bg-gray-800 */
-  color: rgb(229, 231, 235); /* text-gray-200 */
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
+.custom-datatable.mobile-view .cell-content {
+  @apply flex w-full justify-between items-center px-1;
 }
 
-.dark .p-paginator .p-paginator-page {
-  color: rgb(209, 213, 219); /* text-gray-300 */
+.custom-datatable.mobile-view .column-header {
+  @apply block font-medium text-gray-500 dark:text-gray-400 text-sm w-1/3 text-left;
 }
 
-.dark .p-paginator .p-paginator-page:hover {
-  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+.custom-datatable.mobile-view .cell-value {
+  @apply flex items-center justify-end w-2/3 text-right;
 }
 
-.dark .p-paginator .p-paginator-page.p-highlight {
-  background-color: rgb(59, 130, 246); /* bg-blue-600 */
-  color: white;
+.custom-datatable.mobile-view .actions-cell {
+  @apply justify-center py-4;
 }
 
-/* Fix for form elements in datatable */
-.dark .p-inputtext {
-  background-color: rgb(55, 65, 81); /* bg-gray-700 */
-  color: rgb(229, 231, 235); /* text-gray-200 */
-  border-color: rgb(75, 85, 99); /* border-gray-600 */
+.custom-datatable.mobile-view .actions-cell .column-header {
+  @apply hidden;
 }
 
-/* Make icons more visible in dark mode */
-.dark .pi {
-  color: rgb(209, 213, 219); /* text-gray-300 */
+.custom-datatable.mobile-view .action-buttons {
+  @apply w-full flex justify-center gap-2;
 }
 
-/* Fix for action buttons */
+/* Paginator Styling */
+.p-paginator {
+  @apply flex justify-center items-center p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 gap-1;
+}
+
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last,
+.p-paginator .p-paginator-page {
+  @apply inline-flex justify-center items-center min-w-[2.5rem] h-10 rounded-md text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+}
+
+.p-paginator .p-paginator-first.p-disabled,
+.p-paginator .p-paginator-prev.p-disabled,
+.p-paginator .p-paginator-next.p-disabled,
+.p-paginator .p-paginator-last.p-disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.p-paginator .p-paginator-page.p-highlight {
+  @apply bg-blue-600 dark:bg-blue-600 text-white border-blue-600 dark:border-blue-600;
+}
+
+.p-paginator .p-dropdown {
+  @apply border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300;
+}
+
+.p-paginator .p-dropdown-label {
+  @apply px-3 py-2;
+}
+
+/* Action buttons styling */
 .action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 0.25rem;
+  @apply flex justify-center gap-1;
 }
 
-.dark .p-button.p-button-text {
-  color: rgb(209, 213, 219); /* text-gray-300 */
+.action-buttons .p-button.p-button-icon-only {
+  @apply w-8 h-8 p-0;
 }
 
-.dark .p-button.p-button-text:hover {
-  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+/* PrimeVue Button Overrides */
+.p-button.p-button-text {
+  @apply text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700;
 }
 
-.dark .p-button.p-button-danger.p-button-text {
-  color: rgb(248, 113, 113); /* text-red-400 */
+.p-button.p-button-danger.p-button-text {
+  @apply text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20;
 }
 
-.dark .p-button.p-button-danger.p-button-text:hover {
-  background-color: rgba(220, 38, 38, 0.16); /* bg-red-600/16 */
+.p-button.p-button-text .p-button-icon {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.p-button.p-button-danger.p-button-text .p-button-icon {
+  @apply text-red-600 dark:text-red-400;
+}
+
+/* Badge styling for consistent types */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* Form controls in tables */
+.custom-datatable .p-inputtext {
+  @apply p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md;
+}
+
+/* Fix for selection checkbox */
+.p-datatable .p-selection-column {
+  @apply w-10 min-w-[2.5rem];
+}
+
+/* Improve sort indicator visibility */
+.custom-datatable .p-sortable-column {
+  @apply cursor-pointer;
+}
+
+.custom-datatable .p-sortable-column .p-sortable-column-icon {
+  @apply ml-2 text-gray-400 dark:text-gray-500;
+}
+
+.custom-datatable .p-sortable-column.p-highlight {
+  @apply bg-gray-100 dark:bg-gray-700;
+}
+
+.custom-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+/* Transition for theme changes */
+.custom-datatable,
+.custom-datatable * {
+  @apply transition-colors duration-200;
+}
+
+/* Fix mobile view in dark mode */
+.dark .custom-datatable.mobile-view .p-datatable-tbody > tr {
+  @apply bg-gray-800 border-gray-600;
+}
+
+.dark .custom-datatable.mobile-view .p-datatable-tbody > tr > td {
+  @apply border-gray-700;
+}
+
+.dark .p-paginator {
+  @apply bg-gray-800 border-gray-700;
+}
+
+/* Fix for loading overlay */
+.p-datatable .p-datatable-loading-overlay {
+  @apply bg-white/70 dark:bg-gray-900/70;
 }
 </style>

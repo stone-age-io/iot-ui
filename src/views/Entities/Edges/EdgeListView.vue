@@ -235,12 +235,12 @@ const {
 
 // Table columns definition with improved responsive styling
 const columns = [
-  { field: 'code', header: 'Code', sortable: true, style: 'width: 10rem; min-width: 8rem' },
-  { field: 'name', header: 'Name', sortable: true, style: 'width: auto; min-width: 12rem' },
-  { field: 'type', header: 'Type', sortable: true, style: 'width: 8rem; min-width: 6rem' },
-  { field: 'region', header: 'Region', sortable: true, style: 'width: 8rem; min-width: 6rem' },
-  { field: 'active', header: 'Status', sortable: true, style: 'width: 8rem; min-width: 6rem' },
-  { field: 'created', header: 'Created', sortable: true, style: 'width: 10rem; min-width: 8rem' }
+  { field: 'code', header: 'Code', sortable: true, style: 'width: 15%; min-width: 8rem' },
+  { field: 'name', header: 'Name', sortable: true, style: 'width: 20%; min-width: 12rem' },
+  { field: 'type', header: 'Type', sortable: true, style: 'width: 15%; min-width: 6rem' },
+  { field: 'region', header: 'Region', sortable: true, style: 'width: 15%; min-width: 6rem' },
+  { field: 'active', header: 'Status', sortable: true, style: 'width: 15%; min-width: 6rem' },
+  { field: 'created', header: 'Created', sortable: true, style: 'width: 20%; min-width: 8rem' }
 ]
 
 // Load types for filters
