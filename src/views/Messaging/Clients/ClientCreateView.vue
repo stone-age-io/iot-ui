@@ -14,134 +14,145 @@
       </template>
     </PageHeader>
     
-    <div class="card">
-      <EntityForm
-        title="Client Information"
-        :loading="loading"
-        submit-label="Create Client"
-        @submit="handleSubmit"
-        @cancel="$router.back()"
-      >
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Username - required field -->
-          <FormField
-            id="username"
-            label="Username"
-            :required="true"
-            :error-message="v$.username.$errors[0]?.$message"
-            help-text="Unique identifier for NATS authentication"
-            class="md:col-span-2"
-          >
-            <div class="flex items-center space-x-2">
-              <InputText
-                id="username"
-                v-model="client.username"
-                placeholder="device_gateway_001"
-                class="w-full font-mono"
-                :class="{ 'p-invalid': v$.username.$error }"
-              />
-              <Button
-                icon="pi pi-magic"
-                class="p-button-outlined"
-                @click="showGenerateUsernameDialog"
-                tooltip="Generate Username"
-              />
-            </div>
-          </FormField>
-          
-          <!-- Password field - required field -->
-          <FormField
-            id="password"
-            label="Password"
-            :required="true"
-            :error-message="v$.password.$errors[0]?.$message"
-            help-text="You can view this password only during creation"
-          >
-            <div class="flex">
-              <Password
-                id="password"
-                v-model="client.password"
-                :feedback="false"
-                toggleMask
-                inputClass="w-full"
-                class="w-full"
-                :class="{ 'p-invalid': v$.password.$error }"
-              />
-              <Button
-                icon="pi pi-refresh"
-                class="ml-2"
-                @click="generateRandomPassword"
-                tooltip="Generate Password"
-              />
-              <Button
-                icon="pi pi-copy"
-                class="ml-2"
-                @click="copyPasswordToClipboard"
-                tooltip="Copy Password"
-              />
-            </div>
-            <div class="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded flex items-start">
-              <i class="pi pi-exclamation-triangle mr-2 mt-0.5"></i>
-              <span>Make sure to save this password securely. You won't be able to view it again after creation.</span>
-            </div>
-          </FormField>
-          
-          <!-- Role selection - required field -->
-          <FormField
-            id="role_id"
-            label="Role"
-            :required="true"
-            :error-message="v$.role_id.$errors[0]?.$message"
-            help-text="Permissions for this client"
-            class="md:col-span-2"
-          >
-            <Dropdown
-              id="role_id"
-              v-model="client.role_id"
-              :options="roles"
-              optionLabel="name"
-              optionValue="id"
-              placeholder="Select Role"
-              class="w-full"
-              :class="{ 'p-invalid': v$.role_id.$error }"
-              :loading="rolesLoading"
-              :filter="true"
+    <Card>
+      <template #title>
+        <h2 :class="['text-xl font-semibold', textColor.primary]">Client Information</h2>
+      </template>
+      <template #content>
+        <EntityForm
+          :loading="loading"
+          submit-label="Create Client"
+          @submit="handleSubmit"
+          @cancel="$router.back()"
+        >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Username - required field -->
+            <FormField
+              id="username"
+              label="Username"
+              :required="true"
+              :error-message="v$.username.$errors[0]?.$message"
+              help-text="Unique identifier for NATS authentication"
+              class="md:col-span-2"
             >
-              <template #option="slotProps">
-                <div>
-                  <div class="font-medium">{{ slotProps.option.name }}</div>
-                </div>
-              </template>
-            </Dropdown>
-            <div class="mt-2 flex items-center">
-              <Button
-                label="Create New Role"
-                icon="pi pi-plus"
-                class="p-button-text p-button-sm"
-                @click="navigateToCreateRole"
-              />
-            </div>
-          </FormField>
-          
-          <!-- Active Status -->
-          <FormField
-            id="active"
-            label="Status"
-          >
-            <div class="flex items-center mt-2">
-              <InputSwitch
-                id="active"
-                v-model="client.active"
-                class="mr-2"
-              />
-              <label for="active" class="cursor-pointer">
-                {{ client.active ? 'Active' : 'Inactive' }}
-              </label>
-            </div>
-          </FormField>
-        </div>
-      </EntityForm>
-    </div>
+              <div class="flex items-center space-x-2">
+                <InputText
+                  id="username"
+                  v-model="client.username"
+                  placeholder="device_gateway_001"
+                  class="w-full font-mono form-input"
+                  :class="{ 'p-invalid': v$.username.$error }"
+                />
+                <Button
+                  icon="pi pi-magic"
+                  class="p-button-outlined"
+                  @click="showGenerateUsernameDialog"
+                  tooltip="Generate Username"
+                />
+              </div>
+            </FormField>
+            
+            <!-- Password field - required field -->
+            <FormField
+              id="password"
+              label="Password"
+              :required="true"
+              :error-message="v$.password.$errors[0]?.$message"
+              help-text="You can view this password only during creation"
+            >
+              <div class="flex">
+                <Password
+                  id="password"
+                  v-model="client.password"
+                  :feedback="false"
+                  toggleMask
+                  inputClass="w-full form-input"
+                  class="w-full"
+                  :class="{ 'p-invalid': v$.password.$error }"
+                />
+                <Button
+                  icon="pi pi-refresh"
+                  class="ml-2"
+                  @click="generateRandomPassword"
+                  tooltip="Generate Password"
+                />
+                <Button
+                  icon="pi pi-copy"
+                  class="ml-2"
+                  @click="copyPasswordToClipboard"
+                  tooltip="Copy Password"
+                />
+              </div>
+              <div :class="[
+                'mt-2 text-xs p-2 rounded flex items-start',
+                themeValue.class('bg-amber-50 text-amber-600', 'bg-amber-900/20 text-amber-400')
+              ]">
+                <i class="pi pi-exclamation-triangle mr-2 mt-0.5"></i>
+                <span>Make sure to save this password securely. You won't be able to view it again after creation.</span>
+              </div>
+            </FormField>
+            
+            <!-- Role selection - required field -->
+            <FormField
+              id="role_id"
+              label="Role"
+              :required="true"
+              :error-message="v$.role_id.$errors[0]?.$message"
+              help-text="Permissions for this client"
+              class="md:col-span-2"
+            >
+              <Dropdown
+                id="role_id"
+                v-model="client.role_id"
+                :options="roles"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Select Role"
+                class="w-full form-input"
+                :class="{ 'p-invalid': v$.role_id.$error }"
+                :loading="rolesLoading"
+                :filter="true"
+              >
+                <template #option="slotProps">
+                  <div>
+                    <div :class="['font-medium', textColor.primary]">{{ slotProps.option.name }}</div>
+                  </div>
+                </template>
+              </Dropdown>
+              <div class="mt-2 flex items-center">
+                <Button
+                  label="Create New Role"
+                  icon="pi pi-plus"
+                  class="p-button-text p-button-sm"
+                  @click="navigateToCreateRole"
+                />
+              </div>
+            </FormField>
+            
+            <!-- Active Status -->
+            <FormField
+              id="active"
+              label="Status"
+            >
+              <div class="flex items-center mt-2">
+                <InputSwitch
+                  id="active"
+                  v-model="client.active"
+                  class="mr-2"
+                />
+                <label 
+                  for="active" 
+                  class="cursor-pointer"
+                  :class="textColor.primary"
+                >
+                  {{ client.active ? 'Active' : 'Inactive' }}
+                </label>
+              </div>
+            </FormField>
+          </div>
+        </EntityForm>
+      </template>
+    </Card>
     
     <!-- Generate Username Dialog -->
     <Dialog
@@ -151,11 +162,16 @@
       :modal="true"
     >
       <div class="p-4">
-        <p class="mb-4">Generate a username based on client type and descriptive name.</p>
+        <p :class="['mb-4', textColor.primary]">Generate a username based on client type and descriptive name.</p>
         
         <div class="space-y-3">
           <div>
-            <label for="gen-client-type" class="block text-sm font-medium text-gray-700 mb-1">Client Type</label>
+            <label 
+              for="gen-client-type" 
+              :class="['block text-sm font-medium mb-1', textColor.primary]"
+            >
+              Client Type
+            </label>
             <Dropdown
               id="gen-client-type"
               v-model="generateDialog.clientType"
@@ -163,26 +179,31 @@
               optionLabel="label"
               optionValue="value"
               placeholder="Select Type"
-              class="w-full"
+              class="w-full form-input"
             />
           </div>
           
           <div>
-            <label for="gen-name" class="block text-sm font-medium text-gray-700 mb-1">Descriptive Name</label>
+            <label 
+              for="gen-name" 
+              :class="['block text-sm font-medium mb-1', textColor.primary]"
+            >
+              Descriptive Name
+            </label>
             <InputText
               id="gen-name"
               v-model="generateDialog.name"
               placeholder="Temperature Sensor Gateway"
-              class="w-full"
+              class="w-full form-input"
             />
           </div>
           
           <div v-if="generatedUsername">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Generated Username</label>
+            <label :class="['block text-sm font-medium mb-1', textColor.primary]">Generated Username</label>
             <div class="flex items-center">
               <InputText
                 v-model="generatedUsername"
-                class="w-full font-mono"
+                class="w-full font-mono form-input"
                 readonly
               />
               <Button
@@ -229,7 +250,8 @@ import { ref, onMounted } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
 import { useClient } from '../../../composables/useClient'
-import { topicPermissionService } from '../../../services'
+import { useTopicPermission } from '../../../composables/useTopicPermission'
+import { useTheme } from '../../../composables/useTheme'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -241,6 +263,10 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
+import Card from 'primevue/card'
+
+// Theme composable for theme-aware styling
+const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the client composable
 const { 
@@ -250,13 +276,16 @@ const {
   generateSecurePassword,
   createClient,
   copyToClipboard,
-  navigateToCreateRole,
   navigateToClientDetail
 } = useClient()
 
-// Roles for the dropdown
-const roles = ref([])
-const rolesLoading = ref(false)
+// Use the topic permission composable for roles
+const {
+  permissions: roles,
+  loading: rolesLoading,
+  fetchPermissions,
+  navigateToPermissionCreate: navigateToCreateRole
+} = useTopicPermission()
 
 // Client form data
 const client = ref({
@@ -304,21 +333,10 @@ const generatedUsername = ref('')
 
 // Fetch roles on component mount
 onMounted(async () => {
-  await fetchRoles()
+  await fetchPermissions({
+    sort: 'name', // Sort by name for better dropdown display
+  })
 })
-
-// Fetch topic permission roles for the dropdown
-const fetchRoles = async () => {
-  rolesLoading.value = true
-  try {
-    const response = await topicPermissionService.getTopicPermissions()
-    roles.value = response.data.items || []
-  } catch (error) {
-    console.error('Error fetching roles:', error)
-  } finally {
-    rolesLoading.value = false
-  }
-}
 
 // Generate a random secure password
 const generateRandomPassword = () => {
@@ -370,3 +388,91 @@ const handleSubmit = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Theme-aware styling */
+:deep(.p-card) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+  transition: all 0.2s ease;
+}
+
+:deep(.p-card .p-card-title) {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--surface-border);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+:deep(.p-card .p-card-content) {
+  padding: 1.5rem;
+}
+
+:deep(.p-card .p-card-footer) {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+/* Form input styling */
+.form-input {
+  transition: all 0.2s ease;
+}
+
+/* Fix PrimeVue components styling in dark mode */
+:deep(.dark .p-card),
+:deep(.dark .p-card .p-card-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-inputtext),
+:deep(.dark .p-dropdown),
+:deep(.dark .p-inputnumber),
+:deep(.dark .p-textarea),
+:deep(.dark .p-password input) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-dropdown-panel),
+:deep(.dark .p-dropdown-items-wrapper) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dropdown-item) {
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dropdown-item:hover) {
+  background-color: var(--primary-400);
+  color: var(--primary-color-text);
+}
+
+:deep(.dark .p-dialog) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dialog .p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-dialog .p-dialog-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dialog .p-dialog-footer) {
+  background-color: var(--surface-card);
+  border-color: var(--surface-border);
+}
+</style>
