@@ -10,7 +10,7 @@
       </template>
     </PageHeader>
     
-    <div class="card dark:bg-gray-800">
+    <div class="card">
       <DataTable
         :items="edges"
         :columns="columns"
@@ -25,13 +25,13 @@
       >
         <!-- Code column with custom formatting -->
         <template #code-body="{ data }">
-          <div class="font-medium text-primary-700 dark:text-primary-400">{{ data.code }}</div>
+          <div class="font-medium text-primary-700 dark:text-primary-400 font-mono">{{ data.code }}</div>
         </template>
         
         <!-- Type column with badge -->
         <template #type-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
             :class="getTypeClass(data.type)"
           >
             {{ getTypeName(data.type) }}
@@ -41,7 +41,7 @@
         <!-- Region column with badge -->
         <template #region-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
             :class="getRegionClass(data.region)"
           >
             {{ getRegionName(data.region) }}
@@ -51,20 +51,13 @@
         <!-- Status column with badge -->
         <template #active-body="{ data }">
           <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-flex items-center"
+            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
             :class="data.active ? 
               'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
               'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
           >
             {{ data.active ? 'Active' : 'Inactive' }}
           </span>
-        </template>
-        
-        <!-- Created date column -->
-        <template #created-body="{ data }">
-          <div class="text-sm text-gray-600 dark:text-gray-400">
-            {{ formatDate(data.created) }}
-          </div>
         </template>
         
         <!-- Row actions -->
@@ -106,7 +99,10 @@
     >
       <div class="grid grid-cols-1 gap-4 mt-2">
         <div class="field">
-          <label for="filter-type" class="font-medium mb-2 block dark:text-gray-300">Edge Type</label>
+          <label 
+            for="filter-type" 
+            class="font-medium mb-2 block"
+          >Edge Type</label>
           <Dropdown
             id="filter-type"
             v-model="filters.type"
@@ -120,7 +116,10 @@
         </div>
         
         <div class="field">
-          <label for="filter-region" class="font-medium mb-2 block dark:text-gray-300">Region</label>
+          <label 
+            for="filter-region" 
+            class="font-medium mb-2 block"
+          >Region</label>
           <Dropdown
             id="filter-region"
             v-model="filters.region"
@@ -134,7 +133,10 @@
         </div>
         
         <div class="field">
-          <label for="filter-status" class="font-medium mb-2 block dark:text-gray-300">Status</label>
+          <label 
+            for="filter-status" 
+            class="font-medium mb-2 block"
+          >Status</label>
           <Dropdown
             id="filter-status"
             v-model="filters.active"
@@ -179,6 +181,7 @@ import { useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
+import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
@@ -189,6 +192,9 @@ import Toast from 'primevue/toast'
 
 const router = useRouter()
 const typesStore = useTypesStore()
+
+// Theme composable for theme-aware styling
+const { themeValue } = useTheme()
 
 // Get edge functionality from composable
 const { 
@@ -213,14 +219,14 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition with improved responsive styling
+// Table columns definition
 const columns = [
-  { field: 'code', header: 'Code', sortable: true, style: 'width: 15%; min-width: 8rem' },
-  { field: 'name', header: 'Name', sortable: true, style: 'width: 20%; min-width: 12rem' },
-  { field: 'type', header: 'Type', sortable: true, style: 'width: 15%; min-width: 6rem' },
-  { field: 'region', header: 'Region', sortable: true, style: 'width: 15%; min-width: 6rem' },
-  { field: 'active', header: 'Status', sortable: true, style: 'width: 15%; min-width: 6rem' },
-  { field: 'created', header: 'Created', sortable: true, style: 'width: 20%; min-width: 8rem' }
+  { field: 'code', header: 'Code', sortable: true },
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'type', header: 'Type', sortable: true },
+  { field: 'region', header: 'Region', sortable: true },
+  { field: 'active', header: 'Status', sortable: true },
+  { field: 'created', header: 'Created', sortable: true }
 ]
 
 // Load types for filters
@@ -314,34 +320,21 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Dark mode styles for interactive elements */
-:deep(.p-dialog-header),
-:deep(.p-dialog-content),
-:deep(.p-dialog-footer) {
-  @apply dark:bg-gray-800 dark:text-white dark:border-gray-700;
-}
-
-:deep(.p-dropdown),
-:deep(.p-dropdown-panel) {
-  @apply dark:bg-gray-700 dark:border-gray-600;
-}
-
-:deep(.p-dropdown-items) {
-  @apply dark:bg-gray-700;
-}
-
-:deep(.p-dropdown-item) {
-  @apply dark:text-gray-300 dark:hover:bg-gray-600;
-}
-
-:deep(.p-dropdown-item.p-highlight) {
-  @apply dark:bg-primary-700 dark:text-white;
-}
-
-/* Ensure badge elements appear correctly in all views */
-.rounded-full {
+/* Minimal styling, letting the component handle mobile view */
+/* Badge styling for consistency */
+:deep(.badge) {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Basic DataTable styling */
+:deep(.p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
+  cursor: pointer;
 }
 </style>

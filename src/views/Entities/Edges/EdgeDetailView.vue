@@ -2,27 +2,31 @@
   <div>
     <!-- Loading Spinner -->
     <div v-if="loading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" class="dark:text-primary-400" />
+      <ProgressSpinner 
+        strokeWidth="4" 
+        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+      />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="card p-6 text-center dark:bg-gray-800">
-      <div class="text-red-500 dark:text-red-400 text-xl mb-4">
+    <div v-else-if="error" class="p-error-container p-6 text-center">
+      <div :class="['text-xl mb-4', textColor.error]">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load edge details
       </div>
-      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
+      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
     <!-- Edge Details -->
-    <div v-else-if="edge">
+    <div v-else-if="edge" class="edge-detail-container">
+      <!-- Header Section with Edge title and actions -->
       <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Edge Installation</div>
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1">{{ edge.name }}</h1>
-          <div class="text-gray-600 dark:text-gray-400">
-            <span class="font-mono">{{ edge.code }}</span>
+          <div :class="['text-sm mb-1', textColor.secondary]">Edge Installation</div>
+          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ edge.name }}</h1>
+          <div :class="['font-mono', textColor.secondary]">
+            {{ edge.code }}
           </div>
         </div>
         
@@ -42,206 +46,244 @@
         </div>
       </div>
       
+      <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
-        <div class="card dark:bg-gray-800 lg:col-span-2">
-          <h2 class="text-xl font-semibold mb-4 dark:text-gray-200">Edge Details</h2>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-            <!-- Code -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Code</div>
-              <div class="font-mono text-lg dark:text-gray-200">{{ edge.code }}</div>
-            </div>
-            
-            <!-- Name -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Name</div>
-              <div class="text-lg dark:text-gray-200">{{ edge.name }}</div>
-            </div>
-            
-            <!-- Type -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Type</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="getTypeClass(edge.type)"
-                >
-                  {{ getTypeName(edge.type) }}
-                </span>
+        <div class="lg:col-span-2">
+          <Card class="h-full">
+            <template #title>
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Edge Details</h2>
+            </template>
+            <template #content>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                <!-- Code -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Code</div>
+                  <div :class="['font-mono text-lg', textColor.primary]">{{ edge.code }}</div>
+                </div>
+                
+                <!-- Name -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Name</div>
+                  <div :class="['text-lg', textColor.primary]">{{ edge.name }}</div>
+                </div>
+                
+                <!-- Type -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Type</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="badge"
+                      :class="getTypeClass(edge.type)"
+                    >
+                      {{ getTypeName(edge.type) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Region -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Region</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="badge"
+                      :class="getRegionClass(edge.region)"
+                    >
+                      {{ getRegionName(edge.region) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Status -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Status</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="badge"
+                      :class="edge.active ? 
+                        themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
+                        themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                    >
+                      {{ edge.active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Metadata (if any) -->
+                <div v-if="hasEdgeMetadata" class="md:col-span-2">
+                  <div :class="['field-label', textColor.secondary]">Metadata</div>
+                  <div :class="[
+                    'p-3 rounded border font-mono text-sm overflow-x-auto', 
+                    backgroundColor.secondary,
+                    borderColor.default,
+                    textColor.primary
+                  ]">
+                    <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <!-- Region -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Region</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="getRegionClass(edge.region)"
-                >
-                  {{ getRegionName(edge.region) }}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Status -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="edge.active ? 
-                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-                >
-                  {{ edge.active ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Metadata (if any) -->
-            <div v-if="hasEdgeMetadata" class="md:col-span-2">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Metadata</div>
-              <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded border border-gray-200 dark:border-gray-600 font-mono text-sm overflow-x-auto dark:text-gray-300">
-                <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
-              </div>
-            </div>
-          </div>
+            </template>
+          </Card>
         </div>
         
         <!-- Stats/Quick Info Card -->
-        <div class="card dark:bg-gray-800">
-          <h2 class="text-xl font-semibold mb-4 dark:text-gray-200">Overview</h2>
-          
-          <div class="space-y-6">
-            <!-- Locations Count -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Locations</div>
-              <div class="flex items-center">
-                <i class="pi pi-map-marker text-green-600 dark:text-green-400 mr-2"></i>
-                <div class="text-2xl font-semibold dark:text-gray-200">{{ stats.locationsCount }}</div>
+        <div>
+          <Card class="h-full">
+            <template #title>
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Overview</h2>
+            </template>
+            <template #content>
+              <div class="space-y-6">
+                <!-- Locations Count -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Locations</div>
+                  <div class="flex items-center">
+                    <i :class="['pi pi-map-marker mr-2', themeValue.class('text-green-600', 'text-green-400')]"></i>
+                    <div :class="['text-2xl font-semibold', textColor.primary]">{{ stats.locationsCount }}</div>
+                  </div>
+                  <Button
+                    label="View Locations"
+                    icon="pi pi-arrow-right"
+                    class="p-button-text p-button-sm mt-2"
+                    @click="navigateToLocations(edge.id)"
+                  />
+                </div>
+                
+                <!-- Things Count -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Things</div>
+                  <div class="flex items-center">
+                    <i :class="['pi pi-wifi mr-2', themeValue.class('text-purple-600', 'text-purple-400')]"></i>
+                    <div :class="['text-2xl font-semibold', textColor.primary]">{{ stats.thingsCount }}</div>
+                  </div>
+                  <Button
+                    label="View Things"
+                    icon="pi pi-arrow-right"
+                    class="p-button-text p-button-sm mt-2"
+                    @click="navigateToThings(edge.id)"
+                  />
+                </div>
+                
+                <!-- Created Date -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Created</div>
+                  <div :class="textColor.secondary">{{ formatDate(edge.created) }}</div>
+                </div>
+                
+                <!-- Last Updated -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
+                  <div :class="textColor.secondary">{{ formatDate(edge.updated) }}</div>
+                </div>
               </div>
-              <Button
-                label="View Locations"
-                icon="pi pi-arrow-right"
-                class="p-button-text p-button-sm mt-2"
-                @click="navigateToLocations(edge.id)"
-              />
-            </div>
-            
-            <!-- Things Count -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Things</div>
-              <div class="flex items-center">
-                <i class="pi pi-wifi text-purple-600 dark:text-purple-400 mr-2"></i>
-                <div class="text-2xl font-semibold dark:text-gray-200">{{ stats.thingsCount }}</div>
-              </div>
-              <Button
-                label="View Things"
-                icon="pi pi-arrow-right"
-                class="p-button-text p-button-sm mt-2"
-                @click="navigateToThings(edge.id)"
-              />
-            </div>
-            
-            <!-- Created Date -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Created</div>
-              <div class="text-gray-700 dark:text-gray-300">{{ formatDate(edge.created) }}</div>
-            </div>
-            
-            <!-- Last Updated -->
-            <div>
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Last Updated</div>
-              <div class="text-gray-700 dark:text-gray-300">{{ formatDate(edge.updated) }}</div>
-            </div>
-          </div>
+            </template>
+          </Card>
         </div>
       </div>
       
       <!-- Recent Locations -->
-      <div class="card mt-6 dark:bg-gray-800" v-if="recentLocations.length > 0">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold dark:text-gray-200">Recent Locations</h2>
-          <Button
-            label="View All"
-            icon="pi pi-arrow-right"
-            class="p-button-text p-button-sm"
-            @click="navigateToLocations(edge.id)"
-          />
-        </div>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div 
-            v-for="location in recentLocations" 
-            :key="location.id"
-            class="bg-white dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 p-4 hover:shadow-md transition-shadow cursor-pointer"
-            @click="navigateToLocationDetail(location.id)"
-          >
-            <div class="flex justify-between items-start mb-2">
-              <span class="text-primary-600 dark:text-primary-400 font-mono">{{ location.code }}</span>
-              <span 
-                class="px-2 py-1 text-xs rounded-full font-medium"
-                :class="getLocationTypeClass(location.type)"
-              >
-                {{ typesStore.getTypeName(location.type, 'locationTypes') }}
-              </span>
+      <div v-if="recentLocations.length > 0" class="mt-6">
+        <Card>
+          <template #title>
+            <div class="flex justify-between items-center">
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Recent Locations</h2>
+              <Button
+                label="View All"
+                icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm"
+                @click="navigateToLocations(edge.id)"
+              />
             </div>
-            <div class="font-semibold mb-1 dark:text-gray-200">{{ location.name }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400">{{ formatPath(location.path) }}</div>
-          </div>
-        </div>
+          </template>
+          <template #content>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                v-for="location in recentLocations" 
+                :key="location.id"
+                :class="[
+                  'rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer location-card',
+                  backgroundColor.secondary,
+                  borderColor.light
+                ]"
+                @click="navigateToLocationDetail(location.id)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <span :class="themeValue.class('text-primary-600', 'text-primary-400') + ' font-mono'">{{ location.code }}</span>
+                  <span 
+                    class="badge"
+                    :class="getLocationTypeClass(location.type)"
+                  >
+                    {{ typesStore.getTypeName(location.type, 'locationTypes') }}
+                  </span>
+                </div>
+                <div :class="['font-semibold mb-1', textColor.primary]">{{ location.name }}</div>
+                <div :class="['text-sm', textColor.secondary]">{{ formatPath(location.path) }}</div>
+              </div>
+            </div>
+          </template>
+        </Card>
       </div>
       
       <!-- Recent Things -->
-      <div class="card mt-6 dark:bg-gray-800" v-if="recentThings.length > 0">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold dark:text-gray-200">Recent Things</h2>
-          <Button
-            label="View All"
-            icon="pi pi-arrow-right"
-            class="p-button-text p-button-sm"
-            @click="navigateToThings(edge.id)"
-          />
-        </div>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div 
-            v-for="thing in recentThings" 
-            :key="thing.id"
-            class="bg-white dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 p-4 hover:shadow-md transition-shadow cursor-pointer"
-            @click="navigateToThingDetail(thing.id)"
-          >
-            <div class="flex justify-between items-start mb-2">
-              <span class="text-primary-600 dark:text-primary-400 font-mono">{{ thing.thing_code }}</span>
-              <span 
-                class="px-2 py-1 text-xs rounded-full font-medium"
-                :class="getThingTypeClass(thing.thing_type)"
-              >
-                {{ typesStore.getTypeName(thing.thing_type, 'thingTypes') }}
-              </span>
+      <div v-if="recentThings.length > 0" class="mt-6">
+        <Card>
+          <template #title>
+            <div class="flex justify-between items-center">
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Recent Things</h2>
+              <Button
+                label="View All"
+                icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm"
+                @click="navigateToThings(edge.id)"
+              />
             </div>
-            <div class="font-semibold mb-1 dark:text-gray-200">{{ thing.name }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400">{{ getLocationName(thing.location_id) }}</div>
-          </div>
-        </div>
+          </template>
+          <template #content>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                v-for="thing in recentThings" 
+                :key="thing.id"
+                :class="[
+                  'rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer thing-card',
+                  backgroundColor.secondary,
+                  borderColor.light
+                ]"
+                @click="navigateToThingDetail(thing.id)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <span :class="themeValue.class('text-primary-600', 'text-primary-400') + ' font-mono'">{{ thing.thing_code }}</span>
+                  <span 
+                    class="badge"
+                    :class="getThingTypeClass(thing.thing_type)"
+                  >
+                    {{ typesStore.getTypeName(thing.thing_type, 'thingTypes') }}
+                  </span>
+                </div>
+                <div :class="['font-semibold mb-1', textColor.primary]">{{ thing.name }}</div>
+                <div :class="['text-sm', textColor.secondary]">{{ getLocationName(thing.location_id) }}</div>
+              </div>
+            </div>
+          </template>
+        </Card>
       </div>
       
       <!-- Analytics Link Card -->
-      <div class="card mt-6 dark:bg-gray-800">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="flex-1">
-            <h2 class="text-xl font-semibold mb-1 dark:text-gray-200">Analytics & Monitoring</h2>
-            <p class="text-gray-600 dark:text-gray-400">View detailed metrics and logs for this edge in Grafana.</p>
-          </div>
-          <Button
-            label="Open in Grafana"
-            icon="pi pi-external-link"
-            @click="openInGrafana(edge.id)"
-          />
-        </div>
+      <div class="mt-6">
+        <Card>
+          <template #content>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div class="flex-1">
+                <h2 :class="['text-xl font-semibold mb-1', textColor.primary]">Analytics & Monitoring</h2>
+                <p :class="textColor.secondary">View detailed metrics and logs for this edge in Grafana.</p>
+              </div>
+              <Button
+                label="Open in Grafana"
+                icon="pi pi-external-link"
+                @click="openInGrafana(edge.id)"
+              />
+            </div>
+          </template>
+        </Card>
       </div>
     </div>
     
@@ -269,13 +311,18 @@ import { useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
+import { useTheme } from '../../../composables/useTheme'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
+import Card from 'primevue/card'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const router = useRouter()
 const typesStore = useTypesStore()
+
+// Theme composable for theme-aware styling
+const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Ensure types are loaded
 typesStore.loadLocationTypes()
@@ -451,28 +498,96 @@ const getThingTypeClass = (typeCode) => {
 </script>
 
 <style scoped>
-/* Ensure consistent dark mode for all badges */
-:deep(.bg-blue-100.text-blue-800) {
-  @apply dark:bg-blue-900/30 dark:text-blue-300;
+/* Theme-aware custom styling */
+:deep(.p-card) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+  transition: all 0.2s ease;
 }
 
-:deep(.bg-purple-100.text-purple-800) {
-  @apply dark:bg-purple-900/30 dark:text-purple-300;
+:deep(.p-card .p-card-title) {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--surface-border);
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
-:deep(.bg-green-100.text-green-800) {
-  @apply dark:bg-green-900/30 dark:text-green-300;
+:deep(.p-card .p-card-content) {
+  padding: 1.5rem;
 }
 
-:deep(.bg-amber-100.text-amber-800) {
-  @apply dark:bg-amber-900/30 dark:text-amber-300;
+:deep(.p-card .p-card-footer) {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--surface-border);
 }
 
-:deep(.bg-red-100.text-red-800) {
-  @apply dark:bg-red-900/30 dark:text-red-300;
+.field-label {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
 }
 
-:deep(.bg-gray-100.text-gray-800) {
-  @apply dark:bg-gray-700 dark:text-gray-300;
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-field, .stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-card, .thing-card {
+  border-width: 1px;
+  transition: all 0.2s ease;
+}
+
+.location-card:hover, .thing-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Error container styling */
+.p-error-container {
+  background-color: var(--surface-card);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+}
+
+/* Fix PrimeVue Card styling in dark mode */
+:deep(.dark .p-card),
+:deep(.dark .p-card .p-card-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-card .p-card-title) {
+  color: var(--text-color);
+}
+
+/* Fix button styling */
+:deep(.p-button-text) {
+  color: var(--primary-color);
+}
+
+:deep(.p-button-text:hover) {
+  background: rgba(var(--primary-color-rgb), 0.04);
+  color: var(--primary-color);
+}
+
+:deep(.dark .p-button-text) {
+  color: var(--primary-200);
+}
+
+:deep(.dark .p-button-text:hover) {
+  background: rgba(var(--primary-200-rgb), 0.16);
 }
 </style>
