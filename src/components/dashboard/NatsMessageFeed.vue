@@ -1,10 +1,17 @@
 <!-- src/components/dashboard/NatsMessageFeed.vue -->
 <template>
   <div class="nats-message-feed">
-    <!-- Card Header -->
+    <!-- Card Header with Integrated NATS Status -->
     <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
       <div class="flex items-center gap-2">
-        <h3 class="text-lg font-semibold">NATS Messages</h3>
+        <h3 class="text-lg font-semibold text-theme-primary">NATS Messages</h3>
+        
+        <!-- Integrated NATS Status Indicator -->
+        <div class="nats-status-indicator px-2 py-0.5 rounded-full text-xs font-medium flex items-center" :class="statusClass">
+          <div class="w-2 h-2 rounded-full mr-1.5" :class="statusIndicatorClass"></div>
+          <span>{{ statusText }}</span>
+        </div>
+        
         <Badge
           v-tooltip="paused ? 'Message stream paused' : 'Receiving messages'"
           :value="paused ? 'Paused' : 'Live'" 
@@ -41,17 +48,27 @@
     </div>
     
     <!-- Status Messages -->
-    <div v-if="loading" class="flex justify-center py-4">
+    <div v-if="loading" class="flex justify-center py-4 text-theme-secondary">
       <ProgressSpinner style="width: 30px; height: 30px" />
       <span class="ml-2">Initializing subscriptions...</span>
     </div>
     
-    <div v-else-if="error && !hasMessages" class="p-4 bg-red-50 text-red-700 rounded-md mb-3">
+    <div v-else-if="connectionStatus === 'error'" class="p-4 bg-theme-error text-theme-error-contrast rounded-md mb-3">
+      <i class="pi pi-exclamation-circle mr-2"></i>
+      Connection error. Please check your NATS settings.
+    </div>
+    
+    <div v-else-if="connectionStatus === 'disconnected'" class="p-4 bg-theme-warning text-theme-warning-contrast rounded-md mb-3">
+      <i class="pi pi-exclamation-triangle mr-2"></i>
+      Disconnected from NATS server. Reconnecting...
+    </div>
+    
+    <div v-else-if="error && !hasMessages" class="p-4 bg-theme-error text-theme-error-contrast rounded-md mb-3">
       <i class="pi pi-exclamation-circle mr-2"></i>
       {{ error }}
     </div>
     
-    <div v-else-if="topics.length === 0" class="p-4 bg-blue-50 text-blue-700 rounded-md mb-3">
+    <div v-else-if="topics.length === 0" class="p-4 bg-theme-info text-theme-info-contrast rounded-md mb-3">
       <i class="pi pi-info-circle mr-2"></i>
       No subscription topics configured. Go to 
       <router-link to="/settings" class="underline font-medium">Settings</router-link> 
@@ -59,24 +76,24 @@
     </div>
     
     <!-- Empty State -->
-    <div v-if="paginatedMessages.length === 0 && topics.length > 0" class="p-4 text-center text-gray-500">
+    <div v-if="paginatedMessages.length === 0 && topics.length > 0 && connectionStatus === 'connected'" class="p-4 text-center text-theme-secondary">
       No messages received yet. Waiting for messages on topics: {{ topics.join(', ') }}
     </div>
     
     <!-- COMPACT VIEW - Table -->
-    <div v-else-if="compactView" class="overflow-hidden border rounded-md">
+    <div v-else-if="compactView && paginatedMessages.length > 0" class="overflow-hidden border border-theme rounded-md">
       <div class="message-table-container overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 table-fixed">
-          <thead class="bg-gray-50">
+        <table class="min-w-full divide-y divide-theme table-fixed">
+          <thead class="bg-theme-header">
             <tr>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Topic</th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Time</th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">Payload</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-theme-secondary uppercase tracking-wider w-1/4">Topic</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-theme-secondary uppercase tracking-wider w-1/6">Time</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-theme-secondary uppercase tracking-wider w-1/2">Payload</th>
               <th scope="col" class="px-4 py-3 w-14 text-right"></th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="message in paginatedMessages" :key="message.id" class="hover:bg-gray-50">
+          <tbody class="bg-theme-surface divide-y divide-theme">
+            <tr v-for="message in paginatedMessages" :key="message.id" class="hover:bg-theme-hover">
               <td class="px-4 py-3 truncate">
                 <span 
                   class="inline-block px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full"
@@ -86,11 +103,11 @@
                   {{ message.topic }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+              <td class="px-4 py-3 text-xs text-theme-secondary whitespace-nowrap">
                 {{ formatTimestamp(message.timestamp) }}
               </td>
               <td class="px-4 py-3 truncate">
-                <div class="text-gray-900 font-mono text-xs truncate" :title="formatMessageData(message.data)">
+                <div class="text-theme-primary font-mono text-xs truncate" :title="formatMessageData(message.data)">
                   {{ formatMessagePayloadOnly(message.data) }}
                 </div>
               </td>
@@ -109,11 +126,11 @@
     </div>
     
     <!-- EXPANDED VIEW - Cards -->
-    <div v-else class="space-y-3">
+    <div v-else-if="!compactView && paginatedMessages.length > 0" class="space-y-3">
       <div 
         v-for="message in paginatedMessages" 
         :key="message.id"
-        class="message-card border rounded-md p-3 hover:bg-gray-50"
+        class="message-card border border-theme rounded-md p-3 hover:bg-theme-hover"
       >
         <div class="flex justify-between items-start mb-2">
           <span 
@@ -122,12 +139,12 @@
           >
             {{ message.topic }}
           </span>
-          <span class="text-xs text-gray-500">{{ formatTimestamp(message.timestamp) }}</span>
+          <span class="text-xs text-theme-secondary">{{ formatTimestamp(message.timestamp) }}</span>
         </div>
         
         <div class="message-data mt-2">
           <div 
-            class="font-mono text-sm bg-gray-100 p-3 rounded cursor-pointer overflow-hidden"
+            class="font-mono text-sm bg-theme-code-bg p-3 rounded cursor-pointer overflow-hidden text-theme-code"
             :class="{ 'max-h-32': !expandedMessages.includes(message.id) }"
             @click="toggleMessageExpand(message.id)"
           >
@@ -135,7 +152,7 @@
           </div>
           <div 
             v-if="!expandedMessages.includes(message.id) && isMessageExpandable(message.data)" 
-            class="text-center text-xs text-blue-600 mt-1 cursor-pointer" 
+            class="text-center text-xs text-theme-link-color mt-1 cursor-pointer" 
             @click="toggleMessageExpand(message.id)"
           >
             Show more
@@ -156,19 +173,19 @@
       <div v-if="selectedMessage" class="message-detail">
         <div class="message-header mb-5">
           <div class="mb-4">
-            <div class="font-medium text-gray-700 mb-1 text-base">Topic</div>
-            <div class="bg-gray-50 p-2 rounded border border-gray-200 font-medium">{{ selectedMessage.topic }}</div>
+            <div class="font-medium text-theme-secondary mb-1 text-base">Topic</div>
+            <div class="bg-theme-surface-alt p-2 rounded border border-theme font-medium text-theme-primary">{{ selectedMessage.topic }}</div>
           </div>
           <div>
-            <div class="font-medium text-gray-700 mb-1 text-base">Timestamp</div>
-            <div class="bg-gray-50 p-2 rounded border border-gray-200">{{ formatTimestamp(selectedMessage.timestamp, true) }}</div>
+            <div class="font-medium text-theme-secondary mb-1 text-base">Timestamp</div>
+            <div class="bg-theme-surface-alt p-2 rounded border border-theme text-theme-primary">{{ formatTimestamp(selectedMessage.timestamp, true) }}</div>
           </div>
         </div>
         
         <div class="mb-5">
-          <div class="font-medium text-gray-700 mb-1 text-base">Payload</div>
-          <div class="bg-gray-50 p-3 rounded border border-gray-200 overflow-auto max-h-96">
-            <pre class="font-mono text-sm whitespace-pre-wrap break-words">{{ formatMessageData(selectedMessage.data) }}</pre>
+          <div class="font-medium text-theme-secondary mb-1 text-base">Payload</div>
+          <div class="bg-theme-code-bg p-3 rounded border border-theme overflow-auto max-h-96">
+            <pre class="font-mono text-sm whitespace-pre-wrap break-words text-theme-code">{{ formatMessageData(selectedMessage.data) }}</pre>
           </div>
         </div>
         
@@ -190,7 +207,7 @@
     
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="pagination flex justify-between items-center mt-4">
-      <span class="text-sm text-gray-500">
+      <span class="text-sm text-theme-secondary">
         Showing {{ paginatedMessages.length }} of {{ messages.length }} messages
       </span>
       
@@ -211,7 +228,7 @@
           v-tooltip="'Previous page'"
         />
         
-        <span class="flex items-center px-2 text-sm">
+        <span class="flex items-center px-2 text-sm text-theme-primary">
           {{ currentPage }} / {{ totalPages }}
         </span>
         
@@ -233,7 +250,7 @@
       </div>
       
       <div class="page-size-selector flex items-center gap-2">
-        <span class="text-sm text-gray-500">Rows:</span>
+        <span class="text-sm text-theme-secondary">Rows:</span>
         <Dropdown
           v-model="pageSizeModel"
           :options="pageSizeOptions"
@@ -248,8 +265,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useNatsMessages } from '../../composables/useNatsMessages';
+import { useTheme } from '../../composables/useTheme';
 import { useToast } from 'primevue/usetoast';
 import natsService from '../../services/nats/natsService';
 import Button from 'primevue/button';
@@ -257,6 +275,9 @@ import Badge from 'primevue/badge';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 import ProgressSpinner from 'primevue/progressspinner';
+
+// Use theme composable for reactive theme values
+const { themeValue } = useTheme();
 
 // Props
 const props = defineProps({
@@ -273,6 +294,10 @@ const messageDetailVisible = ref(false);
 const selectedMessage = ref(null);
 const toast = useToast();
 const subscriptionInitialized = ref(false); // Track if we've already initialized subscriptions
+
+// NATS connection status - integrated from NatsStatus component
+const connectionStatus = ref('disconnected');
+const statusListener = ref(null);
 
 // Page size options for dropdown
 const pageSizeOptions = [
@@ -307,6 +332,38 @@ const {
 
 // Check if we have messages despite an error
 const hasMessages = computed(() => messages.value.length > 0);
+
+// Computed properties for NATS status display with theme-aware classes
+const statusClass = computed(() => {
+  switch (connectionStatus.value) {
+    case 'connected': 
+      return themeValue.value.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300');
+    case 'connecting': 
+      return themeValue.value.class('bg-blue-100 text-blue-800', 'bg-blue-900/30 text-blue-300');
+    case 'error': 
+      return themeValue.value.class('bg-red-100 text-red-800', 'bg-red-900/30 text-red-300');
+    default: 
+      return themeValue.value.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300');
+  }
+});
+
+const statusIndicatorClass = computed(() => {
+  switch (connectionStatus.value) {
+    case 'connected': return 'bg-green-500';
+    case 'connecting': return 'bg-blue-500';
+    case 'error': return 'bg-red-500';
+    default: return 'bg-gray-500';
+  }
+});
+
+const statusText = computed(() => {
+  switch (connectionStatus.value) {
+    case 'connected': return 'Connected';
+    case 'connecting': return 'Connecting';
+    case 'error': return 'Error';
+    default: return 'Disconnected';
+  }
+});
 
 // Computed property for the page size dropdown model
 const pageSizeModel = computed({
@@ -345,7 +402,7 @@ const formatMessageDataPreview = (data) => {
   return formatted.substring(0, 77) + '...';
 };
 
-// Topic CSS class generator
+// Topic CSS class generator with theme support
 const getTopicClass = (topic) => {
   // Generate a consistent color based on the topic string
   const hash = topic.split('').reduce((a, b) => {
@@ -355,16 +412,16 @@ const getTopicClass = (topic) => {
   
   // List of color classes
   const colors = [
-    'bg-blue-100 text-blue-800',
-    'bg-green-100 text-green-800',
-    'bg-purple-100 text-purple-800',
-    'bg-amber-100 text-amber-800',
-    'bg-red-100 text-red-800',
-    'bg-cyan-100 text-cyan-800',
-    'bg-pink-100 text-pink-800',
-    'bg-indigo-100 text-indigo-800',
-    'bg-teal-100 text-teal-800',
-    'bg-orange-100 text-orange-800'
+    themeValue.value.class('bg-blue-100 text-blue-800', 'bg-blue-900/30 text-blue-300'),
+    themeValue.value.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300'),
+    themeValue.value.class('bg-purple-100 text-purple-800', 'bg-purple-900/30 text-purple-300'),
+    themeValue.value.class('bg-amber-100 text-amber-800', 'bg-amber-900/30 text-amber-300'),
+    themeValue.value.class('bg-red-100 text-red-800', 'bg-red-900/30 text-red-300'),
+    themeValue.value.class('bg-cyan-100 text-cyan-800', 'bg-cyan-900/30 text-cyan-300'),
+    themeValue.value.class('bg-pink-100 text-pink-800', 'bg-pink-900/30 text-pink-300'),
+    themeValue.value.class('bg-indigo-100 text-indigo-800', 'bg-indigo-900/30 text-indigo-300'),
+    themeValue.value.class('bg-teal-100 text-teal-800', 'bg-teal-900/30 text-teal-300'),
+    themeValue.value.class('bg-orange-100 text-orange-800', 'bg-orange-900/30 text-orange-300')
   ];
   
   // Select color based on hash
@@ -417,17 +474,21 @@ const copyMessageData = (data) => {
     });
 };
 
-// Handle connection status changes
-const handleConnectionStatus = (status) => {
-  console.log(`NATS connection status changed: ${status}`);
+// Setup NATS connection status listener - from NatsStatus component
+const setupStatusListener = () => {
+  statusListener.value = (status) => {
+    connectionStatus.value = status;
+    
+    // If we connect and haven't initialized subscriptions, do so
+    if (status === 'connected' && !subscriptionInitialized.value) {
+      console.log('Setting up initial NATS subscriptions');
+      subscribeToAllTopics().then(() => {
+        subscriptionInitialized.value = true;
+      });
+    }
+  };
   
-  if (status === 'connected' && !subscriptionInitialized.value) {
-    // Only initialize subscriptions once
-    console.log('Setting up initial NATS subscriptions');
-    subscribeToAllTopics().then(() => {
-      subscriptionInitialized.value = true;
-    });
-  }
+  natsService.onStatusChange(statusListener.value);
 };
 
 // Set initial page size
@@ -442,12 +503,13 @@ onMounted(() => {
   // Set initial page size
   initializePageSize();
   
-  // Subscribe to connection status changes
-  natsService.onStatusChange(handleConnectionStatus);
+  // Setup connection status listener
+  setupStatusListener();
   
   // If already connected, subscribe to topics
   if (natsService.isConnected() && !subscriptionInitialized.value) {
     console.log('NATS already connected, setting up subscriptions');
+    connectionStatus.value = 'connected';
     subscribeToAllTopics().then(() => {
       subscriptionInitialized.value = true;
     });
@@ -459,7 +521,9 @@ onUnmounted(() => {
   console.log('NatsMessageFeed component unmounting');
   
   // Remove status listener
-  natsService.removeStatusListener(handleConnectionStatus);
+  if (statusListener.value) {
+    natsService.removeStatusListener(statusListener.value);
+  }
   
   // Ensure we unsubscribe from all topics
   unsubscribeFromAllTopics();
@@ -470,6 +534,85 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Custom theme CSS variables */
+:root {
+  --theme-code-bg: #f1f5f9;
+  --theme-code-color: #334155;
+  --theme-link-color: #3b82f6;
+  --theme-error-bg: #fef2f2;
+  --theme-error-text: #b91c1c;
+  --theme-info-bg: #eff6ff;
+  --theme-info-text: #1e40af;
+  --theme-warning-bg: #fffbeb;
+  --theme-warning-text: #92400e;
+}
+
+.dark {
+  --theme-code-bg: #1e293b;
+  --theme-code-color: #cbd5e1;
+  --theme-link-color: #60a5fa;
+  --theme-error-bg: rgba(239, 68, 68, 0.2);
+  --theme-error-text: #f87171;
+  --theme-info-bg: rgba(59, 130, 246, 0.2);
+  --theme-info-text: #93c5fd;
+  --theme-warning-bg: rgba(245, 158, 11, 0.2);
+  --theme-warning-text: #fbbf24;
+}
+
+/* NATS Status indicator */
+.nats-status-indicator {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Theme utility classes */
+.bg-theme-code-bg {
+  background-color: var(--theme-code-bg);
+}
+
+.text-theme-code {
+  color: var(--theme-code-color);
+}
+
+.text-theme-link-color {
+  color: var(--theme-link-color);
+}
+
+.bg-theme-error {
+  background-color: var(--theme-error-bg);
+}
+
+.text-theme-error-contrast {
+  color: var(--theme-error-text);
+}
+
+.bg-theme-info {
+  background-color: var(--theme-info-bg);
+}
+
+.text-theme-info-contrast {
+  color: var(--theme-info-text);
+}
+
+.bg-theme-warning {
+  background-color: var(--theme-warning-bg);
+}
+
+.text-theme-warning-contrast {
+  color: var(--theme-warning-text);
+}
+
+.bg-theme-header {
+  @apply bg-gray-50 dark:bg-gray-700;
+}
+
+.bg-theme-hover {
+  @apply bg-gray-50 dark:bg-gray-700;
+}
+
+.bg-theme-surface-alt {
+  @apply bg-gray-50 dark:bg-gray-700;
+}
+
 /* Ensure table has proper layout and overflow handling */
 .message-table-container {
   overflow-x: auto;
@@ -492,11 +635,7 @@ td, th {
 
 /* Message card styling in expanded view */
 .message-card {
-  transition: box-shadow 0.2s ease;
-}
-
-.message-card:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .message-data pre {
@@ -507,7 +646,8 @@ td, th {
 /* Dialog styling */
 :deep(.message-detail-dialog .p-dialog-header) {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
 }
 
 :deep(.message-detail-dialog .p-dialog-content) {
@@ -530,7 +670,8 @@ td, th {
     grid-template-columns: 1fr;
     gap: 0.25rem;
     padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
   }
   
   table tbody td {

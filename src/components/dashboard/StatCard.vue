@@ -1,14 +1,14 @@
 <!-- src/components/dashboard/StatCard.vue -->
 <template>
-  <div class="stat-card">
-    <div class="stat-card-icon" :class="iconBgClass">
-      <i :class="[icon, iconColorClass]"></i>
+  <div class="stat-card bg-theme-surface border border-theme" :class="[hoverEffect ? 'hover:shadow-md hover:-translate-y-1' : '']">
+    <div class="stat-card-icon" :class="iconClass">
+      <i :class="[icon, textClass]"></i>
     </div>
     <div class="stat-card-content">
-      <div class="stat-card-label">{{ label }}</div>
-      <div class="stat-card-value">{{ value }}</div>
+      <div class="stat-card-label text-theme-secondary">{{ label }}</div>
+      <div class="stat-card-value text-theme-primary">{{ value }}</div>
     </div>
-    <router-link :to="linkTo" class="stat-card-link" :class="linkColorClass">
+    <router-link :to="linkTo" class="stat-card-link" :class="textClass">
       <span>{{ linkText }}</span>
       <i class="pi pi-arrow-right"></i>
     </router-link>
@@ -17,6 +17,10 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useTheme } from '../../composables/useTheme';
+
+// Use theme composable for reactive theme values
+const { themeValue } = useTheme();
 
 const props = defineProps({
   label: {
@@ -43,32 +47,53 @@ const props = defineProps({
   linkText: {
     type: String,
     default: 'View all'
+  },
+  hoverEffect: {
+    type: Boolean,
+    default: true
   }
 });
 
-const iconBgClass = computed(() => `bg-${props.color}-50`);
-const iconColorClass = computed(() => `text-${props.color}-600`);
-const linkColorClass = computed(() => `text-${props.color}-600`);
+// Computed classes for theming
+const iconClass = computed(() => {
+  // Theme-aware icon background classes
+  const colorClassMap = {
+    blue: themeValue.value.class('bg-blue-50', 'bg-blue-900/20'),
+    green: themeValue.value.class('bg-green-50', 'bg-green-900/20'),
+    purple: themeValue.value.class('bg-purple-50', 'bg-purple-900/20'),
+    orange: themeValue.value.class('bg-orange-50', 'bg-orange-900/20'),
+    red: themeValue.value.class('bg-red-50', 'bg-red-900/20'),
+    gray: themeValue.value.class('bg-gray-50', 'bg-gray-700')
+  };
+  
+  return colorClassMap[props.color] || colorClassMap.gray;
+});
+
+const textClass = computed(() => {
+  // Theme-aware text color classes
+  const colorClassMap = {
+    blue: themeValue.value.class('text-blue-600', 'text-blue-400'),
+    green: themeValue.value.class('text-green-600', 'text-green-400'),
+    purple: themeValue.value.class('text-purple-600', 'text-purple-400'),
+    orange: themeValue.value.class('text-orange-600', 'text-orange-400'),
+    red: themeValue.value.class('text-red-600', 'text-red-400'),
+    gray: themeValue.value.class('text-gray-600', 'text-gray-400')
+  };
+  
+  return colorClassMap[props.color] || colorClassMap.gray;
+});
 </script>
 
 <style scoped>
 .stat-card {
-  background-color: white;
   border-radius: 0.5rem;
   padding: 1rem;
   display: flex;
   align-items: center;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
   height: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card-icon {
@@ -93,7 +118,6 @@ const linkColorClass = computed(() => `text-${props.color}-600`);
 
 .stat-card-label {
   font-size: 0.875rem;
-  color: #6b7280;
   font-weight: 500;
   line-height: 1.25;
 }
@@ -101,7 +125,6 @@ const linkColorClass = computed(() => `text-${props.color}-600`);
 .stat-card-value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
   line-height: 1.25;
 }
 

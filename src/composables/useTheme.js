@@ -1,5 +1,5 @@
 // src/composables/useTheme.js
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useThemeStore } from '../stores/theme'
 
 /**
@@ -22,16 +22,30 @@ export function useTheme() {
       (themeStore.theme === 'auto' && systemPrefersDark.value)
   })
   
-  // Helper to get theme-specific value
+  // Generate a themeValue object with helper methods
   const themeValue = computed(() => {
     return {
-      // Return different values based on theme
+      /**
+       * Returns different values based on the current theme
+       * @param {any} lightValue - Value for light theme
+       * @param {any} darkValue - Value for dark theme
+       * @returns {any} - The appropriate value for the current theme
+       */
       value: (lightValue, darkValue) => isDarkMode.value ? darkValue : lightValue,
       
-      // Return different class names based on theme
+      /**
+       * Returns different class names based on the current theme
+       * @param {string} lightClass - CSS class for light theme
+       * @param {string} darkClass - CSS class for dark theme
+       * @returns {string} - The appropriate class for the current theme
+       */
       class: (lightClass, darkClass) => isDarkMode.value ? darkClass : lightClass,
       
-      // For CSS variables - gets the current value
+      /**
+       * Gets the current value of a CSS variable
+       * @param {string} variableName - CSS variable name (including leading --)
+       * @returns {string} - Current value of the CSS variable
+       */
       cssVar: (variableName) => {
         const value = getComputedStyle(document.documentElement)
           .getPropertyValue(variableName)
@@ -46,7 +60,9 @@ export function useTheme() {
     return {
       primary: isDarkMode.value ? 'bg-gray-800' : 'bg-white',
       secondary: isDarkMode.value ? 'bg-gray-700' : 'bg-gray-50',
-      highlight: isDarkMode.value ? 'bg-gray-700' : 'bg-blue-50'
+      tertiary: isDarkMode.value ? 'bg-gray-900' : 'bg-gray-100',
+      accent: isDarkMode.value ? 'bg-blue-900/20' : 'bg-blue-50',
+      highlight: isDarkMode.value ? 'bg-amber-900/20' : 'bg-amber-50'
     }
   })
   
@@ -55,7 +71,11 @@ export function useTheme() {
     return {
       primary: isDarkMode.value ? 'text-gray-200' : 'text-gray-900',
       secondary: isDarkMode.value ? 'text-gray-400' : 'text-gray-500',
-      muted: isDarkMode.value ? 'text-gray-500' : 'text-gray-400'
+      muted: isDarkMode.value ? 'text-gray-500' : 'text-gray-400',
+      accent: isDarkMode.value ? 'text-blue-400' : 'text-blue-600',
+      warning: isDarkMode.value ? 'text-amber-400' : 'text-amber-600',
+      error: isDarkMode.value ? 'text-red-400' : 'text-red-600',
+      success: isDarkMode.value ? 'text-green-400' : 'text-green-600'
     }
   })
   
@@ -64,7 +84,18 @@ export function useTheme() {
     return {
       default: isDarkMode.value ? 'border-gray-700' : 'border-gray-200',
       light: isDarkMode.value ? 'border-gray-600' : 'border-gray-100',
-      dark: isDarkMode.value ? 'border-gray-800' : 'border-gray-300'
+      dark: isDarkMode.value ? 'border-gray-800' : 'border-gray-300',
+      accent: isDarkMode.value ? 'border-blue-800' : 'border-blue-200'
+    }
+  })
+
+  // Helper for theme-specific shadow styles
+  const shadowStyle = computed(() => {
+    return {
+      sm: isDarkMode.value ? 'shadow-sm shadow-gray-900/50' : 'shadow-sm',
+      md: isDarkMode.value ? 'shadow shadow-gray-900/50' : 'shadow',
+      lg: isDarkMode.value ? 'shadow-lg shadow-gray-900/50' : 'shadow-lg',
+      xl: isDarkMode.value ? 'shadow-xl shadow-gray-900/50' : 'shadow-xl'
     }
   })
   
@@ -79,6 +110,21 @@ export function useTheme() {
     if (currentTheme === 'light') themeStore.setTheme('dark')
     else if (currentTheme === 'dark') themeStore.setTheme('auto')
     else themeStore.setTheme('light')
+  }
+
+  // Get CSS custom properties for a given element
+  const getCssCustomProperties = (element = document.documentElement) => {
+    const properties = {}
+    const styles = getComputedStyle(element)
+    
+    for (let i = 0; i < styles.length; i++) {
+      const prop = styles[i]
+      if (prop.startsWith('--')) {
+        properties[prop] = styles.getPropertyValue(prop).trim()
+      }
+    }
+    
+    return properties
   }
   
   // Listen for system preference changes
@@ -123,6 +169,11 @@ export function useTheme() {
     })
   })
   
+  // Reactively apply theme classes to the root element
+  watch(isDarkMode, (newIsDark) => {
+    document.documentElement.classList.toggle('dark', newIsDark)
+  }, { immediate: true })
+  
   return {
     // Current theme state
     currentTheme: computed(() => themeStore.theme),
@@ -134,6 +185,10 @@ export function useTheme() {
     backgroundColor,
     textColor,
     borderColor,
+    shadowStyle,
+    
+    // CSS variables
+    getCssCustomProperties,
     
     // Theme change methods
     setLightTheme,

@@ -1,9 +1,9 @@
 <template>
   <div class="dashboard">
-    <h1 class="page-header">Dashboard</h1>
+    <h1 class="page-header text-theme-primary">Dashboard</h1>
     
-    <!-- Status Cards Grid -->
-    <div class="grid-cols-dashboard mb-8">
+    <!-- Status Cards Grid - Updated to single row on desktop -->
+    <div class="stat-cards-grid mb-6">
       <StatCard
         v-for="(card, index) in statCards"
         :key="index"
@@ -15,18 +15,18 @@
       />
     </div>
     
-    <!-- NATS Message Feed - NEW -->
-    <DashboardCard title="Real-time Messages">
+    <!-- NATS Message Feed - NatsStatus now integrated inside this component -->
+    <DashboardCard>
       <NatsMessageFeed />
     </DashboardCard>
     
-    <!-- Recent Activity - Now showing fewer items -->
+    <!-- Recent Activity -->
     <DashboardCard title="Recent Activity">
-      <div v-if="loading" class="empty-state">
+      <div v-if="loading" class="empty-state text-theme-secondary">
         <ProgressSpinner style="width: 24px; height: 24px" />
       </div>
       
-      <div v-else-if="activity.length === 0" class="empty-state">
+      <div v-else-if="activity.length === 0" class="empty-state text-theme-secondary">
         No recent activity found.
       </div>
       
@@ -48,8 +48,8 @@
           <i class="pi pi-chart-line"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-base font-medium text-gray-900">Analytics & Dashboards</div>
-          <div class="text-sm text-gray-500 hidden sm:block mt-1">View metrics in Grafana</div>
+          <div class="text-base font-medium text-theme-primary">Analytics & Dashboards</div>
+          <div class="text-sm text-theme-secondary hidden sm:block mt-1">View metrics in Grafana</div>
         </div>
         <Button
           label="Open"
@@ -65,12 +65,17 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useDashboard } from '../composables/useDashboard'
+import { useTheme } from '../composables/useTheme'
 import StatCard from '../components/dashboard/StatCard.vue'
 import ActivityItem from '../components/dashboard/ActivityItem.vue'
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
-import NatsMessageFeed from '../components/dashboard/NatsMessageFeed.vue' // New import
+import NatsMessageFeed from '../components/dashboard/NatsMessageFeed.vue'
+// Removed NatsStatus import since it's now integrated
 import ProgressSpinner from 'primevue/progressspinner'
 import Button from 'primevue/button'
+
+// Use theme composable
+useTheme();
 
 // Use the dashboard composable
 const { 
@@ -82,7 +87,7 @@ const {
   loading,
   fetchDashboardData,
   openGrafana
-} = useDashboard()
+} = useDashboard();
 
 // Computed stat cards for better maintainability
 const statCards = computed(() => [
@@ -114,17 +119,49 @@ const statCards = computed(() => [
     color: 'orange',
     linkTo: '/messaging/clients'
   }
-])
+]);
 
 // Fetch dashboard data on mount
 onMounted(async () => {
-  await fetchDashboardData()
-})
+  await fetchDashboardData();
+});
 </script>
 
 <style scoped>
 .dashboard {
   padding-bottom: 1.5rem;
+}
+
+.page-header {
+  transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
+}
+
+/* New stat cards grid layout - single row on desktop, stack on mobile */
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+/* Tablet breakpoint - 2 cards per row */
+@media (min-width: 640px) {
+  .stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Desktop breakpoint - all cards in a single row */
+@media (min-width: 1024px) {
+  .stat-cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+.empty-state {
+  @apply flex justify-center items-center py-8 text-sm;
+  transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
 }
 
 /* Ensure bottom spacing on mobile */
@@ -133,8 +170,8 @@ onMounted(async () => {
     padding-bottom: 2rem;
   }
   
-  .grid-cols-dashboard {
-    margin-bottom: 1.5rem;
+  .stat-cards-grid {
+    margin-bottom: 1rem;
   }
 }
 </style>

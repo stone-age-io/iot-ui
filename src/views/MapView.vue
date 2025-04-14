@@ -52,9 +52,10 @@
     </DashboardCard>
     
     <!-- Location List -->
-    <DashboardCard title="Locations">
+    <DashboardCard>
       <DataTable
-        :items="filteredLocations"
+        title="Locations"
+	:items="filteredLocations"
         :columns="columns"
         :loading="loading"
         :paginated="true"
@@ -62,7 +63,6 @@
         :rowsPerPageOptions="[5, 10, 20, 50]"
         :searchable="true"
         :searchFields="['name', 'code', 'expand.edge_id.name', 'type']"
-        title="Locations"
         empty-message="No locations found. Try adjusting your filters."
         @row-click="navigateToDetail"
       >

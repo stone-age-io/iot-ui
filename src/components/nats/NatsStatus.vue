@@ -10,7 +10,11 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useTheme } from '../../composables/useTheme';
 import natsService from '../../services/nats/natsService';
+
+// Use theme composable for reactive theme values
+const { themeValue } = useTheme();
 
 // Status state
 const connectionStatus = ref('disconnected');
@@ -32,13 +36,17 @@ onUnmounted(() => {
   }
 });
 
-// Computed properties for display
+// Computed properties for display with theme-aware classes
 const statusClass = computed(() => {
   switch (connectionStatus.value) {
-    case 'connected': return 'bg-green-100 text-green-800';
-    case 'connecting': return 'bg-blue-100 text-blue-800';
-    case 'error': return 'bg-red-100 text-red-800';
-    default: return 'bg-gray-100 text-gray-800';
+    case 'connected': 
+      return themeValue.value.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300');
+    case 'connecting': 
+      return themeValue.value.class('bg-blue-100 text-blue-800', 'bg-blue-900/30 text-blue-300');
+    case 'error': 
+      return themeValue.value.class('bg-red-100 text-red-800', 'bg-red-900/30 text-red-300');
+    default: 
+      return themeValue.value.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300');
   }
 });
 
@@ -60,3 +68,10 @@ const statusText = computed(() => {
   }
 });
 </script>
+
+<style scoped>
+.nats-status {
+  transition: background-color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease),
+              color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
+}
+</style>

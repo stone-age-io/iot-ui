@@ -8,9 +8,46 @@
   /* Light theme variables (default) */
   --color-bg: 249, 250, 251; /* bg-gray-50 */
   --color-surface: 255, 255, 255; /* white */
+  --color-surface-alt: 243, 244, 246; /* bg-gray-100 */
+  --color-surface-hover: 243, 244, 246; /* bg-gray-100 */
   --color-border: 229, 231, 235; /* border-gray-200 */
   --color-text: 17, 24, 39; /* text-gray-900 */
   --color-text-secondary: 107, 114, 128; /* text-gray-500 */
+  --color-text-muted: 156, 163, 175; /* text-gray-400 */
+  --color-header: 243, 244, 246; /* bg-gray-100 */
+  
+  /* Component-specific colors */
+  --color-card-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --color-card-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  
+  /* Status and feedback colors */
+  --color-success: 34, 197, 94; /* green-500 */
+  --color-success-light: 240, 253, 244; /* green-50 */
+  --color-success-text: 22, 101, 52; /* green-800 */
+  
+  --color-warning: 245, 158, 11; /* amber-500 */
+  --color-warning-light: 255, 251, 235; /* amber-50 */
+  --color-warning-text: 146, 64, 14; /* amber-800 */
+  
+  --color-error: 239, 68, 68; /* red-500 */
+  --color-error-light: 254, 242, 242; /* red-50 */
+  --color-error-text: 153, 27, 27; /* red-800 */
+  
+  --color-info: 59, 130, 246; /* blue-500 */
+  --color-info-light: 239, 246, 255; /* blue-50 */
+  --color-info-text: 30, 64, 175; /* blue-800 */
+  
+  /* Code block colors */
+  --color-code-bg: 241, 245, 249; /* slate-100 */
+  --color-code-text: 51, 65, 85; /* slate-700 */
+  
+  /* Link colors */
+  --color-link: 59, 130, 246; /* blue-500 */
+  --color-link-hover: 37, 99, 235; /* blue-600 */
+  
+  /* Badge colors */
+  --color-badge-bg: 243, 244, 246; /* bg-gray-100 */
+  --color-badge-text: 55, 65, 81; /* text-gray-700 */
   
   /* Light theme PrimeVue overrides */
   --primary-color: #3B82F6;
@@ -32,11 +69,49 @@
 
 /* Dark theme variables */
 .dark {
+  /* Dark theme base colors */
   --color-bg: 17, 24, 39; /* bg-gray-900 */
   --color-surface: 31, 41, 55; /* bg-gray-800 */
+  --color-surface-alt: 55, 65, 81; /* bg-gray-700 */
+  --color-surface-hover: 55, 65, 81; /* bg-gray-700 */
   --color-border: 75, 85, 99; /* border-gray-600 */
   --color-text: 229, 231, 235; /* text-gray-200 */
   --color-text-secondary: 156, 163, 175; /* text-gray-400 */
+  --color-text-muted: 107, 114, 128; /* text-gray-500 */
+  --color-header: 31, 41, 55; /* bg-gray-800 */
+  
+  /* Component-specific colors */
+  --color-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --color-card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  
+  /* Status and feedback colors */
+  --color-success: 74, 222, 128; /* green-400 */
+  --color-success-light: 6, 78, 59; /* green-950 with opacity */
+  --color-success-text: 134, 239, 172; /* green-300 */
+  
+  --color-warning: 251, 191, 36; /* amber-400 */
+  --color-warning-light: 120, 53, 15; /* amber-950 with opacity */
+  --color-warning-text: 252, 211, 77; /* amber-300 */
+  
+  --color-error: 248, 113, 113; /* red-400 */
+  --color-error-light: 127, 29, 29; /* red-950 with opacity */
+  --color-error-text: 252, 165, 165; /* red-300 */
+  
+  --color-info: 96, 165, 250; /* blue-400 */
+  --color-info-light: 23, 37, 84; /* blue-950 with opacity */
+  --color-info-text: 147, 197, 253; /* blue-300 */
+  
+  /* Code block colors */
+  --color-code-bg: 30, 41, 59; /* slate-800 */
+  --color-code-text: 203, 213, 225; /* slate-300 */
+  
+  /* Link colors */
+  --color-link: 96, 165, 250; /* blue-400 */
+  --color-link-hover: 147, 197, 253; /* blue-300 */
+  
+  /* Badge colors */
+  --color-badge-bg: 55, 65, 81; /* bg-gray-700 */
+  --color-badge-text: 209, 213, 219; /* text-gray-300 */
   
   /* Dark theme PrimeVue overrides */
   --primary-color: #60A5FA;
@@ -63,6 +138,16 @@
   transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
 }
 
+.bg-theme-surface-alt {
+  background-color: rgb(var(--color-surface-alt));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-hover:hover {
+  background-color: rgb(var(--color-surface-hover));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
 .text-theme-primary {
   color: rgb(var(--color-text));
   transition: color var(--theme-transition-duration) var(--theme-transition-timing);
@@ -73,9 +158,84 @@
   transition: color var(--theme-transition-duration) var(--theme-transition-timing);
 }
 
+.text-theme-muted {
+  color: rgb(var(--color-text-muted));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
 .border-theme {
   border-color: rgb(var(--color-border));
   transition: border-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.divide-theme > * + * {
+  border-color: rgb(var(--color-border));
+  transition: border-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-header {
+  background-color: rgb(var(--color-header));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Status color helpers */
+.bg-theme-success {
+  background-color: rgb(var(--color-success-light));
+  color: rgb(var(--color-success-text));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-warning {
+  background-color: rgb(var(--color-warning-light));
+  color: rgb(var(--color-warning-text));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-error {
+  background-color: rgb(var(--color-error-light));
+  color: rgb(var(--color-error-text));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.bg-theme-info {
+  background-color: rgb(var(--color-info-light));
+  color: rgb(var(--color-info-text));
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Text status color helpers */
+.text-theme-success {
+  color: rgb(var(--color-success));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-warning {
+  color: rgb(var(--color-warning));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-error {
+  color: rgb(var(--color-error));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-info {
+  color: rgb(var(--color-info));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Link color */
+.text-theme-link {
+  color: rgb(var(--color-link));
+  transition: color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.text-theme-link:hover {
+  color: rgb(var(--color-link-hover));
 }
 
 /* Transitions for smooth theme changes */
