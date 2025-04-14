@@ -2,29 +2,33 @@
   <div>
     <!-- Loading Spinner -->
     <div v-if="loading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" />
+      <ProgressSpinner 
+        strokeWidth="4" 
+        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+      />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="card p-6 text-center">
-      <div class="text-red-500 text-xl mb-4">
+    <div v-else-if="error" class="p-error-container p-6 text-center">
+      <div :class="['text-xl mb-4', textColor.error]">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load thing details
       </div>
-      <p class="text-gray-600 mb-4">{{ error }}</p>
+      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
     <!-- Thing Details -->
-    <div v-else-if="thing">
-      <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+    <div v-else-if="thing" class="thing-detail-container">
+      <!-- Header Section with Thing title and actions -->
+      <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div class="text-sm text-gray-500 mb-1">Thing</div>
-          <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ thing.name }}</h1>
+          <div :class="['text-sm mb-1', textColor.secondary]">Thing</div>
+          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ thing.name }}</h1>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="font-mono text-primary-600">{{ thing.thing_code }}</span>
+            <span :class="['font-mono', themeValue.class('text-primary-600', 'text-primary-400')]">{{ thing.thing_code }}</span>
             <span 
-              class="px-2 py-1 text-xs rounded-full font-medium"
+              class="badge"
               :class="getTypeClass(thing.thing_type)"
             >
               {{ getTypeName(thing.thing_type) }}
@@ -32,7 +36,7 @@
           </div>
         </div>
         
-        <div class="flex flex-wrap gap-2">
+        <div class="flex space-x-2">
           <Button
             icon="pi pi-pencil"
             label="Edit"
@@ -48,172 +52,208 @@
         </div>
       </div>
       
+      <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
-        <div class="card lg:col-span-2">
-          <h2 class="text-xl font-semibold mb-4">Thing Details</h2>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-            <!-- Code -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Code</div>
-              <div class="font-mono text-lg">{{ thing.thing_code }}</div>
-            </div>
-            
-            <!-- Name -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Name</div>
-              <div class="text-lg">{{ thing.name }}</div>
-            </div>
-            
-            <!-- Type -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Type</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="getTypeClass(thing.thing_type)"
-                >
-                  {{ getTypeName(thing.thing_type) }}
-                </span>
+        <div class="lg:col-span-2">
+          <Card class="h-full">
+            <template #title>
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Thing Details</h2>
+            </template>
+            <template #content>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                <!-- Code -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Code</div>
+                  <div :class="['font-mono text-lg', textColor.primary]">{{ thing.thing_code }}</div>
+                </div>
+                
+                <!-- Name -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Name</div>
+                  <div :class="['text-lg', textColor.primary]">{{ thing.name }}</div>
+                </div>
+                
+                <!-- Type -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Type</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="badge"
+                      :class="getTypeClass(thing.thing_type)"
+                    >
+                      {{ getTypeName(thing.thing_type) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Status -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Status</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="badge"
+                      :class="thing.active ? 
+                        themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
+                        themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                    >
+                      {{ thing.active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Location -->
+                <div v-if="location" class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Location</div>
+                  <div class="flex items-center gap-2">
+                    <span :class="['font-mono text-xs', textColor.secondary]">{{ location.code }}</span>
+                    <span :class="textColor.primary">{{ location.name }}</span>
+                    <Button
+                      icon="pi pi-external-link"
+                      class="p-button-text p-button-rounded p-button-sm"
+                      @click="navigateToLocationDetail(location.id)"
+                      tooltip="View Location"
+                    />
+                  </div>
+                </div>
+                
+                <!-- Edge -->
+                <div v-if="edge" class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Edge</div>
+                  <div class="flex items-center gap-2">
+                    <span :class="['font-mono text-xs', textColor.secondary]">{{ edge.code }}</span>
+                    <span :class="textColor.primary">{{ edge.name }}</span>
+                    <Button
+                      icon="pi pi-external-link"
+                      class="p-button-text p-button-rounded p-button-sm"
+                      @click="navigateToEdgeDetail(edge.id)"
+                      tooltip="View Edge"
+                    />
+                  </div>
+                </div>
+                
+                <!-- Description -->
+                <div class="md:col-span-2" v-if="thing.description">
+                  <div :class="['field-label', textColor.secondary]">Description</div>
+                  <div :class="textColor.primary">{{ thing.description }}</div>
+                </div>
+                
+                <!-- Metadata (if any) -->
+                <div v-if="hasMetadata(thing)" class="md:col-span-2">
+                  <div :class="['field-label', textColor.secondary]">Metadata</div>
+                  <div :class="[
+                    'p-3 rounded border font-mono text-sm overflow-x-auto', 
+                    backgroundColor.secondary,
+                    borderColor.default,
+                    textColor.primary
+                  ]">
+                    <pre>{{ JSON.stringify(thing.metadata, null, 2) }}</pre>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <!-- Status -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Status</div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-                  :class="thing.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                >
-                  {{ thing.active ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Location -->
-            <div v-if="location">
-              <div class="text-sm text-gray-500 mb-1">Location</div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-xs">{{ location.code }}</span>
-                <span class="text-gray-700">{{ location.name }}</span>
-                <Button
-                  icon="pi pi-external-link"
-                  class="p-button-text p-button-rounded p-button-sm"
-                  @click="navigateToLocationDetail(location.id)"
-                  tooltip="View Location"
-                />
-              </div>
-            </div>
-            
-            <!-- Edge -->
-            <div v-if="edge">
-              <div class="text-sm text-gray-500 mb-1">Edge</div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-xs">{{ edge.code }}</span>
-                <span class="text-gray-700">{{ edge.name }}</span>
-                <Button
-                  icon="pi pi-external-link"
-                  class="p-button-text p-button-rounded p-button-sm"
-                  @click="navigateToEdgeDetail(edge.id)"
-                  tooltip="View Edge"
-                />
-              </div>
-            </div>
-            
-            <!-- Description -->
-            <div class="md:col-span-2" v-if="thing.description">
-              <div class="text-sm text-gray-500 mb-1">Description</div>
-              <div class="text-gray-700">{{ thing.description }}</div>
-            </div>
-            
-            <!-- Metadata (if any) -->
-            <div v-if="hasMetadata(thing)" class="md:col-span-2">
-              <div class="text-sm text-gray-500 mb-1">Metadata</div>
-              <div class="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
-                <pre>{{ JSON.stringify(thing.metadata, null, 2) }}</pre>
-              </div>
-            </div>
-          </div>
+            </template>
+          </Card>
         </div>
         
         <!-- Stats/Quick Info Card -->
-        <div class="card">
-          <h2 class="text-xl font-semibold mb-4">Overview</h2>
-          
-          <div class="space-y-6">
-            <!-- Status Info -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Device Status</div>
-              <div class="flex items-center">
-                <span 
-                  class="w-3 h-3 rounded-full mr-2" 
-                  :class="deviceStatus.online ? 'bg-green-500' : 'bg-red-500'"
-                ></span>
-                <div class="font-semibold">{{ deviceStatus.online ? 'Online' : 'Offline' }}</div>
-              </div>
-              <div class="text-xs text-gray-500 mt-1">
-                Last updated: {{ formatTime(deviceStatus.lastUpdated) }}
-              </div>
-            </div>
-            
-            <!-- Metrics -->
-            <div v-if="deviceStatus.metrics">
-              <div class="text-sm text-gray-500 mb-1">Metrics</div>
-              <div class="space-y-2">
-                <div v-for="(value, key) in deviceStatus.metrics" :key="key" class="flex justify-between">
-                  <span class="text-gray-600">{{ formatMetricName(key) }}:</span>
-                  <span class="font-medium">{{ formatMetricValue(key, value) }}</span>
+        <div>
+          <Card class="h-full">
+            <template #title>
+              <h2 :class="['text-xl font-semibold', textColor.primary]">Overview</h2>
+            </template>
+            <template #content>
+              <div class="space-y-6">
+                <!-- Status Info -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Device Status</div>
+                  <div class="flex items-center">
+                    <span 
+                      class="w-3 h-3 rounded-full mr-2" 
+                      :class="deviceStatus.online ? 'bg-green-500' : 'bg-red-500'"
+                    ></span>
+                    <div :class="['font-semibold', textColor.primary]">
+                      {{ deviceStatus.online ? 'Online' : 'Offline' }}
+                    </div>
+                  </div>
+                  <div :class="['text-xs mt-1', textColor.secondary]">
+                    Last updated: {{ formatTime(deviceStatus.lastUpdated) }}
+                  </div>
+                </div>
+                
+                <!-- Metrics -->
+                <div v-if="deviceStatus.metrics" class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Metrics</div>
+                  <div class="space-y-2">
+                    <div v-for="(value, key) in deviceStatus.metrics" :key="key" class="flex justify-between">
+                      <span :class="textColor.secondary">{{ formatMetricName(key) }}:</span>
+                      <span :class="['font-medium', textColor.primary]">{{ formatMetricValue(key, value) }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- View Activity Button -->
+                <div class="stat-item">
+                  <Button
+                    label="View Activity"
+                    icon="pi pi-history"
+                    class="w-full"
+                    @click="showActivityDialog = true"
+                  />
+                </div>
+                
+                <!-- Created Date -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Created</div>
+                  <div :class="textColor.secondary">{{ formatDate(thing.created) }}</div>
+                </div>
+                
+                <!-- Last Updated -->
+                <div class="stat-item">
+                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
+                  <div :class="textColor.secondary">{{ formatDate(thing.updated) }}</div>
                 </div>
               </div>
-            </div>
-            
-            <!-- View Activity Button -->
-            <div>
-              <Button
-                label="View Activity"
-                icon="pi pi-history"
-                class="w-full"
-                @click="showActivityDialog = true"
-              />
-            </div>
-            
-            <!-- Created & Updated Dates -->
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Created</div>
-              <div class="text-gray-700">{{ formatDate(thing.created) }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-gray-500 mb-1">Last Updated</div>
-              <div class="text-gray-700">{{ formatDate(thing.updated) }}</div>
-            </div>
-          </div>
+            </template>
+          </Card>
         </div>
       </div>
       
       <!-- Current State Card (if available) -->
-      <div class="card mt-6" v-if="thing.current_state && Object.keys(thing.current_state).length > 0">
-        <h2 class="text-xl font-semibold mb-4">Current State</h2>
-        
-        <div class="bg-gray-50 p-4 rounded border border-gray-200 font-mono text-sm overflow-x-auto">
-          <pre>{{ JSON.stringify(thing.current_state, null, 2) }}</pre>
-        </div>
+      <div class="mt-6" v-if="thing.current_state && Object.keys(thing.current_state).length > 0">
+        <Card>
+          <template #title>
+            <h2 :class="['text-xl font-semibold', textColor.primary]">Current State</h2>
+          </template>
+          <template #content>
+            <div :class="[
+              'p-4 rounded border font-mono text-sm overflow-x-auto', 
+              backgroundColor.secondary,
+              borderColor.default,
+              textColor.primary
+            ]">
+              <pre>{{ JSON.stringify(thing.current_state, null, 2) }}</pre>
+            </div>
+          </template>
+        </Card>
       </div>
       
       <!-- Graph Link Card -->
-      <div class="card mt-6">
-        <div class="flex items-center">
-          <div class="flex-1">
-            <h2 class="text-xl font-semibold mb-1">Analytics & Monitoring</h2>
-            <p class="text-gray-600">View detailed metrics and logs for this thing in Grafana.</p>
-          </div>
-          <Button
-            label="Open in Grafana"
-            icon="pi pi-external-link"
-            @click="openInGrafana(thing.id)"
-          />
-        </div>
+      <div class="mt-6">
+        <Card>
+          <template #content>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div class="flex-1">
+                <h2 :class="['text-xl font-semibold mb-1', textColor.primary]">Analytics & Monitoring</h2>
+                <p :class="textColor.secondary">View detailed metrics and logs for this thing in Grafana.</p>
+              </div>
+              <Button
+                label="Open in Grafana"
+                icon="pi pi-external-link"
+                @click="openInGrafana(thing.id)"
+              />
+            </div>
+          </template>
+        </Card>
       </div>
     </div>
     
@@ -225,7 +265,10 @@
       :style="{ width: '90%', maxWidth: '900px' }"
     >
       <div v-if="messagesLoading" class="flex justify-center items-center p-4">
-        <ProgressSpinner strokeWidth="4" />
+        <ProgressSpinner 
+          strokeWidth="4" 
+          :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        />
       </div>
       <div v-else>
         <div class="flex justify-between items-center mb-4">
@@ -234,8 +277,10 @@
               class="w-3 h-3 rounded-full mr-2" 
               :class="deviceStatus.online ? 'bg-green-500' : 'bg-red-500'"
             ></span>
-            <div class="font-semibold">{{ deviceStatus.online ? 'Online' : 'Offline' }}</div>
-            <div class="text-xs text-gray-500 ml-2">
+            <div :class="['font-semibold', textColor.primary]">
+              {{ deviceStatus.online ? 'Online' : 'Offline' }}
+            </div>
+            <div :class="['text-xs ml-2', textColor.secondary]">
               Last updated: {{ formatTime(deviceStatus.lastUpdated) }}
             </div>
           </div>
@@ -276,20 +321,20 @@
                   class="mr-2"
                   :class="getMessageTypeIcon(data.type)"
                 ></i>
-                <span>{{ getMessageTypeLabel(data.type) }}</span>
+                <span :class="textColor.primary">{{ getMessageTypeLabel(data.type) }}</span>
               </div>
             </template>
             
             <!-- Timestamp column -->
             <template #timestamp-body="{ data }">
-              <div class="text-sm text-gray-600">
+              <div :class="['text-sm', textColor.secondary]">
                 {{ formatTime(data.timestamp) }}
               </div>
             </template>
             
             <!-- Summary column -->
             <template #summary-body="{ data }">
-              <div>{{ data.summary }}</div>
+              <div :class="textColor.primary">{{ data.summary }}</div>
             </template>
             
             <!-- Details column with expand/collapse -->
@@ -300,7 +345,12 @@
                   class="p-button-text p-button-sm p-button-rounded"
                   @click="toggleMessageDetails(rowIndex)"
                 />
-                <div v-if="data.expanded" class="mt-2 bg-gray-50 p-2 rounded border border-gray-100 font-mono text-xs overflow-x-auto">
+                <div v-if="data.expanded" :class="[
+                  'mt-2 p-2 rounded border font-mono text-xs overflow-x-auto',
+                  backgroundColor.secondary,
+                  borderColor.default,
+                  textColor.primary
+                ]">
                   <pre>{{ JSON.stringify(data.payload, null, 2) }}</pre>
                 </div>
               </div>
@@ -346,8 +396,10 @@ import { useThing } from '../../../composables/useThing'
 import { useMessages } from '../../../composables/useMessages'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
+import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
+import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -356,6 +408,9 @@ import ProgressSpinner from 'primevue/progressspinner'
 const route = useRoute()
 const router = useRouter()
 const typesStore = useTypesStore()
+
+// Theme composable for theme-aware styling
+const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Ensure thing types are loaded
 typesStore.loadThingTypes()
@@ -505,7 +560,7 @@ const getMessageTypeLabel = (type) => {
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!thing.value) return
-  confirmDelete(thing.value, 'thing', 'thing_code')
+  confirmDelete(thing.value, 'Thing', 'thing_code')
 }
 
 // Handle delete confirmation
@@ -524,3 +579,110 @@ const handleDeleteConfirm = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Theme-aware styling */
+.thing-detail-container {
+  margin-bottom: 2rem;
+}
+
+:deep(.p-card) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+  transition: all 0.2s ease;
+}
+
+:deep(.p-card .p-card-title) {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--surface-border);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+:deep(.p-card .p-card-content) {
+  padding: 1.5rem;
+}
+
+:deep(.p-card .p-card-footer) {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.field-label {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-field, .stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Error container styling */
+.p-error-container {
+  background-color: var(--surface-card);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+}
+
+/* Fix PrimeVue Card styling in dark mode */
+:deep(.dark .p-card),
+:deep(.dark .p-card .p-card-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-card .p-card-title) {
+  color: var(--text-color);
+}
+
+/* Fix dialog styling in dark mode */
+:deep(.dark .p-dialog) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom-color: var(--surface-border);
+}
+
+:deep(.dark .p-dialog-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+/* Fix button styling */
+:deep(.p-button-text) {
+  color: var(--primary-color);
+}
+
+:deep(.p-button-text:hover) {
+  background: rgba(var(--primary-color-rgb), 0.04);
+  color: var(--primary-color);
+}
+
+:deep(.dark .p-button-text) {
+  color: var(--primary-200);
+}
+
+:deep(.dark .p-button-text:hover) {
+  background: rgba(var(--primary-200-rgb), 0.16);
+}
+</style>
