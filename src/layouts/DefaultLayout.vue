@@ -51,9 +51,6 @@
       </main>
     </div>
     
-    <!-- Mobile Bottom Navigation -->
-    <MobileNavBar v-if="isMobileView && showMobileNav" />
-    
     <!-- Notifications -->
     <Toast position="bottom-right" />
     <ConfirmDialog />

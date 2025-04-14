@@ -10,7 +10,8 @@
       </template>
     </PageHeader>
     
-    <div class="card">
+    <Card>
+    <template #content>
       <DataTable
         :items="edges"
         :columns="columns"
@@ -87,7 +88,8 @@
           </div>
         </template>
       </DataTable>
-    </div>
+    </template>
+    </Card>
     
     <!-- Filter Dialog -->
     <Dialog
@@ -185,6 +187,7 @@ import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
+import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
@@ -320,6 +323,29 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
+/* Theme-aware styling */
+:deep(.p-card) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--surface-border);
+  transition: all 0.2s ease;
+}
+
+:deep(.p-card .p-card-title) {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--surface-border);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+:deep(.p-card .p-card-content) {
+  padding: 1.5rem;
+}
+
 /* Minimal styling, letting the component handle mobile view */
 /* Badge styling for consistency */
 :deep(.badge) {
