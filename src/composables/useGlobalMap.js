@@ -1,4 +1,4 @@
-// src/composables/useGlobalMap.js - Fixed marker visibility issue
+// src/composables/useGlobalMap.js - Updated with theme support
 import { ref, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -11,6 +11,7 @@ import { useTypesStore } from '../stores/types'
 /**
  * Composable for global map operations
  * Provides utilities for rendering and interacting with global maps
+ * Now with theme support for light/dark modes
  */
 export function useGlobalMap() {
   const { performOperation } = useApiOperation()
@@ -27,6 +28,13 @@ export function useGlobalMap() {
   const locationMarkers = ref({})
   const mapInitialized = ref(false)
   const savedMapState = ref(null)
+  const currentTileLayer = ref(null)
+  
+  // Map tile URLs for light and dark modes
+  const TILE_URLS = {
+    light: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+  }
   
   /**
    * Initialize the map with a container element ID
@@ -41,6 +49,9 @@ export function useGlobalMap() {
       // Fix Leaflet icon paths (common issue in bundled apps)
       fixLeafletIconPaths()
       
+      // Extract darkMode from options
+      const { darkMode, ...mapOptions } = options
+      
       // Initialize map with improved options
       map.value = L.map(containerId, {
         center: [39.8283, -98.5795], // Default center on US
@@ -50,16 +61,11 @@ export function useGlobalMap() {
         zoomSnap: 0.5,
         wheelPxPerZoomLevel: 120,
         maxBoundsViscosity: 0.8,
-        ...options
+        ...mapOptions
       })
       
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-        minZoom: 2,
-        noWrap: true
-      }).addTo(map.value)
+      // Add the appropriate tile layer based on theme
+      updateMapTiles(darkMode)
       
       // Initialize marker cluster group with improved settings
       markersLayer.value = L.markerClusterGroup({
@@ -116,6 +122,40 @@ export function useGlobalMap() {
       loading.value = false
       
       return false
+    }
+  }
+  
+  /**
+   * Update map tiles based on the current theme
+   * @param {boolean} isDarkMode - Whether dark mode is active
+   */
+  const updateMapTiles = (isDarkMode) => {
+    if (!map.value) return
+    
+    // Remove existing tile layer if it exists
+    if (currentTileLayer.value) {
+      map.value.removeLayer(currentTileLayer.value)
+    }
+    
+    // Select tile URL based on theme
+    const tileUrl = isDarkMode ? TILE_URLS.dark : TILE_URLS.light
+    
+    // Add the new tile layer
+    currentTileLayer.value = L.tileLayer(tileUrl, {
+      attribution: isDarkMode 
+        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      minZoom: 2,
+      noWrap: true
+    }).addTo(map.value)
+    
+    // Add a class to the map container for theme-specific styling
+    const mapContainer = map.value.getContainer()
+    if (isDarkMode) {
+      mapContainer.classList.add('dark-mode-map')
+    } else {
+      mapContainer.classList.remove('dark-mode-map')
     }
   }
   
@@ -185,13 +225,14 @@ export function useGlobalMap() {
    * Render location markers on the map
    * @param {Array} locations - Array of locations to render
    * @param {Array} edges - Array of edges for location mapping
+   * @param {boolean} isDarkMode - Current theme state
    */
-  const renderMarkers = (locations, edges = []) => {
+  const renderMarkers = (locations, edges = [], isDarkMode = false) => {
     if (!map.value || !markersLayer.value) return
     
     // If a zoom animation is in progress, defer marker rendering
     if (map.value._isZooming) {
-      setTimeout(() => renderMarkers(locations, edges), 300)
+      setTimeout(() => renderMarkers(locations, edges, isDarkMode), 300)
       return
     }
     
@@ -217,8 +258,8 @@ export function useGlobalMap() {
       // Find the edge for this location
       const edge = edges.find(e => e.id === location.edge_id)
       
-      // Create a custom icon based on location type
-      const icon = createCustomIcon(location.type)
+      // Create a custom icon based on location type and theme
+      const icon = createCustomIcon(location.type, isDarkMode)
       
       // Create marker with custom icon
       const marker = L.marker([lat, lng], {
@@ -271,7 +312,7 @@ export function useGlobalMap() {
         }, 10)
       })
       
-      // IMPORTANT FIX: Add marker directly to the marker layer
+      // Add marker directly to the marker layer
       markersLayer.value.addLayer(marker)
       
       // Store marker reference for later use
@@ -357,11 +398,12 @@ export function useGlobalMap() {
   }
   
   /**
-   * Create custom icon based on location type
+   * Create custom icon based on location type and theme
    * @param {string} locationType - Location type code
+   * @param {boolean} isDarkMode - Whether dark mode is active
    * @returns {Object} - Leaflet icon
    */
-  const createCustomIcon = (locationType) => {
+  const createCustomIcon = (locationType, isDarkMode) => {
     // Pick color based on location type
     const colorMap = {
       'entrance': '#3b82f6',      // blue
@@ -376,9 +418,26 @@ export function useGlobalMap() {
       'entrance-hall': '#3b82f6'  // blue
     }
     
-    const color = colorMap[locationType] || '#6b7280'
+    // In dark mode, use brighter colors
+    const darkModeColorMap = {
+      'entrance': '#60a5fa',      // blue-400
+      'work-area': '#34d399',     // green-400
+      'meeting-room': '#a78bfa',  // purple-400
+      'break-area': '#fbbf24',    // amber-400
+      'reception': '#818cf8',     // indigo-400
+      'security': '#f87171',      // red-400
+      'server-room': '#22d3ee',   // cyan-400
+      'utility-room': '#2dd4bf',  // teal-400
+      'storage': '#9ca3af',       // gray-400
+      'entrance-hall': '#60a5fa'  // blue-400
+    }
     
-    // IMPORTANT FIX: Ensure the HTML structure matches what the CSS expects
+    // Select the appropriate color map based on theme
+    const color = isDarkMode 
+      ? (darkModeColorMap[locationType] || '#9ca3af')
+      : (colorMap[locationType] || '#6b7280')
+    
+    // Create icon with theme-appropriate styling
     return L.divIcon({
       className: 'custom-location-marker',
       html: `<div class="location-marker-dot" style="background-color: ${color}"></div>`,
@@ -394,7 +453,8 @@ export function useGlobalMap() {
    * @returns {boolean} - True if coordinates are valid
    */
   const hasValidCoordinates = (location) => {
-    return location.metadata && 
+    return location && 
+           location.metadata && 
            location.metadata.coordinates && 
            location.metadata.coordinates.lat && 
            (location.metadata.coordinates.lng || location.metadata.coordinates.long)
@@ -472,6 +532,7 @@ export function useGlobalMap() {
     // Methods
     initMap,
     renderMarkers,
+    updateMapTiles,
     centerToAllLocations,
     centerToLocation,
     findMarkerById,

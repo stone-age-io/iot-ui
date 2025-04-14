@@ -1,17 +1,17 @@
-<!-- src/components/map/FloorPlanMap.vue (Updated) -->
+<!-- src/components/map/FloorPlanMap.vue (Updated with theme support) -->
 <template>
-  <div class="floor-plan-map">
+  <div class="floor-plan-map theme-transition">
     <!-- Loading state -->
-    <div v-if="loading" class="loading-overlay">
+    <div v-if="loading" class="loading-overlay" :class="themeValue.class('bg-white bg-opacity-80', 'bg-gray-900 bg-opacity-80')">
       <ProgressSpinner strokeWidth="4" />
     </div>
     
     <!-- Floor plan uploader if no plan exists -->
-    <div v-else-if="!hasFloorPlan && showUpload" class="upload-container">
+    <div v-else-if="!hasFloorPlan && showUpload" class="upload-container" :class="backgroundColor.secondary">
       <div class="upload-prompt">
-        <i class="pi pi-image text-4xl text-gray-400 mb-3"></i>
-        <h3 class="text-lg font-medium mb-2">No Floor Plan Available</h3>
-        <p class="text-gray-500 mb-4">Upload a floor plan image to visualize indoor positioning</p>
+        <i class="pi pi-image text-4xl mb-3" :class="textColor.secondary"></i>
+        <h3 class="text-lg font-medium mb-2" :class="textColor.primary">No Floor Plan Available</h3>
+        <p class="mb-4" :class="textColor.secondary">Upload a floor plan image to visualize indoor positioning</p>
         <FileUpload
           mode="basic"
           :maxFileSize="5000000"
@@ -36,11 +36,14 @@
       <!-- Legend panel -->
       <div 
         v-if="showLegend && mapInitialized" 
-        class="legend-panel bg-white rounded-md shadow-md p-3"
-        :class="legendPosition === 'left' ? 'legend-left' : 'legend-right'"
+        class="legend-panel rounded-md shadow-md p-3 theme-transition"
+        :class="[
+          legendPosition === 'left' ? 'legend-left' : 'legend-right',
+          backgroundColor.primary
+        ]"
       >
         <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-semibold">Legend</h3>
+          <h3 class="text-sm font-semibold" :class="textColor.primary">Legend</h3>
           <Button
             icon="pi pi-times"
             class="p-button-rounded p-button-text p-button-sm"
@@ -52,9 +55,9 @@
           <div v-for="(typeObj, index) in uniqueThingTypes" :key="index" class="flex items-center">
             <span 
               class="h-3 w-3 rounded-full mr-2"
-              :style="{ backgroundColor: getMarkerColor(typeObj.type) }"
+              :style="{ backgroundColor: getMarkerColor(typeObj.type, isDarkMode) }"
             ></span>
-            <span class="text-xs">{{ typeObj.label }} ({{ typeObj.count }})</span>
+            <span class="text-xs" :class="textColor.primary">{{ typeObj.label }} ({{ typeObj.count }})</span>
           </div>
         </div>
       </div>
@@ -62,13 +65,14 @@
       <!-- Fallback message when floor plan load fails but hasFloorPlan is true -->
       <div 
         v-if="hasFloorPlan && initAttempted && !mapInitialized && !loading" 
-        class="floor-plan-error p-4 bg-red-50 border border-red-200 rounded-md"
+        class="floor-plan-error p-4 rounded-md" 
+        :class="themeValue.class('bg-red-50 border border-red-200', 'bg-red-900/30 border border-red-700')"
       >
         <div class="flex items-start">
-          <i class="pi pi-exclamation-circle text-red-500 mt-0.5 mr-2"></i>
+          <i class="pi pi-exclamation-circle mt-0.5 mr-2" :class="textColor.error"></i>
           <div>
-            <p class="text-red-700 font-medium">Failed to load floor plan</p>
-            <p class="text-red-600 text-sm mt-1">There was an error loading the floor plan image. Please try again later or upload a new image.</p>
+            <p class="font-medium" :class="themeValue.class('text-red-700', 'text-red-400')">Failed to load floor plan</p>
+            <p class="text-sm mt-1" :class="themeValue.class('text-red-600', 'text-red-300')">There was an error loading the floor plan image. Please try again later or upload a new image.</p>
             <div class="mt-3">
               <FileUpload
                 v-if="showUpload"
@@ -88,17 +92,19 @@
     </div>
     
     <!-- Edit mode panel -->
-    <div v-if="editMode && mapInitialized" class="edit-panel p-3 bg-gray-100 border-t border-gray-300">
-      <h3 class="text-sm font-medium mb-2">Edit Mode: Place things on the map</h3>
-      <p class="text-xs text-gray-500 mb-3">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
+    <div v-if="editMode && mapInitialized" class="edit-panel p-3 border-t theme-transition"
+      :class="[backgroundColor.secondary, borderColor.default]"
+    >
+      <h3 class="text-sm font-medium mb-2" :class="textColor.primary">Edit Mode: Place things on the map</h3>
+      <p class="text-xs mb-3" :class="textColor.secondary">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="thing in things" :key="thing.id" class="flex items-center">
           <span 
             class="h-3 w-3 rounded-full mr-2"
-            :style="{ backgroundColor: getMarkerColor(thing.type) }"
+            :style="{ backgroundColor: getMarkerColor(thing.type, isDarkMode) }"
           ></span>
-          <span class="text-sm truncate flex-1">{{ thing.name }}</span>
+          <span class="text-sm truncate flex-1" :class="textColor.primary">{{ thing.name }}</span>
           <Button
             icon="pi pi-search"
             class="p-button-rounded p-button-text p-button-sm"
@@ -116,6 +122,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import ProgressSpinner from 'primevue/progressspinner'
+import { useTheme } from '../../composables/useTheme' // Import theme composable
 
 // Import from new service layer
 import { locationService, thingService } from '../../services'
@@ -158,6 +165,15 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update-thing-position', 'upload-floor-plan', 'thing-click'])
+
+// Get theme information
+const { 
+  isDarkMode, 
+  themeValue, 
+  backgroundColor, 
+  textColor, 
+  borderColor 
+} = useTheme()
 
 // State
 const map = ref(null)
@@ -235,6 +251,24 @@ watch(() => hasFloorPlan.value, (newValue) => {
   }
 })
 
+// Watch for theme changes and update map
+watch(() => isDarkMode.value, () => {
+  if (mapInitialized.value) {
+    // Update marker colors without reinitializing the map
+    renderThingMarkers();
+    
+    // Also update the map container class for theme-specific styling
+    const mapContainer = document.getElementById('floorplan-map');
+    if (mapContainer) {
+      if (isDarkMode.value) {
+        mapContainer.classList.add('dark-mode-map');
+      } else {
+        mapContainer.classList.remove('dark-mode-map');
+      }
+    }
+  }
+})
+
 // Prepare the direct image URL
 const prepareImageUrl = () => {
   if (!hasFloorPlan.value) return;
@@ -306,6 +340,11 @@ const initMap = async () => {
     
     // Fix Leaflet icon paths
     fixLeafletIconPaths();
+    
+    // Add dark mode class to map container if needed
+    if (isDarkMode.value) {
+      mapElement.classList.add('dark-mode-map');
+    }
     
     // Improved map options with better zoom levels
     const mapOptions = {
@@ -400,7 +439,7 @@ const addMapControls = () => {
         if (editMode.value) {
           button.innerHTML = '<i class="pi pi-check"></i>';
           button.style.backgroundColor = '#4ade80'; // Green background
-          button.style.color = 'white';
+          button.style.color = isDarkMode.value ? '#1f2937' : 'white';
         } else {
           button.innerHTML = '<i class="pi pi-pencil"></i>';
           button.style.backgroundColor = '';
@@ -612,7 +651,7 @@ const centerFloorPlan = () => {
   });
 }
 
-// Render markers for things
+// Render markers for things with theme support
 const renderThingMarkers = () => {
   if (!map.value || !markerLayer.value) return;
   
@@ -664,10 +703,10 @@ const renderThingMarkers = () => {
       return;
     }
     
-    // Create custom marker icon based on thing type
+    // Create custom marker icon based on thing type and current theme
     const icon = L.divIcon({
       className: 'custom-marker-icon',
-      html: `<div class="marker-dot" style="background-color: ${getMarkerColor(thing.type)}"></div>
+      html: `<div class="marker-dot" style="background-color: ${getMarkerColor(thing.type, isDarkMode.value)}"></div>
              <div class="marker-label">${thing.name}</div>`,
       iconSize: [30, 30],
       iconAnchor: [15, 15],
@@ -683,9 +722,9 @@ const renderThingMarkers = () => {
       zIndexOffset: hasCoords ? 1000 : 500 // Place positioned markers on top
     });
     
-    // Bind popup
+    // Bind popup - with theme-aware HTML
     marker.bindPopup(`
-      <div class="thing-popup">
+      <div class="thing-popup ${isDarkMode.value ? 'dark-theme' : 'light-theme'}">
         <h3>${thing.name}</h3>
         <p class="code">${thing.code || ''}</p>
         <div class="badge badge-${thing.type}">${getThingTypeName(thing.type)}</div>
@@ -871,9 +910,9 @@ const fixLeafletIconPaths = () => {
   });
 }
 
-// Get color for marker based on thing type
-const getMarkerColor = (type) => {
-  const colors = {
+// Get color for marker based on thing type and theme
+const getMarkerColor = (type, isDark = false) => {
+  const lightColors = {
     'reader': '#3b82f6',      // blue
     'controller': '#8b5cf6',  // purple
     'lock': '#f59e0b',        // amber
@@ -886,7 +925,23 @@ const getMarkerColor = (type) => {
     'occupancy-sensor': '#f97316' // orange
   };
   
-  return colors[type] || '#6b7280'; // gray default
+  // Brighter colors for dark mode
+  const darkColors = {
+    'reader': '#60a5fa',      // blue-400
+    'controller': '#a78bfa',  // purple-400
+    'lock': '#fbbf24',        // amber-400
+    'temperature-sensor': '#34d399', // green-400
+    'humidity-sensor': '#22d3ee',    // cyan-400
+    'hvac': '#38bdf8',        // sky-400
+    'lighting': '#fbbf24',    // amber-400
+    'camera': '#f87171',      // red-400
+    'motion-sensor': '#818cf8', // indigo-400
+    'occupancy-sensor': '#fb923c' // orange-400
+  };
+  
+  return isDark 
+    ? (darkColors[type] || '#9ca3af') // gray-400 default for dark
+    : (lightColors[type] || '#6b7280'); // gray-600 default for light
 }
 
 // Get thing type name
@@ -924,7 +979,6 @@ const getThingTypeName = (type) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.8);
   z-index: 1000;
 }
 
@@ -933,8 +987,8 @@ const getThingTypeName = (type) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f9fafb;
-  border: 2px dashed #e5e7eb;
+  border: 2px dashed;
+  border-color: rgb(var(--color-border));
   border-radius: 6px;
 }
 
@@ -950,9 +1004,7 @@ const getThingTypeName = (type) => {
 
 /* Legend positioning */
 .legend-panel {
-  background-color: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: absolute;
   max-width: 250px;
   max-height: 60%; 
   overflow-y: auto;
@@ -960,21 +1012,27 @@ const getThingTypeName = (type) => {
 }
 
 .legend-left {
-  position: absolute;
   left: 10px;
   bottom: 30px;
 }
 
 .legend-right {
-  position: absolute;
   right: 10px;
   bottom: 30px;
 }
 
-/* Marker styling */
+/* Theme transition for smooth color changes */
+.theme-transition,
+.theme-transition * {
+  transition-property: background-color, border-color, color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Marker styling with theme support */
 :deep(.custom-marker-icon) {
-  background: none;
-  border: none;
+  background: none !important;
+  border: none !important;
   position: relative;
 }
 
@@ -988,6 +1046,11 @@ const getThingTypeName = (type) => {
   transform: translate(-50%, -50%);
   border: 2px solid white;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+:deep(.dark-mode-map .marker-dot) {
+  border: 2px solid #1f2937;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
 }
 
 :deep(.marker-label) {
@@ -1005,7 +1068,27 @@ const getThingTypeName = (type) => {
   text-overflow: ellipsis;
 }
 
-/* Popup styling */
+:deep(.dark-mode-map .marker-label) {
+  background-color: rgba(31, 41, 55, 0.8);
+  color: #e5e7eb;
+}
+
+/* Popup styling with theme support */
+:deep(.leaflet-popup-content-wrapper) {
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+:deep(.dark-mode-map .leaflet-popup-content-wrapper) {
+  background-color: #1f2937;
+  color: #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+:deep(.dark-mode-map .leaflet-popup-tip) {
+  background-color: #1f2937;
+}
+
 :deep(.thing-popup) {
   min-width: 180px;
   padding: 6px;
@@ -1017,11 +1100,19 @@ const getThingTypeName = (type) => {
   margin: 0 0 4px 0;
 }
 
+:deep(.dark-mode-map .thing-popup h3) {
+  color: #e5e7eb;
+}
+
 :deep(.thing-popup .code) {
   font-family: monospace;
   color: #666;
   margin: 0 0 8px 0;
   font-size: 0.75rem;
+}
+
+:deep(.dark-mode-map .thing-popup .code) {
+  color: #9ca3af;
 }
 
 :deep(.thing-popup .badge) {
@@ -1032,6 +1123,30 @@ const getThingTypeName = (type) => {
   font-weight: 500;
   margin-bottom: 10px;
 }
+
+/* Badge colors with theme support */
+:deep(.badge-reader) { background-color: #dbeafe; color: #1e40af; }
+:deep(.badge-controller) { background-color: #ede9fe; color: #5b21b6; }
+:deep(.badge-lock) { background-color: #ffedd5; color: #9a3412; }
+:deep(.badge-temperature-sensor) { background-color: #dcfce7; color: #166534; }
+:deep(.badge-humidity-sensor) { background-color: #cffafe; color: #0e7490; }
+:deep(.badge-hvac) { background-color: #e0f2fe; color: #0c4a6e; }
+:deep(.badge-lighting) { background-color: #fef9c3; color: #854d0e; }
+:deep(.badge-camera) { background-color: #fee2e2; color: #b91c1c; }
+:deep(.badge-motion-sensor) { background-color: #e0e7ff; color: #3730a3; }
+:deep(.badge-occupancy-sensor) { background-color: #ffedd5; color: #9a3412; }
+
+/* Dark mode badges */
+:deep(.dark-mode-map .badge-reader) { background-color: rgba(37, 99, 235, 0.2); color: #93c5fd; }
+:deep(.dark-mode-map .badge-controller) { background-color: rgba(91, 33, 182, 0.2); color: #c4b5fd; }
+:deep(.dark-mode-map .badge-lock) { background-color: rgba(154, 52, 18, 0.2); color: #fdba74; }
+:deep(.dark-mode-map .badge-temperature-sensor) { background-color: rgba(22, 101, 52, 0.2); color: #86efac; }
+:deep(.dark-mode-map .badge-humidity-sensor) { background-color: rgba(14, 116, 144, 0.2); color: #67e8f9; }
+:deep(.dark-mode-map .badge-hvac) { background-color: rgba(12, 74, 110, 0.2); color: #7dd3fc; }
+:deep(.dark-mode-map .badge-lighting) { background-color: rgba(133, 77, 14, 0.2); color: #fef08a; }
+:deep(.dark-mode-map .badge-camera) { background-color: rgba(185, 28, 28, 0.2); color: #fca5a5; }
+:deep(.dark-mode-map .badge-motion-sensor) { background-color: rgba(55, 48, 163, 0.2); color: #a5b4fc; }
+:deep(.dark-mode-map .badge-occupancy-sensor) { background-color: rgba(154, 52, 18, 0.2); color: #fdba74; }
 
 :deep(.view-button) {
   display: block;
@@ -1050,17 +1165,25 @@ const getThingTypeName = (type) => {
   background-color: #2563eb;
 }
 
-/* Badge colors */
-:deep(.badge-reader) { background-color: #dbeafe; color: #1e40af; }
-:deep(.badge-controller) { background-color: #ede9fe; color: #5b21b6; }
-:deep(.badge-lock) { background-color: #ffedd5; color: #9a3412; }
-:deep(.badge-temperature-sensor) { background-color: #dcfce7; color: #166534; }
-:deep(.badge-humidity-sensor) { background-color: #cffafe; color: #0e7490; }
-:deep(.badge-hvac) { background-color: #e0f2fe; color: #0c4a6e; }
-:deep(.badge-lighting) { background-color: #fef9c3; color: #854d0e; }
-:deep(.badge-camera) { background-color: #fee2e2; color: #b91c1c; }
-:deep(.badge-motion-sensor) { background-color: #e0e7ff; color: #3730a3; }
-:deep(.badge-occupancy-sensor) { background-color: #ffedd5; color: #9a3412; }
+:deep(.dark-mode-map .view-button) {
+  background-color: #60a5fa;
+  color: #1e293b;
+}
+
+:deep(.dark-mode-map .view-button:hover) {
+  background-color: #93c5fd;
+}
+
+/* Dark mode control styling */
+:deep(.dark-mode-map .leaflet-control-zoom a) {
+  background-color: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+:deep(.dark-mode-map .leaflet-control-zoom a:hover) {
+  background-color: #4b5563;
+}
 
 /* Custom control styling overrides */
 :deep(.leaflet-control a) {
