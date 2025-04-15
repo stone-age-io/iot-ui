@@ -1,13 +1,16 @@
 <!-- src/layouts/AuthLayout.vue -->
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4 py-8 dark:bg-gray-900">
+  <div :class="[
+    'min-h-screen flex flex-col items-center justify-center px-4 py-8 overflow-hidden',
+    backgroundColor.primary
+  ]">
     <div class="w-full max-w-md">
       <!-- Company Branding -->
       <div class="mb-8">
         <!-- Logo and Company Name -->
         <div class="flex justify-center mb-2">
           <div class="flex items-center">
-            <div class="text-primary-600 w-12 h-12 flex items-center justify-center mr-3">
+            <div :class="['w-12 h-12 flex items-center justify-center mr-3', isDarkMode ? 'text-primary-400' : 'text-primary-600']">
               <!-- Custom SVG Logo -->
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -24,25 +27,41 @@
               </svg>
             </div>
             <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-primary-700 whitespace-nowrap dark:text-primary-300">Stone-Age.io</h1>
+              <h1 :class="['text-2xl sm:text-3xl font-bold whitespace-nowrap', isDarkMode ? 'text-primary-300' : 'text-primary-700']">Stone-Age.io</h1>
             </div>
           </div>
         </div>
         <!-- Tagline -->
-        <p class="text-gray-600 text-center dark:text-gray-400">Physical Access Control & Building Automation</p>
+        <p :class="['text-center', textColor.secondary]">Physical Access Control & Building Automation</p>
       </div>
       
       <!-- Auth Content Container -->
-      <div class="bg-[#1f4b8e] shadow-lg rounded-lg overflow-hidden">
+      <div :class="[
+        'rounded-lg overflow-hidden',
+        backgroundColor.surface,
+        borderColor.default,
+        shadowStyle.lg
+      ]">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
+        
+        <!-- Theme Toggle - Now inside the card footer -->
+        <div class="flex justify-center py-3 border-t" :class="borderColor.default">
+          <Button
+            :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
+            :label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+            class="p-button-text p-button-sm"
+            @click="toggleTheme"
+            style="height: auto; padding: 0.5rem 1rem;"
+          />
+        </div>
       </div>
       
       <!-- Footer -->
-      <div class="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
+      <div class="text-center mt-6 text-sm" :class="textColor.secondary">
         &copy; {{ currentYear }} Stone-Age.io. All rights reserved.
       </div>
     </div>
@@ -54,7 +73,19 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useTheme } from '../composables/useTheme'
 import Toast from 'primevue/toast'
+import Button from 'primevue/button'
+
+// Theme composable for theme-aware styling
+const { 
+  isDarkMode, 
+  toggleTheme,
+  backgroundColor, 
+  textColor,
+  borderColor,
+  shadowStyle 
+} = useTheme()
 
 // Dynamic year for copyright
 const currentYear = computed(() => new Date().getFullYear())
@@ -72,6 +103,17 @@ const currentYear = computed(() => new Date().getFullYear())
 }
 
 .logo-image {
-  fill: var(--primary-color);
+  fill: currentColor;
+}
+
+/* Ensure no overflow issues */
+:deep(.p-button-label) {
+  white-space: nowrap;
+}
+
+/* Fix for tooltips and prevent scrollbar flashes */
+:deep(.p-tooltip) {
+  max-width: 250px;
+  overflow: hidden;
 }
 </style>
