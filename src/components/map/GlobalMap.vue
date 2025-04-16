@@ -8,6 +8,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useGlobalMap } from '../../composables/useGlobalMap'
 import { useTypesStore } from '../../stores/types'
 import { useTheme } from '../../composables/useTheme' // Import theme composable
+import L from 'leaflet'
 
 // Initialize composables and store
 const mapComposable = useGlobalMap()
@@ -37,7 +38,7 @@ const mapId = `global-map-${Math.random().toString(36).substring(2, 9)}`
 const shouldRenderMarkers = ref(false)
 const mapInitialized = ref(false)
 
-// Initialize map on mount
+  // Initialize map on mount
 onMounted(() => {
   nextTick(() => {
     // Initialize map with the uniquely generated ID and pass the theme state
@@ -49,8 +50,37 @@ onMounted(() => {
       zoomSnap: 0.5,
       wheelPxPerZoomLevel: 120,
       maxBoundsViscosity: 0.8,
+      attributionControl: false, // Disable default so we can create with custom prefix
       darkMode: isDarkMode.value // Pass the current theme state
     })
+    
+    // Completely control the attribution and tile layer
+    if (mapComposable.map.value) {
+      // Add our custom attribution with empty prefix
+      const attributionControl = L.control.attribution({
+        prefix: '', // No "Leaflet" text
+        position: 'bottomright'
+      }).addTo(mapComposable.map.value);
+      
+      // Remove any existing tile layers
+      mapComposable.map.value.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+          mapComposable.map.value.removeLayer(layer);
+        }
+      });
+      
+      // Add our tile layer with minimal attribution
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+        minZoom: 2
+      }).addTo(mapComposable.map.value);
+      
+      // Add dark-mode-map class if in dark mode (for proper control styling)
+      if (isDarkMode.value) {
+        mapComposable.map.value.getContainer().classList.add('dark-mode-map');
+      }
+    }
     
     // Setup custom event for location clicks
     document.addEventListener('location-click', handleLocationClickEvent)
@@ -92,8 +122,13 @@ watch(() => mapComposable.mapInitialized.value, (initialized) => {
 // Watch for theme changes and update map tiles
 watch(() => isDarkMode.value, (newIsDark) => {
   if (mapInitialized.value && mapComposable.map.value) {
-    // Update map tile layer based on theme
-    mapComposable.updateMapTiles(newIsDark)
+    // Just toggle the dark-mode-map class for styling controls and markers
+    const mapContainer = mapComposable.map.value.getContainer();
+    if (newIsDark) {
+      mapContainer.classList.add('dark-mode-map');
+    } else {
+      mapContainer.classList.remove('dark-mode-map');
+    }
     
     // Re-render markers to update their styles
     renderMarkers()
@@ -144,19 +179,37 @@ defineExpose({
 
 /* Fix for dark mode map attribution text */
 :deep(.dark-mode-map .leaflet-control-attribution) {
-  background-color: rgba(31, 41, 55, 0.7) !important;
-  color: #d1d5db !important;
+  background-color: rgba(31, 41, 55, 0.9) !important;
+  color: #f3f4f6 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3) !important;
+}
+
+:deep(.dark-mode-map .leaflet-control-attribution a) {
+  color: #93c5fd !important;
+}
+
+:deep(.leaflet-control-attribution) {
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+:deep(.leaflet-control-attribution a) {
+  color: #2563eb !important;
 }
 
 /* Fix for dark mode map controls */
 :deep(.dark-mode-map .leaflet-control a) {
-  background-color: #374151 !important;
-  color: #d1d5db !important;
-  border-color: #4b5563 !important;
+  background-color: rgba(75, 85, 99, 0.9) !important; /* Lighter control background */
+  color: #e5e7eb !important;
+  border-color: #6b7280 !important; /* Lighter border */
 }
 
 :deep(.dark-mode-map .leaflet-control a:hover) {
-  background-color: #4b5563 !important;
+  background-color: rgba(107, 114, 128, 0.9) !important; /* Even lighter on hover */
 }
 
 /* Custom marker styling - IMPORTANT for marker visibility */
@@ -180,7 +233,7 @@ defineExpose({
 
 /* Dark mode marker styles */
 :deep(.dark-mode-map .location-marker-dot) {
-  border-color: #1f2937;
+  border-color: #374151; /* Lighter border color */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
@@ -193,7 +246,7 @@ defineExpose({
 }
 
 :deep(.dark-mode-map .marker-cluster) {
-  background-color: rgba(31, 41, 55, 0.8);
+  background-color: rgba(55, 65, 81, 0.8); /* Lighter background */
 }
 
 :deep(.marker-cluster div) {
@@ -229,12 +282,13 @@ defineExpose({
 
 /* Dark mode popup styles */
 :deep(.dark-mode-map .leaflet-popup-content-wrapper) {
-  background-color: #1f2937 !important;
-  color: #e5e7eb !important;
+  background-color: #374151 !important; /* Lighter background */
+  color: #f3f4f6 !important;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
 :deep(.dark-mode-map .leaflet-popup-tip) {
-  background-color: #1f2937 !important;
+  background-color: #374151 !important; /* Lighter tip */
 }
 
 /* Popup styling */
@@ -250,7 +304,7 @@ defineExpose({
 }
 
 :deep(.dark-mode-map .location-popup h3) {
-  color: #f3f4f6;
+  color: #f9fafb; /* Brighter text */
 }
 
 :deep(.location-popup .code) {
@@ -261,7 +315,7 @@ defineExpose({
 }
 
 :deep(.dark-mode-map .location-popup .code) {
-  color: #9ca3af;
+  color: #d1d5db; /* Brighter text */
 }
 
 :deep(.location-popup .edge) {
@@ -278,16 +332,17 @@ defineExpose({
   margin-bottom: 10px;
 }
 
-/* Dark mode badge variants */
-:deep(.dark-mode-map .badge-entrance) { background-color: rgba(30, 64, 175, 0.3); color: #93c5fd; }
-:deep(.dark-mode-map .badge-work-area) { background-color: rgba(22, 101, 52, 0.3); color: #86efac; }
-:deep(.dark-mode-map .badge-meeting-room) { background-color: rgba(91, 33, 182, 0.3); color: #d8b4fe; }
-:deep(.dark-mode-map .badge-break-area) { background-color: rgba(154, 52, 18, 0.3); color: #fcd34d; }
-:deep(.dark-mode-map .badge-reception) { background-color: rgba(55, 48, 163, 0.3); color: #a5b4fc; }
-:deep(.dark-mode-map .badge-security) { background-color: rgba(185, 28, 28, 0.3); color: #fca5a5; }
-:deep(.dark-mode-map .badge-server-room) { background-color: rgba(14, 116, 144, 0.3); color: #67e8f9; }
-:deep(.dark-mode-map .badge-utility-room) { background-color: rgba(15, 118, 110, 0.3); color: #5eead4; }
-:deep(.dark-mode-map .badge-storage) { background-color: rgba(55, 65, 81, 0.3); color: #d1d5db; }
+/* Dark mode badge variants with improved contrast */
+:deep(.dark-mode-map .badge-entrance) { background-color: rgba(37, 99, 235, 0.4); color: #bfdbfe; }
+:deep(.dark-mode-map .badge-work-area) { background-color: rgba(22, 163, 74, 0.4); color: #bbf7d0; }
+:deep(.dark-mode-map .badge-meeting-room) { background-color: rgba(124, 58, 237, 0.4); color: #e9d5ff; }
+:deep(.dark-mode-map .badge-break-area) { background-color: rgba(217, 119, 6, 0.4); color: #fef08a; }
+:deep(.dark-mode-map .badge-reception) { background-color: rgba(79, 70, 229, 0.4); color: #c7d2fe; }
+:deep(.dark-mode-map .badge-security) { background-color: rgba(220, 38, 38, 0.4); color: #fecaca; }
+:deep(.dark-mode-map .badge-server-room) { background-color: rgba(14, 165, 233, 0.4); color: #a5f3fc; }
+:deep(.dark-mode-map .badge-utility-room) { background-color: rgba(20, 184, 166, 0.4); color: #99f6e4; }
+:deep(.dark-mode-map .badge-storage) { background-color: rgba(75, 85, 99, 0.4); color: #e5e7eb; }
+:deep(.dark-mode-map .badge-entrance-hall) { background-color: rgba(37, 99, 235, 0.4); color: #bfdbfe; }
 
 /* Light mode badge variants */
 :deep(.badge-entrance) { background-color: #dbeafe; color: #1e40af; }

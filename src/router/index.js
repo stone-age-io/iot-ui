@@ -365,7 +365,7 @@ router.beforeEach((to, from, next) => {
 
   // Set document title
   document.title = to.meta.title 
-    ? `${to.meta.title} | IoT Platform` 
+    ? `${to.meta.title} | Stone-Age.io` 
     : 'IoT Platform'
 
   if (requiresAuth && !authStore.isAuthenticated) {
