@@ -53,7 +53,7 @@ const themeStore = useThemeStore()
 // Initialize the theme system
 themeStore.init()
 
-// Initialize NATS connection manager
+// Initialize NATS connection manager once at startup
 natsConnectionManager.initialize()
 
 // Setup the rest of the app
@@ -72,22 +72,40 @@ app.use(PrimeVue, {
 app.use(ConfirmationService)
 app.use(ToastService)
 
-// Initialize type store after Pinia is installed
+// Track if stores have been initialized
+let storesInitialized = false
+
+// Initialize type store (only once)
 const initializeStores = () => {
+  if (storesInitialized) {
+    console.log('Stores already initialized, skipping')
+    return
+  }
+  
+  console.log('Initializing application stores')
   const typesStore = useTypesStore()
   // Preload type data that's used across the app
   typesStore.loadAllTypes()
+  storesInitialized = true
 }
 
 // Add navigation guard to check if user is logged in
 // and initialize NATS connection
 router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && localStorage.getItem('token')) {
-    // User is logged in, attempt to connect NATS if auto-connect is enabled
-    natsConnectionManager.attemptAutoConnect()
+    // User is logged in
     
     // Initialize stores if not already done
-    initializeStores()
+    if (!storesInitialized) {
+      initializeStores()
+    }
+    
+    // Only attempt NATS auto-connect once per session
+    if (from.name === 'login' && to.name === 'dashboard') {
+      console.log('Initial login navigation detected, attempting NATS auto-connect')
+      // This is the initial login navigation, attempt to connect NATS
+      natsConnectionManager.attemptAutoConnect()
+    }
   }
   next()
 })
