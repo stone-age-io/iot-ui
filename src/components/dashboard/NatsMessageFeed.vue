@@ -142,6 +142,9 @@
       </TransitionGroup>
     </div>
     
+    <!-- Hidden textarea for clipboard copy fallback -->
+    <textarea ref="clipboardFallback" class="sr-only" aria-hidden="true"></textarea>
+    
     <!-- Toast for copy notification -->
     <Toast position="bottom-right" />
   </div>
@@ -163,6 +166,7 @@ const componentId = ref(`nats-feed-${Date.now()}`);
 const showDebugInfo = ref(false);
 const expandedMessages = ref(new Set());
 const toast = useToast();
+const clipboardFallback = ref(null);
 
 // Use the NATS messages composable
 const { 
@@ -255,27 +259,96 @@ const toggleExpand = (messageId) => {
 
 // Copy full message to clipboard
 const copyMessage = (message) => {
+  // Prepare message text to copy
   const messageText = typeof message.data === 'object' 
     ? JSON.stringify(message.data, null, 2) 
     : String(message.data);
+  
+  // Try to use the modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(messageText)
+      .then(() => {
+        showCopySuccess();
+      })
+      .catch(err => {
+        console.error("Clipboard API error:", err);
+        // Fall back to the alternative method
+        copyUsingFallback(messageText);
+      });
+  } else {
+    // For browsers that don't support the Clipboard API
+    copyUsingFallback(messageText);
+  }
+};
+
+// Fallback clipboard copy method using textarea
+const copyUsingFallback = (text) => {
+  try {
+    // Make sure we have the textarea reference
+    if (!clipboardFallback.value) {
+      console.error("Clipboard fallback element not found");
+      showCopyFailed();
+      return;
+    }
     
-  navigator.clipboard.writeText(messageText)
-    .then(() => {
-      toast.add({
-        severity: 'success',
-        summary: 'Copied to clipboard',
-        detail: 'Message copied to clipboard',
-        life: 3000
-      });
-    })
-    .catch(err => {
-      toast.add({
-        severity: 'error',
-        summary: 'Copy failed',
-        detail: 'Failed to copy message to clipboard',
-        life: 3000
-      });
-    });
+    // Set the text to copy into the textarea
+    const textarea = clipboardFallback.value;
+    textarea.value = text;
+    
+    // Make the textarea visible but maintain accessibility
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    
+    // Show the textarea
+    textarea.style.display = 'block';
+    
+    // Select the text
+    textarea.focus();
+    textarea.select();
+    
+    // Copy the selected text
+    const successful = document.execCommand('copy');
+    
+    // Hide the textarea again
+    textarea.style.display = 'none';
+    
+    if (successful) {
+      showCopySuccess();
+    } else {
+      showCopyFailed();
+    }
+  } catch (err) {
+    console.error("Fallback clipboard error:", err);
+    showCopyFailed();
+  }
+};
+
+// Show success toast
+const showCopySuccess = () => {
+  toast.add({
+    severity: 'success',
+    summary: 'Copied to clipboard',
+    detail: 'Message copied to clipboard',
+    life: 3000
+  });
+};
+
+// Show failure toast
+const showCopyFailed = () => {
+  toast.add({
+    severity: 'error',
+    summary: 'Copy failed',
+    detail: 'Failed to copy message to clipboard. Try selecting and copying manually.',
+    life: 5000
+  });
 };
 
 // Clean up on component unmount
@@ -339,5 +412,18 @@ pre::-webkit-scrollbar-thumb:hover {
 
 .dark pre::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* For screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 </style>
