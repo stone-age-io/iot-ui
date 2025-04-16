@@ -30,26 +30,14 @@
       
       <!-- Password Input -->
       <div class="space-y-2">
-        <div class="flex items-center justify-between flex-wrap">
-          <label for="password" :class="['block text-sm font-medium', textColor.primary]">Password</label>
-          <router-link 
-            to="/auth/forgot-password" 
-            :class="[
-              'text-sm hover:underline',
-              isDarkMode ? 'text-primary-400 hover:text-primary-300' : 'text-primary-600 hover:text-primary-700'
-            ]"
-          >
-            Forgot password?
-          </router-link>
-        </div>
+        <label for="password" :class="['block text-sm font-medium', textColor.primary]">Password</label>
         <Password
           id="password"
           v-model="password"
           :feedback="false"
           toggleMask
-          inputClass="w-full form-input"
           class="w-full"
-          :class="{ 'p-invalid': v$.password.$error }"
+          :inputClass="['w-full form-input', { 'p-invalid': v$.password.$error }]"
           aria-describedby="password-error"
         />
         <small
@@ -98,6 +86,19 @@
           </span>
           <span v-else>Sign in</span>
         </button>
+      </div>
+      
+      <!-- Forgot Password Link - Moved to here -->
+      <div class="text-center text-sm">
+        <router-link 
+          to="/auth/forgot-password" 
+          :class="[
+            'hover:underline',
+            isDarkMode ? 'text-primary-400 hover:text-primary-300' : 'text-primary-600 hover:text-primary-700'
+          ]"
+        >
+          Forgot your password?
+        </router-link>
       </div>
       
       <!-- Registration Link -->
@@ -175,6 +176,15 @@ const handleSubmit = async () => {
   transition: all 0.2s ease;
 }
 
+/* Password component specific styling */
+:deep(.p-password) {
+  width: 100%;
+}
+
+:deep(.p-password-input) {
+  width: 100%;
+}
+
 :deep(.p-password-panel) {
   background-color: var(--surface-card);
   color: var(--text-color);
@@ -185,6 +195,26 @@ const handleSubmit = async () => {
   background-color: var(--surface-hover);
   color: var(--text-color);
   border-color: var(--surface-border);
+}
+
+/* Style for password toggle button */
+:deep(.p-password .p-password-toggle) {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-color-secondary) !important;
+}
+
+:deep(.p-password .p-password-toggle:hover) {
+  color: var(--text-color) !important;
+}
+
+:deep(.dark .p-password .p-password-toggle) {
+  background: transparent !important;
+  color: var(--text-color-secondary) !important;
+}
+
+:deep(.dark .p-password .p-password-toggle:hover) {
+  color: var(--text-color) !important;
 }
 
 /* Add hover effect for button */
