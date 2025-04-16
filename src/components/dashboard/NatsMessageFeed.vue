@@ -187,7 +187,7 @@ const {
   prevPage
 } = useNatsMessages(100);
 
-// Extract just the payload from a message for compact display
+// Extract payload for compact display
 const extractPayload = (data) => {
   if (!data) return "{}";
   
@@ -196,48 +196,45 @@ const extractPayload = (data) => {
       data = JSON.parse(data);
     }
     
-    // First look for 'payload' field
-    if (data.payload) {
-      return JSON.stringify(data.payload, null, 2);
+    // Create a compact representation with type and payload
+    const compactView = {};
+    
+    // Always include type if available
+    if (data.type) {
+      compactView.type = data.type;
     }
     
-    // Try to find the most important fields
-    const importantFields = {};
-    
-    // Common fields we want to show in compact view
-    if (data.type) importantFields.type = data.type;
-    if (data.payload) importantFields.payload = data.payload;
-    
-    // If there are no important fields, show a subset of all fields
-    if (Object.keys(importantFields).length === 0) {
-      // Show a limited selection of fields for compact view
-      const compactView = {};
+    // Include payload if it exists
+    if (data.payload) {
+      compactView.payload = data.payload;
+    } else {
+      // If no direct payload, look for other key fields
       
-      // Add payload if it exists
-      if (data.payload) {
-        compactView.payload = data.payload;
-      }
-      
-      // Add a few key fields if they exist
-      if (data.type) compactView.type = data.type;
+      // Add a few important fields that might be useful
       if (data.id) compactView.id = data.id;
       if (data.ts) compactView.ts = data.ts;
       
-      // If we found any fields, use them
-      if (Object.keys(compactView).length > 0) {
-        return JSON.stringify(compactView, null, 2);
+      // If we don't have any fields yet, include some core data
+      if (Object.keys(compactView).length <= 1) { // 1 because we might already have type
+        // Look for other fields that might contain data
+        if (data.context) compactView.context = data.context;
+        if (data.data) compactView.data = data.data;
+        if (data.message) compactView.message = data.message;
       }
-      
-      // If we still don't have anything, just show abbreviated full message
-      // Limit to a reasonable preview size
-      const fullJson = JSON.stringify(data, null, 2);
-      if (fullJson.length > 150) {
-        return fullJson.substring(0, 150) + '...';
-      }
-      return fullJson;
     }
     
-    return JSON.stringify(importantFields, null, 2);
+    // If we have fields, return the compact view
+    if (Object.keys(compactView).length > 0) {
+      return JSON.stringify(compactView, null, 2);
+    }
+    
+    // If we still don't have anything, just show abbreviated full message
+    // Limit to a reasonable preview size
+    const fullJson = JSON.stringify(data, null, 2);
+    if (fullJson.length > 150) {
+      return fullJson.substring(0, 150) + '...';
+    }
+    return fullJson;
   } catch (e) {
     // If anything goes wrong, just show the raw data
     if (typeof data === 'object') {
@@ -272,7 +269,6 @@ const copyMessage = (message) => {
       });
     })
     .catch(err => {
-      console.error('Failed to copy message:', err);
       toast.add({
         severity: 'error',
         summary: 'Copy failed',
