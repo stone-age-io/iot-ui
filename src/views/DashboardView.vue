@@ -20,7 +20,7 @@
       <NatsMessageFeed />
     </DashboardCard>
     
-    <!-- Recent Activity -->
+    <!-- Recent Activity from Audit Logs -->
     <DashboardCard title="Recent Activity">
       <div v-if="loading" class="empty-state text-theme-secondary">
         <ProgressSpinner style="width: 24px; height: 24px" />
@@ -32,12 +32,44 @@
       
       <div v-else class="activity-feed">
         <ActivityItem
-          v-for="(item, index) in activity.slice(0, 5)" 
-          :key="index"
+          v-for="item in activity.slice(0, displayedItems)" 
+          :key="item.id"
           :type="item.type"
           :title="item.title"
           :time="item.timestamp"
+          :details="item.details"
+          :user="item.user"
+          :showDetails="expandedDetails"
         />
+      </div>
+      
+      <!-- Activity Control Buttons -->
+      <div class="mt-3 flex justify-between items-center">
+        <Button
+          v-if="activity.length > 0"
+          :label="expandedDetails ? 'Hide Details' : 'Show Details'"
+          :icon="expandedDetails ? 'pi pi-eye-slash' : 'pi pi-eye'"
+          class="p-button-text p-button-sm"
+          @click="toggleExpandDetails"
+        />
+        
+        <div class="flex">
+          <Button
+            v-if="activity.length > displayedItems"
+            label="Show More"
+            icon="pi pi-chevron-down"
+            class="p-button-text p-button-sm mr-2"
+            @click="showMoreActivity"
+          />
+          
+          <Button
+            v-if="activity.length > 5"
+            label="View All Activity"
+            icon="pi pi-list"
+            class="p-button-text p-button-sm"
+            @click="navigateToAuditLogs"
+          />
+        </div>
       </div>
     </DashboardCard>
     
@@ -63,19 +95,22 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDashboard } from '../composables/useDashboard'
 import { useTheme } from '../composables/useTheme'
 import StatCard from '../components/dashboard/StatCard.vue'
 import ActivityItem from '../components/dashboard/ActivityItem.vue'
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
 import NatsMessageFeed from '../components/dashboard/NatsMessageFeed.vue'
-// Removed NatsStatus import since it's now integrated
 import ProgressSpinner from 'primevue/progressspinner'
 import Button from 'primevue/button'
 
+// Use Vue Router
+const router = useRouter()
+
 // Use theme composable
-useTheme();
+const { themeValue } = useTheme()
 
 // Use the dashboard composable
 const { 
@@ -87,7 +122,32 @@ const {
   loading,
   fetchDashboardData,
   openGrafana
-} = useDashboard();
+} = useDashboard()
+
+// State for activity display
+const displayedItems = ref(5)
+const expandedDetails = ref(false)
+
+// Toggle expanded details view
+const toggleExpandDetails = () => {
+  expandedDetails.value = !expandedDetails.value
+}
+
+// Show more activity items
+const showMoreActivity = () => {
+  // Increase shown items by 5, up to the total count
+  displayedItems.value = Math.min(displayedItems.value + 5, activity.value.length)
+}
+
+// Method to navigate to the audit logs page (can be implemented later)
+const navigateToAuditLogs = () => {
+  // This will be implemented when you create an audit logs page
+  // For now, just show a notification
+  alert('Audit Logs page coming soon!')
+  
+  // When you have an actual audit logs page, uncomment this line:
+  // router.push('/admin/audit-logs')
+}
 
 // Computed stat cards for better maintainability
 const statCards = computed(() => [
@@ -119,12 +179,12 @@ const statCards = computed(() => [
     color: 'orange',
     linkTo: '/messaging/clients'
   }
-]);
+])
 
 // Fetch dashboard data on mount
 onMounted(async () => {
-  await fetchDashboardData();
-});
+  await fetchDashboardData()
+})
 </script>
 
 <style scoped>
@@ -162,6 +222,12 @@ onMounted(async () => {
 .empty-state {
   @apply flex justify-center items-center py-8 text-sm;
   transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
+}
+
+/* Make the activity feed scrollable if there are many items */
+.activity-feed {
+  max-height: 350px;
+  overflow-y: auto;
 }
 
 /* Ensure bottom spacing on mobile */

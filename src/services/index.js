@@ -8,6 +8,7 @@ import { thingService, validateThingCode, generateThingCode, getThingTypeAbbrevi
 import { clientService, generateClientUsername, generateSecurePassword } from './client/clientService';
 import { topicPermissionService, validateTopic } from './topic-permission/topicPermissionService';
 import { userService } from './user/userService';
+import { auditLogService } from './audit/auditLogService';
 
 // Type management services
 import { edgeTypeService } from './type/edgeTypeService';
@@ -37,7 +38,8 @@ export {
   clientService,
   topicPermissionService,
   userService,
-  
+  auditLogService,
+
   // Edge utilities
   validateEdgeCode,
   generateEdgeCode,
