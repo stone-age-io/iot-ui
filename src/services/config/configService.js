@@ -51,6 +51,20 @@ class ConfigService {
       DEFAULT_PAGE_SIZE: 10,
       MAX_PAGE_SIZE: 100
     }
+    
+    // Cache configuration
+    this.cache = {
+      enabled: true,
+      defaultTTL: 5, // minutes
+      longTTL: 60,   // minutes
+      // Which collections should use long TTL
+      longTTLCollections: ['edge_types', 'edge_regions', 'location_types', 'thing_types'],
+      // TTL overrides for specific collections (minutes)
+      ttlOverrides: {
+        'audit_logs': 2,
+        'dashboard': 1
+      }
+    }
   }
   
   /**
@@ -105,6 +119,40 @@ class ConfigService {
    */
   getFileUrl(collection, recordId, filename) {
     return `${this.env.API_URL}/pb/api/files/${collection}/${recordId}/${filename}`
+  }
+  
+  /**
+   * Get TTL for a collection
+   * @param {string} collectionName - Collection name
+   * @param {string} operation - Operation type (list, detail, etc)
+   * @returns {number} - TTL in minutes
+   */
+  getTTL(collectionName, operation = 'list') {
+    // Types usually change less frequently, use longer cache
+    if (this.cache.longTTLCollections.includes(collectionName)) {
+      return this.cache.longTTL;
+    }
+    
+    // Check for specific overrides
+    if (this.cache.ttlOverrides[collectionName]) {
+      return this.cache.ttlOverrides[collectionName];
+    }
+    
+    // For detail views, cache a bit longer
+    if (operation === 'detail') {
+      return this.cache.defaultTTL * 2;
+    }
+    
+    // Default TTL
+    return this.cache.defaultTTL;
+  }
+  
+  /**
+   * Check if cache is enabled
+   * @returns {boolean} - Whether cache is enabled
+   */
+  isCacheEnabled() {
+    return this.cache.enabled;
   }
 }
 

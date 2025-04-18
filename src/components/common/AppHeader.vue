@@ -64,10 +64,13 @@
         </router-link>
       </div>
       
-      <!-- Right section - User Menu -->
-      <div class="flex items-center">
+      <!-- Right section - Cache Controls, Theme Toggle, and User Menu -->
+      <div class="flex items-center space-x-1">
+        <!-- Cache Control -->
+        <CacheControl :collection-name="currentCollectionName" :on-refresh="handleRefresh" />
+        
         <!-- Theme Toggle -->
-        <ThemeToggle class="mr-2" />
+        <ThemeToggle />
         
         <!-- User Menu -->
         <div class="relative">
@@ -142,12 +145,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useTheme } from '../../composables/useTheme'
 import ThemeToggle from './ThemeToggle.vue'
+import CacheControl from './CacheControl.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const isUserMenuOpen = ref(false)
 const userMenuDropdown = ref(null)
@@ -175,6 +180,26 @@ const userInitialsClasses = computed(() => ({
   'dark:bg-primary-900 dark:text-primary-300': isDarkMode.value
 }))
 
+// Get the current collection name based on route
+const currentCollectionName = computed(() => {
+  const path = route.path
+  
+  // Extract collection name from route path
+  if (path.includes('/edges')) return 'edges'
+  if (path.includes('/locations')) return 'locations'
+  if (path.includes('/things')) return 'things'
+  if (path.includes('/clients')) return 'clients'
+  if (path.includes('/permissions')) return 'topic_permissions'
+  
+  // Handle type routes
+  if (path.includes('/types/edge-types')) return 'edge_types'
+  if (path.includes('/types/edge-regions')) return 'edge_regions'
+  if (path.includes('/types/location-types')) return 'location_types'
+  if (path.includes('/types/thing-types')) return 'thing_types'
+  
+  return null
+})
+
 // Props and emits
 defineProps({
   sidebarOpen: {
@@ -193,6 +218,14 @@ const toggleUserMenu = () => {
 // Close user menu
 const closeUserMenu = () => {
   isUserMenuOpen.value = false;
+}
+
+// Handle refresh for cache control
+const handleRefresh = async () => {
+  await router.replace({
+    path: router.currentRoute.value.path,
+    query: { ...router.currentRoute.value.query, _refresh: Date.now() }
+  });
 }
 
 // Handle logout action

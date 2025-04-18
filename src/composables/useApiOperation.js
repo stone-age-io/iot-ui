@@ -39,9 +39,14 @@ export function useApiOperation() {
     try {
       // Perform the operation
       const response = await operation()
+      
+      // Skip loading indicator immediately if response is from cache
+      if (response?.fromCache && loadingRef) {
+        loadingRef.value = false
+      }
 
-      // Show success toast if provided
-      if (successMessage) {
+      // Show success toast if provided (only for non-cache responses)
+      if (successMessage && !response?.fromCache) {
         toast.add({
           severity: 'success',
           summary: 'Success',
@@ -80,8 +85,11 @@ export function useApiOperation() {
       // Return a default value or rethrow
       return null
     } finally {
-      // Reset loading state
-      if (loadingRef) loadingRef.value = false
+      // Reset loading state if not already done for cached responses
+      // Only modify loading state if it exists and we're not dealing with a cached response
+      if (loadingRef) {
+        loadingRef.value = false
+      }
     }
   }
 

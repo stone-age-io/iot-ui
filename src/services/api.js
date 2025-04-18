@@ -1,6 +1,7 @@
-// Updated src/services/api.js with exposed Axios instance
+// Updated src/services/api.js with caching capabilities
 import axios from 'axios'
 import configService from './config/configService'
+import { generateCacheKey, getCache, setCache } from '../utils/cacheUtils'
 
 // Create axios instance with default config
 const apiService = axios.create({
@@ -75,6 +76,73 @@ apiService.interceptors.response.use(
   }
 )
 
+/**
+ * Wrapper for API calls with caching support
+ * @param {Function} apiCall - Function that performs the API call
+ * @param {Object} cacheOptions - Cache configuration
+ * @returns {Promise} - Promise that resolves with the API response
+ */
+export const withCache = (apiCall, cacheOptions) => {
+  return async () => {
+    const {
+      collectionName,
+      operation,
+      id = null,
+      params = null,
+      ttl = null,
+      skipCache = false
+    } = cacheOptions;
+    
+    // Skip caching if disabled globally or for this specific call
+    if (!configService.isCacheEnabled() || skipCache) {
+      return apiCall();
+    }
+    
+    // Generate cache key
+    const cacheKey = generateCacheKey(collectionName, operation, id, params);
+    
+    // Try to get from cache first
+    const cachedData = getCache(cacheKey);
+    if (cachedData) {
+      // Return cached data with a flag indicating it's from cache
+      const cachedResponse = { 
+        data: cachedData,
+        fromCache: true 
+      };
+      
+      // Refresh cache in background
+      setTimeout(() => {
+        apiCall()
+          .then(freshResponse => {
+            // Update cache with fresh data
+            const cacheTTL = ttl || configService.getTTL(collectionName, operation);
+            setCache(cacheKey, freshResponse.data, cacheTTL);
+          })
+          .catch(error => {
+            // Log error but don't affect user experience
+            console.warn('Background cache refresh failed:', error);
+          });
+      }, 100);
+      
+      return Promise.resolve(cachedResponse);
+    }
+    
+    // No cache hit, perform actual API call
+    try {
+      const response = await apiCall();
+      
+      // Cache the successful response
+      const cacheTTL = ttl || configService.getTTL(collectionName, operation);
+      setCache(cacheKey, response.data, cacheTTL);
+      
+      return response;
+    } catch (error) {
+      // Don't cache errors
+      throw error;
+    }
+  };
+};
+
 // Helper methods for common patterns
 export const apiHelpers = {
   /**
@@ -83,22 +151,43 @@ export const apiHelpers = {
   axiosInstance: apiService,
   
   /**
-   * Fetch a paginated list of resources
+   * Fetch a paginated list of resources with caching
    * @param {string} endpoint - API endpoint
    * @param {Object} params - Query parameters
+   * @param {Object} cacheOptions - Optional caching options
    * @returns {Promise} - Axios promise
    */
-  getList: (endpoint, params = {}) => {
-    return apiService.get(endpoint, { params })
+  getList: (endpoint, params = {}, cacheOptions = null) => {
+    const apiCall = () => apiService.get(endpoint, { params });
+    
+    if (cacheOptions) {
+      return withCache(() => apiCall(), {
+        ...cacheOptions,
+        params,
+        operation: 'list'
+      })();
+    }
+    
+    return apiCall();
   },
   
   /**
-   * Fetch a single resource by ID
+   * Fetch a single resource by ID with caching
    * @param {string} endpoint - API endpoint (with ID already included)
+   * @param {Object} cacheOptions - Optional caching options
    * @returns {Promise} - Axios promise
    */
-  getById: (endpoint) => {
-    return apiService.get(endpoint)
+  getById: (endpoint, cacheOptions = null) => {
+    const apiCall = () => apiService.get(endpoint);
+    
+    if (cacheOptions) {
+      return withCache(() => apiCall(), {
+        ...cacheOptions,
+        operation: 'detail'
+      })();
+    }
+    
+    return apiCall();
   },
   
   /**
@@ -108,7 +197,7 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   create: (endpoint, data) => {
-    return apiService.post(endpoint, data)
+    return apiService.post(endpoint, data);
   },
   
   /**
@@ -119,7 +208,7 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   update: (endpoint, id, data) => {
-    return apiService.patch(endpoint, data)
+    return apiService.patch(endpoint, data);
   },
   
   /**
@@ -128,7 +217,7 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   delete: (endpoint) => {
-    return apiService.delete(endpoint)
+    return apiService.delete(endpoint);
   }
 }
 

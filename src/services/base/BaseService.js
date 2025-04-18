@@ -1,5 +1,7 @@
 // src/services/base/BaseService.js
 import { apiHelpers } from '../api'
+import { clearCollectionCache } from '../../utils/cacheUtils'
+import configService from '../config/configService'
 import {
   transformResponse,
   transformPaginationParams
@@ -44,9 +46,18 @@ export class BaseService {
     // Apply custom parameter transformations
     this.transformParams(transformedParams, params)
     
-    return apiHelpers.getList(endpoint, transformedParams)
+    // Setup caching options if enabled
+    const cacheOptions = configService.isCacheEnabled() ? {
+      collectionName: this.collectionName,
+      id: null,
+      skipCache: params.skipCache === true
+    } : null;
+    
+    return apiHelpers.getList(endpoint, transformedParams, cacheOptions)
       .then(response => {
-        const data = transformResponse(response.data)
+        const data = response.fromCache 
+          ? response.data 
+          : transformResponse(response.data);
         
         // Process JSON fields and field mappings in list items
         if (data.items && data.items.length > 0) {
@@ -56,7 +67,7 @@ export class BaseService {
           })
         }
         
-        return { data }
+        return { data, fromCache: response.fromCache }
       })
   }
 
@@ -74,14 +85,22 @@ export class BaseService {
       url = `${endpoint}?expand=${this.options.expandFields.join(',')}`
     }
     
-    return apiHelpers.getById(url)
+    // Setup caching options if enabled
+    const cacheOptions = configService.isCacheEnabled() ? {
+      collectionName: this.collectionName,
+      id: id
+    } : null;
+    
+    return apiHelpers.getById(url, cacheOptions)
       .then(response => {
         if (response.data) {
           // Apply JSON field parsing and field mappings
-          const parsedData = this.parseJsonFields(response.data)
-          response.data = this.mapApiToClientFields(parsedData)
+          const parsedData = this.parseJsonFields(
+            response.fromCache ? response.data : response.data
+          );
+          response.data = this.mapApiToClientFields(parsedData);
         }
-        return response
+        return response;
       })
   }
 
@@ -101,6 +120,11 @@ export class BaseService {
     
     return apiHelpers.create(endpoint, processedData)
       .then(response => {
+        // Clear collection cache when a new entity is created
+        if (configService.isCacheEnabled()) {
+          clearCollectionCache(this.collectionName);
+        }
+        
         if (response.data) {
           // Apply JSON field parsing and field mappings to response
           const parsedData = this.parseJsonFields(response.data)
@@ -127,6 +151,12 @@ export class BaseService {
     
     return apiHelpers.update(endpoint, null, processedData)
       .then(response => {
+        // Clear specific cache entries when entity is updated
+        if (configService.isCacheEnabled()) {
+          // Clear collection list cache and the specific entity cache
+          clearCollectionCache(this.collectionName);
+        }
+        
         if (response.data) {
           // Apply JSON field parsing and field mappings to response
           const parsedData = this.parseJsonFields(response.data)
@@ -144,6 +174,13 @@ export class BaseService {
   delete(id) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
     return apiHelpers.delete(endpoint)
+      .then(response => {
+        // Clear collection cache when an entity is deleted
+        if (configService.isCacheEnabled()) {
+          clearCollectionCache(this.collectionName);
+        }
+        return response;
+      })
   }
 
   /**
