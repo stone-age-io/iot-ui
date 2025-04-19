@@ -32,13 +32,15 @@ export function useApiOperation() {
       onError
     } = options
 
+    let response = null;
+
     // Set loading state
     if (loadingRef) loadingRef.value = true
     if (errorRef) errorRef.value = null
 
     try {
       // Perform the operation
-      const response = await operation()
+      response = await operation()
       
       // Skip loading indicator immediately if response is from cache
       if (response?.fromCache && loadingRef) {
@@ -86,8 +88,7 @@ export function useApiOperation() {
       return null
     } finally {
       // Reset loading state if not already done for cached responses
-      // Only modify loading state if it exists and we're not dealing with a cached response
-      if (loadingRef) {
+      if (loadingRef && !(response?.fromCache)) {
         loadingRef.value = false
       }
     }

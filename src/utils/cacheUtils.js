@@ -6,9 +6,6 @@
 // Cache namespace to avoid conflicts with other localStorage items
 const CACHE_PREFIX = 'iot_api_cache_';
 
-// Default TTL (Time To Live) for cache items in minutes
-const DEFAULT_TTL = 5;
-
 /**
  * Generate a cache key from the collection name and parameters
  * @param {string} collectionName - PocketBase collection name
@@ -37,17 +34,15 @@ export function generateCacheKey(collectionName, operation, id = null, params = 
 }
 
 /**
- * Store data in cache with expiration
+ * Store data in cache
  * @param {string} key - Cache key
  * @param {any} data - Data to cache
- * @param {number} ttlMinutes - Time to live in minutes
  */
-export function setCache(key, data, ttlMinutes = DEFAULT_TTL) {
+export function setCache(key, data) {
   try {
     const cacheItem = {
       data,
-      timestamp: Date.now(),
-      expiry: Date.now() + (ttlMinutes * 60 * 1000)
+      timestamp: Date.now()
     };
     
     localStorage.setItem(key, JSON.stringify(cacheItem));
@@ -69,9 +64,9 @@ export function setCache(key, data, ttlMinutes = DEFAULT_TTL) {
 }
 
 /**
- * Get data from cache if it exists and is not expired
+ * Get data from cache if it exists
  * @param {string} key - Cache key
- * @returns {Object|null} - Cached data or null if not found/expired
+ * @returns {Object|null} - Cached data or null if not found
  */
 export function getCache(key) {
   try {
@@ -79,16 +74,27 @@ export function getCache(key) {
     if (!item) return null;
     
     const cacheItem = JSON.parse(item);
-    
-    // Check if cache has expired
-    if (cacheItem.expiry && cacheItem.expiry < Date.now()) {
-      localStorage.removeItem(key);
-      return null;
-    }
-    
     return cacheItem.data;
   } catch (error) {
     console.warn('Failed to retrieve cache item:', error);
+    return null;
+  }
+}
+
+/**
+ * Get cache timestamp if it exists
+ * @param {string} key - Cache key
+ * @returns {number|null} - Timestamp or null if not found
+ */
+export function getCacheTimestamp(key) {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return null;
+    
+    const cacheItem = JSON.parse(item);
+    return cacheItem.timestamp || null;
+  } catch (error) {
+    console.warn('Failed to retrieve cache timestamp:', error);
     return null;
   }
 }

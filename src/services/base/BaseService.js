@@ -32,9 +32,10 @@ export class BaseService {
   /**
    * Get a paginated list of entities
    * @param {Object} params - Query parameters
+   * @param {Function} updateCallback - Optional callback for stale-while-revalidate updates
    * @returns {Promise} - Axios promise with data
    */
-  getList(params = {}) {
+  getList(params = {}, updateCallback = null) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     const transformedParams = transformPaginationParams(params)
     
@@ -53,33 +54,54 @@ export class BaseService {
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       id: null,
-      skipCache: params.skipCache === true || skipCacheFromURL
+      skipCache: params.skipCache === true || skipCacheFromURL,
+      updateCallback: updateCallback ? (freshData) => {
+        // Process the fresh data before passing to callback
+        const processedData = this.processResponseData(freshData);
+        updateCallback(processedData);
+      } : null
     } : null;
     
     return apiHelpers.getList(endpoint, transformedParams, cacheOptions)
       .then(response => {
-        const data = response.fromCache 
-          ? response.data 
-          : transformResponse(response.data);
+        // Process the response data
+        const processedData = this.processResponseData(response.data);
         
-        // Process JSON fields and field mappings in list items
-        if (data.items && data.items.length > 0) {
-          data.items = data.items.map(item => {
-            const parsedItem = this.parseJsonFields(item)
-            return this.mapApiToClientFields(parsedItem)
-          })
-        }
-        
-        return { data, fromCache: response.fromCache }
-      })
+        return { 
+          data: processedData, 
+          fromCache: response.fromCache,
+          timestamp: response.timestamp 
+        };
+      });
+  }
+  
+  /**
+   * Process and transform response data
+   * @param {Object} data - Response data
+   * @returns {Object} - Processed data
+   */
+  processResponseData(data) {
+    // Transform the response format if needed
+    const transformedData = data.items ? transformResponse(data) : data;
+    
+    // Process JSON fields and field mappings in list items
+    if (transformedData.items && transformedData.items.length > 0) {
+      transformedData.items = transformedData.items.map(item => {
+        const parsedItem = this.parseJsonFields(item);
+        return this.mapApiToClientFields(parsedItem);
+      });
+    }
+    
+    return transformedData;
   }
 
   /**
    * Get a single entity by ID
    * @param {string} id - Entity ID
+   * @param {Function} updateCallback - Optional callback for stale-while-revalidate updates
    * @returns {Promise} - Axios promise with entity data
    */
-  getById(id) {
+  getById(id, updateCallback = null) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
     let url = endpoint
     
@@ -95,20 +117,24 @@ export class BaseService {
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       id: id,
-      skipCache: skipCacheFromURL
+      skipCache: skipCacheFromURL,
+      updateCallback: updateCallback ? (freshData) => {
+        // Parse and map fields before calling the callback
+        const parsedData = this.parseJsonFields(freshData);
+        const mappedData = this.mapApiToClientFields(parsedData);
+        updateCallback(mappedData);
+      } : null
     } : null;
     
     return apiHelpers.getById(url, cacheOptions)
       .then(response => {
         if (response.data) {
           // Apply JSON field parsing and field mappings
-          const parsedData = this.parseJsonFields(
-            response.fromCache ? response.data : response.data
-          );
+          const parsedData = this.parseJsonFields(response.data);
           response.data = this.mapApiToClientFields(parsedData);
         }
         return response;
-      })
+      });
   }
 
   /**

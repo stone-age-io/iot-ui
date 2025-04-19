@@ -1,7 +1,7 @@
-// Updated src/services/api.js with caching capabilities
+// Updated src/services/api.js with stale-while-revalidate caching
 import axios from 'axios'
 import configService from './config/configService'
-import { generateCacheKey, getCache, setCache } from '../utils/cacheUtils'
+import { generateCacheKey, getCache, setCache, getCacheTimestamp } from '../utils/cacheUtils'
 
 // Create axios instance with default config
 const apiService = axios.create({
@@ -77,7 +77,7 @@ apiService.interceptors.response.use(
 )
 
 /**
- * Wrapper for API calls with caching support
+ * Wrapper for API calls with stale-while-revalidate caching
  * @param {Function} apiCall - Function that performs the API call
  * @param {Object} cacheOptions - Cache configuration
  * @returns {Promise} - Promise that resolves with the API response
@@ -89,8 +89,8 @@ export const withCache = (apiCall, cacheOptions) => {
       operation,
       id = null,
       params = null,
-      ttl = null,
-      skipCache = false
+      skipCache = false,
+      updateCallback = null // New callback for UI updates
     } = cacheOptions;
     
     // Skip caching if disabled globally or for this specific call
@@ -103,28 +103,33 @@ export const withCache = (apiCall, cacheOptions) => {
     
     // Try to get from cache first
     const cachedData = getCache(cacheKey);
+    const cachedTimestamp = getCacheTimestamp(cacheKey);
+    
     if (cachedData) {
-      // Return cached data with a flag indicating it's from cache
-      const cachedResponse = { 
-        data: cachedData,
-        fromCache: true 
-      };
-      
-      // Refresh cache in background
+      // Start background refresh immediately
       setTimeout(() => {
         apiCall()
           .then(freshResponse => {
-            // Update cache with fresh data
-            const cacheTTL = ttl || configService.getTTL(collectionName, operation);
-            setCache(cacheKey, freshResponse.data, cacheTTL);
+            // Always update cache with fresh data
+            setCache(cacheKey, freshResponse.data);
+            
+            // Update UI with fresh data if callback provided
+            if (updateCallback) {
+              updateCallback(freshResponse.data);
+            }
           })
           .catch(error => {
             // Log error but don't affect user experience
             console.warn('Background cache refresh failed:', error);
           });
-      }, 100);
+      }, 10);
       
-      return Promise.resolve(cachedResponse);
+      // Return cached data right away with a flag indicating it's from cache
+      return Promise.resolve({
+        data: cachedData,
+        fromCache: true,
+        timestamp: cachedTimestamp
+      });
     }
     
     // No cache hit, perform actual API call
@@ -132,10 +137,14 @@ export const withCache = (apiCall, cacheOptions) => {
       const response = await apiCall();
       
       // Cache the successful response
-      const cacheTTL = ttl || configService.getTTL(collectionName, operation);
-      setCache(cacheKey, response.data, cacheTTL);
+      setCache(cacheKey, response.data);
       
-      return response;
+      // Return response with current timestamp
+      return {
+        ...response,
+        timestamp: Date.now(),
+        fromCache: false
+      };
     } catch (error) {
       // Don't cache errors
       throw error;
