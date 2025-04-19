@@ -2,22 +2,6 @@
   <div class="header-actions-wrapper relative">
     <!-- Single action button on mobile, multiple buttons on desktop -->
     <div class="flex items-center space-x-1">
-      <!-- On desktop: Show all controls separately -->
-      <div class="hidden md:block">
-        <button
-          type="button"
-          class="p-button p-button-text p-button-rounded action-button"
-          @click="refreshCache"
-          :title="refreshing ? 'Refreshing data...' : 'Refresh data'"
-          :disabled="refreshing"
-          aria-label="Refresh data"
-        >
-          <span class="p-button-icon p-button-icon-only">
-            <i class="pi pi-refresh" :class="{ 'spin-animation': refreshing }"></i>
-          </span>
-        </button>
-      </div>
-      
       <!-- Theme Toggle - Desktop only -->
       <div class="hidden md:block">
         <ThemeToggle />
@@ -46,17 +30,6 @@
       ref="actionsMenuDropdown"
     >
       <div class="py-1" role="menu">
-        <!-- Refresh data option -->
-        <button
-          class="action-menu-item w-full text-left"
-          role="menuitem"
-          @click="refreshCache"
-          :disabled="refreshing"
-        >
-          <i class="pi pi-refresh action-menu-icon" :class="{ 'spin-animation': refreshing }"></i>
-          <span>Refresh Data</span>
-        </button>
-        
         <!-- Theme toggle option -->
         <button
           class="action-menu-item w-full text-left"
@@ -110,17 +83,12 @@ const props = defineProps({
   collectionName: {
     type: String,
     default: null
-  },
-  onRefresh: {
-    type: Function,
-    default: null
   }
 });
 
 const router = useRouter();
 const toast = useToast();
 const themeStore = useThemeStore();
-const refreshing = ref(false);
 const isMenuOpen = ref(false);
 const actionsMenuDropdown = ref(null);
 
@@ -151,61 +119,29 @@ const closeMenu = () => {
   isMenuOpen.value = false;
 };
 
-// Refresh the current page data
-const refreshCache = async () => {
-  if (refreshing.value) return;
-  
-  refreshing.value = true;
-  closeMenu();
-  
-  try {
-    if (props.collectionName) {
-      // First, clear the collection cache
-      clearCollectionCache(props.collectionName);
+// Force data refresh with skipCache
+const forceRefresh = () => {
+  // Add skipCache parameter and reload data
+  router.replace({
+    path: router.currentRoute.value.path,
+    query: { 
+      ...router.currentRoute.value.query, 
+      _refresh: Date.now(),
+      skipCache: true
     }
-    
-    // Call the onRefresh callback if provided
-    if (props.onRefresh) {
-      await props.onRefresh();
-    } else {
-      // Default refresh method - reload current route with special skipCache parameter
-      await router.replace({
-        path: router.currentRoute.value.path,
-        query: { 
-          ...router.currentRoute.value.query, 
-          _refresh: Date.now(),
-          skipCache: true  // This is the key parameter to bypass cache
-        }
-      });
-    }
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Refreshed',
-      detail: 'Data has been refreshed',
-      life: 2000
-    });
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to refresh data',
-      life: 3000
-    });
-  } finally {
-    // Remove the skipCache parameter after a delay
+  }).then(() => {
+    // Remove skipCache parameter after delay
     setTimeout(() => {
       if (router.currentRoute.value.query.skipCache) {
         const query = { ...router.currentRoute.value.query };
         delete query.skipCache;
-        router.replace({ 
+        router.replace({
           path: router.currentRoute.value.path,
           query
         });
       }
-      refreshing.value = false;
     }, 1000);
-  }
+  });
 };
 
 // Toggle theme from menu
@@ -230,27 +166,7 @@ const clearPageCache = () => {
       life: 2000
     });
     
-    // Add skipCache parameter and reload data
-    router.replace({
-      path: router.currentRoute.value.path,
-      query: { 
-        ...router.currentRoute.value.query, 
-        _refresh: Date.now(),
-        skipCache: true
-      }
-    }).then(() => {
-      // Remove skipCache parameter after delay
-      setTimeout(() => {
-        if (router.currentRoute.value.query.skipCache) {
-          const query = { ...router.currentRoute.value.query };
-          delete query.skipCache;
-          router.replace({
-            path: router.currentRoute.value.path,
-            query
-          });
-        }
-      }, 1000);
-    });
+    forceRefresh();
   }
   closeMenu();
 };
@@ -266,28 +182,7 @@ const clearAllCacheHandler = () => {
     life: 2000
   });
   
-  // Add skipCache parameter and reload data
-  router.replace({
-    path: router.currentRoute.value.path,
-    query: { 
-      ...router.currentRoute.value.query, 
-      _refresh: Date.now(),
-      skipCache: true
-    }
-  }).then(() => {
-    // Remove skipCache parameter after delay
-    setTimeout(() => {
-      if (router.currentRoute.value.query.skipCache) {
-        const query = { ...router.currentRoute.value.query };
-        delete query.skipCache;
-        router.replace({
-          path: router.currentRoute.value.path,
-          query
-        });
-      }
-    }, 1000);
-  });
-  
+  forceRefresh();
   closeMenu();
 };
 
@@ -356,24 +251,9 @@ onBeforeUnmount(() => {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.action-button:disabled {
-  opacity: 0.6 !important;
-  cursor: not-allowed !important;
-}
-
 .action-button .p-button-icon {
   margin: 0 !important;
   font-size: 1.25rem !important;
-}
-
-/* Refresh animation */
-.spin-animation {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 /* Actions menu dropdown styling */
@@ -423,11 +303,6 @@ onBeforeUnmount(() => {
 
 .dark .action-menu-item:hover {
   background-color: rgba(255, 255, 255, 0.08);
-}
-
-.action-menu-item:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .action-menu-icon {

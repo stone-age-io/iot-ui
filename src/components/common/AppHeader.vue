@@ -67,7 +67,7 @@
       <!-- Right section - Actions Menu and User Menu -->
       <div class="flex items-center space-x-1">
         <!-- Header Actions (combines Cache Control and Theme Toggle) -->
-        <HeaderActions :collection-name="currentCollectionName" :on-refresh="handleRefresh" />
+        <HeaderActions :collection-name="currentCollectionName" />
         
         <!-- User Menu -->
         <div class="relative">
@@ -216,13 +216,7 @@ const closeUserMenu = () => {
   isUserMenuOpen.value = false;
 }
 
-// Handle refresh for cache control
-const handleRefresh = async () => {
-  await router.replace({
-    path: router.currentRoute.value.path,
-    query: { ...router.currentRoute.value.query, _refresh: Date.now() }
-  });
-}
+
 
 // Handle logout action
 const handleLogout = () => {
