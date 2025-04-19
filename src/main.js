@@ -18,6 +18,11 @@ import ToastService from 'primevue/toastservice'
 import DialogService from 'primevue/dialogservice'
 import 'primevue/resources/primevue.min.css'
 import 'primeicons/primeicons.css'
+
+// Import PrimeVue theme CSS directly
+import 'primevue/resources/themes/lara-light-blue/theme.css'     // Light theme
+// Dark theme will be handled via CSS variables instead of separate file
+
 import Tooltip from 'primevue/tooltip'
 
 // Import NATS connection manager

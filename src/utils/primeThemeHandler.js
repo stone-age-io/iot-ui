@@ -9,45 +9,8 @@ export function setupPrimeVueTheme(theme) {
   const isDark = theme === 'dark' || 
     (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   
-  // Preload both themes to prevent flash
-  ensureThemesLoaded()
-  
-  // Toggle theme visibility through a class on the html element
-  document.documentElement.setAttribute('data-primetheme', isDark ? 'dark' : 'light')
-  
   // Update PrimeVue CSS variables
   updatePrimeVueVariables(isDark)
-}
-
-/**
- * Ensures both themes are loaded to prevent flash of unstyled content
- */
-function ensureThemesLoaded() {
-  const themes = [
-    { id: 'prime-theme-light', href: '/themes/lara-light-blue/theme.css' },
-    { id: 'prime-theme-dark', href: '/themes/lara-dark-blue/theme.css' }
-  ]
-  
-  themes.forEach(theme => {
-    if (!document.getElementById(theme.id)) {
-      const link = document.createElement('link')
-      link.id = theme.id
-      link.rel = 'stylesheet'
-      link.href = theme.href
-      document.head.appendChild(link)
-    }
-  })
-  
-  // Add style to control theme visibility via the data-primetheme attribute
-  if (!document.getElementById('prime-theme-switcher')) {
-    const style = document.createElement('style')
-    style.id = 'prime-theme-switcher'
-    style.textContent = `
-      html[data-primetheme="light"] #prime-theme-dark { display: none; }
-      html[data-primetheme="dark"] #prime-theme-light { display: none; }
-    `
-    document.head.appendChild(style)
-  }
 }
 
 /**
