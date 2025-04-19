@@ -1,0 +1,456 @@
+<template>
+  <div class="header-actions-wrapper relative">
+    <!-- Single action button on mobile, multiple buttons on desktop -->
+    <div class="flex items-center space-x-1">
+      <!-- On desktop: Show all controls separately -->
+      <div class="hidden md:block">
+        <button
+          type="button"
+          class="p-button p-button-text p-button-rounded action-button"
+          @click="refreshCache"
+          :title="refreshing ? 'Refreshing data...' : 'Refresh data'"
+          :disabled="refreshing"
+          aria-label="Refresh data"
+        >
+          <span class="p-button-icon p-button-icon-only">
+            <i class="pi pi-refresh" :class="{ 'spin-animation': refreshing }"></i>
+          </span>
+        </button>
+      </div>
+      
+      <!-- Theme Toggle - Desktop only -->
+      <div class="hidden md:block">
+        <ThemeToggle />
+      </div>
+      
+      <!-- On mobile: Consolidated menu button -->
+      <button
+        type="button"
+        class="md:hidden p-button p-button-text p-button-rounded action-button"
+        @click="toggleMenu"
+        title="Actions menu"
+        aria-label="Actions menu"
+        aria-haspopup="true"
+        :aria-expanded="isMenuOpen ? 'true' : 'false'"
+      >
+        <span class="p-button-icon p-button-icon-only">
+          <i class="pi pi-ellipsis-v"></i>
+        </span>
+      </button>
+    </div>
+
+    <!-- Consolidated dropdown menu -->
+    <div
+      v-show="isMenuOpen"
+      class="actions-menu-dropdown"
+      ref="actionsMenuDropdown"
+    >
+      <div class="py-1" role="menu">
+        <!-- Refresh data option -->
+        <button
+          class="action-menu-item w-full text-left"
+          role="menuitem"
+          @click="refreshCache"
+          :disabled="refreshing"
+        >
+          <i class="pi pi-refresh action-menu-icon" :class="{ 'spin-animation': refreshing }"></i>
+          <span>Refresh Data</span>
+        </button>
+        
+        <!-- Theme toggle option -->
+        <button
+          class="action-menu-item w-full text-left"
+          role="menuitem"
+          @click="toggleThemeFromMenu"
+        >
+          <i :class="['action-menu-icon', currentThemeIcon]"></i>
+          <span>{{ themeLabel }}</span>
+        </button>
+        
+        <!-- Clear page cache option -->
+        <button
+          class="action-menu-item w-full text-left"
+          role="menuitem"
+          @click="clearPageCache"
+        >
+          <i class="pi pi-sync action-menu-icon"></i>
+          <span>Clear Page Cache</span>
+        </button>
+        
+        <!-- Clear all cache option -->
+        <button
+          class="action-menu-item w-full text-left"
+          role="menuitem"
+          @click="clearAllCacheHandler"
+        >
+          <i class="pi pi-trash action-menu-icon"></i>
+          <span>Clear All Cache</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Backdrop overlay that closes the menu when clicking outside -->
+  <div
+    v-if="isMenuOpen"
+    class="fixed inset-0 z-30 bg-transparent"
+    @click="closeMenu"
+  ></div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
+import { useThemeStore } from '../../stores/theme';
+import { clearAllCache, clearCollectionCache } from '../../utils/cacheUtils';
+import ThemeToggle from './ThemeToggle.vue';
+
+const props = defineProps({
+  collectionName: {
+    type: String,
+    default: null
+  },
+  onRefresh: {
+    type: Function,
+    default: null
+  }
+});
+
+const router = useRouter();
+const toast = useToast();
+const themeStore = useThemeStore();
+const refreshing = ref(false);
+const isMenuOpen = ref(false);
+const actionsMenuDropdown = ref(null);
+
+// Theme-related computed properties
+const currentThemeIcon = computed(() => {
+  switch(themeStore.theme) {
+    case 'light': return 'pi pi-sun';
+    case 'dark': return 'pi pi-moon';
+    default: return 'pi pi-desktop';
+  }
+});
+
+const themeLabel = computed(() => {
+  switch(themeStore.theme) {
+    case 'light': return 'Switch to Dark Theme';
+    case 'dark': return 'Switch to System Theme';
+    default: return 'Switch to Light Theme';
+  }
+});
+
+// Toggle actions menu
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value;
+};
+
+// Close actions menu
+const closeMenu = () => {
+  isMenuOpen.value = false;
+};
+
+// Refresh the current page data
+const refreshCache = async () => {
+  if (refreshing.value) return;
+  
+  refreshing.value = true;
+  closeMenu();
+  
+  try {
+    if (props.collectionName) {
+      // First, clear the collection cache
+      clearCollectionCache(props.collectionName);
+    }
+    
+    // Call the onRefresh callback if provided
+    if (props.onRefresh) {
+      await props.onRefresh();
+    } else {
+      // Default refresh method - reload current route with special skipCache parameter
+      await router.replace({
+        path: router.currentRoute.value.path,
+        query: { 
+          ...router.currentRoute.value.query, 
+          _refresh: Date.now(),
+          skipCache: true  // This is the key parameter to bypass cache
+        }
+      });
+    }
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Refreshed',
+      detail: 'Data has been refreshed',
+      life: 2000
+    });
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to refresh data',
+      life: 3000
+    });
+  } finally {
+    // Remove the skipCache parameter after a delay
+    setTimeout(() => {
+      if (router.currentRoute.value.query.skipCache) {
+        const query = { ...router.currentRoute.value.query };
+        delete query.skipCache;
+        router.replace({ 
+          path: router.currentRoute.value.path,
+          query
+        });
+      }
+      refreshing.value = false;
+    }, 1000);
+  }
+};
+
+// Toggle theme from menu
+const toggleThemeFromMenu = () => {
+  const currentTheme = themeStore.theme;
+  if (currentTheme === 'light') themeStore.setTheme('dark');
+  else if (currentTheme === 'dark') themeStore.setTheme('auto');
+  else themeStore.setTheme('light');
+  
+  closeMenu();
+};
+
+// Clear cache for the current page/collection
+const clearPageCache = () => {
+  if (props.collectionName) {
+    clearCollectionCache(props.collectionName);
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Cache Cleared',
+      detail: `Cache for ${props.collectionName} has been cleared`,
+      life: 2000
+    });
+    
+    // Add skipCache parameter and reload data
+    router.replace({
+      path: router.currentRoute.value.path,
+      query: { 
+        ...router.currentRoute.value.query, 
+        _refresh: Date.now(),
+        skipCache: true
+      }
+    }).then(() => {
+      // Remove skipCache parameter after delay
+      setTimeout(() => {
+        if (router.currentRoute.value.query.skipCache) {
+          const query = { ...router.currentRoute.value.query };
+          delete query.skipCache;
+          router.replace({
+            path: router.currentRoute.value.path,
+            query
+          });
+        }
+      }, 1000);
+    });
+  }
+  closeMenu();
+};
+
+// Clear all cache
+const clearAllCacheHandler = () => {
+  clearAllCache();
+  
+  toast.add({
+    severity: 'success',
+    summary: 'Cache Cleared',
+    detail: 'All cached data has been cleared',
+    life: 2000
+  });
+  
+  // Add skipCache parameter and reload data
+  router.replace({
+    path: router.currentRoute.value.path,
+    query: { 
+      ...router.currentRoute.value.query, 
+      _refresh: Date.now(),
+      skipCache: true
+    }
+  }).then(() => {
+    // Remove skipCache parameter after delay
+    setTimeout(() => {
+      if (router.currentRoute.value.query.skipCache) {
+        const query = { ...router.currentRoute.value.query };
+        delete query.skipCache;
+        router.replace({
+          path: router.currentRoute.value.path,
+          query
+        });
+      }
+    }, 1000);
+  });
+  
+  closeMenu();
+};
+
+// Handle click outside to close menu
+const handleClickOutside = (event) => {
+  if (isMenuOpen.value && actionsMenuDropdown.value) {
+    const dropdown = actionsMenuDropdown.value;
+    const isClickInsideDropdown = dropdown.contains(event.target);
+    const isClickInsideButton = event.target.closest('.action-button');
+    
+    if (!isClickInsideDropdown && !isClickInsideButton) {
+      closeMenu();
+    }
+  }
+};
+
+// Handle escape key to close menu
+const handleEscapeKey = (event) => {
+  if (event.key === 'Escape' && isMenuOpen.value) {
+    closeMenu();
+  }
+};
+
+// Add event listeners
+onMounted(() => {
+  window.addEventListener('keydown', handleEscapeKey);
+  document.addEventListener('click', handleClickOutside);
+});
+
+// Clean up event listeners
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleEscapeKey);
+  document.removeEventListener('click', handleClickOutside);
+});
+</script>
+
+<style scoped>
+.header-actions-wrapper {
+  position: relative;
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.action-button {
+  position: relative;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  transition: background-color 0.2s ease !important;
+  z-index: 40;
+}
+
+.action-button:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .action-button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.action-button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.action-button .p-button-icon {
+  margin: 0 !important;
+  font-size: 1.25rem !important;
+}
+
+/* Refresh animation */
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Actions menu dropdown styling */
+.actions-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  width: 200px;
+  background-color: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 50;
+  animation: dropdown-in 0.15s ease-out;
+}
+
+.dark .actions-menu-dropdown {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: rgb(var(--color-text));
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.action-menu-item:hover {
+  background-color: rgba(var(--color-text), 0.04);
+}
+
+.dark .action-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.action-menu-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-menu-icon {
+  margin-right: 0.75rem;
+  color: rgb(var(--color-text-secondary));
+}
+
+/* Different icon colors based on theme */
+.pi-sun {
+  color: #ff9800 !important;
+}
+
+.pi-moon {
+  color: #5c6bc0 !important;
+}
+
+.pi-desktop {
+  color: var(--primary-color, #3b82f6) !important;
+}
+
+.dark .pi-sun,
+.dark .pi-moon,
+.dark .pi-desktop {
+  color: #e0e0e0 !important;
+}
+</style>
