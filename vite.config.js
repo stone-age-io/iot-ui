@@ -13,24 +13,18 @@ export default defineConfig({
   build: {
     // Generate source maps for better debugging
     sourcemap: true,
+    
     // Rollup options
     rollupOptions: {
       output: {
+        // Use a simpler chunking strategy
         manualChunks: {
-          // Split vendor code into separate chunks
           'vendor': [
             'vue', 
             'vue-router', 
-            'pinia',
-            'primevue',
-            'axios'
-          ],
-          'primevue': [
-            'primevue/config',
-            'primevue/confirmationservice',
-            'primevue/toastservice',
-            'primevue/dialogservice'
+            'pinia'
           ]
+          // Remove specific PrimeVue chunking as it's causing issues
         }
       }
     }

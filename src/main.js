@@ -11,18 +11,20 @@ import './assets/styles/primevue-components.css' // PrimeVue components styling
 import './assets/styles/dark-mode.css'          // Additional dark mode overrides
 import './assets/responsive-utilities.css'       // Responsive utilities
 
-// PrimeVue
+// PrimeVue core
 import PrimeVue from 'primevue/config'
+// Import services individually for better tree-shaking
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 import DialogService from 'primevue/dialogservice'
+
+// PrimeVue styles
 import 'primevue/resources/primevue.min.css'
 import 'primeicons/primeicons.css'
-
 // Import PrimeVue theme CSS directly
-import 'primevue/resources/themes/lara-light-blue/theme.css'     // Light theme
-// Dark theme will be handled via CSS variables instead of separate file
+import 'primevue/resources/themes/lara-light-blue/theme.css'
 
+// Individual component import
 import Tooltip from 'primevue/tooltip'
 
 // Import NATS connection manager
@@ -65,17 +67,11 @@ natsConnectionManager.initialize()
 
 // Setup the rest of the app
 app.use(router)
+// Use PrimeVue with minimal configuration
 app.use(PrimeVue, { 
-  ripple: true,
-  // Initialize PrimeVue with custom style for the Menu component
-  pt: {
-    menu: {
-      root: {
-        style: 'z-index: 99999'
-      }
-    }
-  }
+  ripple: true
 })
+// Add services individually
 app.use(ConfirmationService)
 app.use(ToastService)
 app.use(DialogService)
@@ -98,11 +94,6 @@ const preloadAppData = async () => {
     
     // Load all type collections for form dropdowns
     await typesStore.loadAllTypes()
-    
-    // Additional preloading can be added here:
-    // - Dashboard data
-    // - User preferences
-    // - Recently viewed items
     
     console.log('Application data preloaded successfully')
     storesInitialized = true
