@@ -2,6 +2,7 @@
 import { apiHelpers } from '../api'
 import { clearCollectionCache } from '../../utils/cacheUtils'
 import configService from '../config/configService'
+import { generateUUIDv7 } from '../../utils/uuidUtils'
 import {
   transformResponse,
   transformPaginationParams
@@ -157,15 +158,22 @@ export class BaseService {
   }
 
   /**
-   * Create a new entity
+   * Create a new entity with auto-generated UUIDv7
    * @param {Object} entity - Entity data
    * @returns {Promise} - Axios promise with created entity
    */
   create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
+    // Generate a UUIDv7 for the entity if ID is not already specified
+    // Uses the uuidv7 library for robust, secure UUIDv7 generation
+    const entityWithId = {
+      ...entity,
+      id: entity.id || generateUUIDv7()
+    }
+    
     // Map client fields to API fields
-    const mappedEntity = this.mapClientToApiFields(entity)
+    const mappedEntity = this.mapClientToApiFields(entityWithId)
     
     // Process entity data before sending to API
     const processedData = this.stringifyJsonFields(mappedEntity)
