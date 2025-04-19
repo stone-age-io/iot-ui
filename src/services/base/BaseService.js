@@ -46,11 +46,14 @@ export class BaseService {
     // Apply custom parameter transformations
     this.transformParams(transformedParams, params)
     
+    // Check for skipCache in URL query params
+    const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
+    
     // Setup caching options if enabled
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       id: null,
-      skipCache: params.skipCache === true
+      skipCache: params.skipCache === true || skipCacheFromURL
     } : null;
     
     return apiHelpers.getList(endpoint, transformedParams, cacheOptions)
@@ -85,10 +88,14 @@ export class BaseService {
       url = `${endpoint}?expand=${this.options.expandFields.join(',')}`
     }
     
+    // Check for skipCache in URL query params
+    const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
+    
     // Setup caching options if enabled
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
-      id: id
+      id: id,
+      skipCache: skipCacheFromURL
     } : null;
     
     return apiHelpers.getById(url, cacheOptions)

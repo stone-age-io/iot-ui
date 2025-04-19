@@ -64,13 +64,10 @@
         </router-link>
       </div>
       
-      <!-- Right section - Cache Controls, Theme Toggle, and User Menu -->
+      <!-- Right section - Actions Menu and User Menu -->
       <div class="flex items-center space-x-1">
-        <!-- Cache Control -->
-        <CacheControl :collection-name="currentCollectionName" :on-refresh="handleRefresh" />
-        
-        <!-- Theme Toggle -->
-        <ThemeToggle />
+        <!-- Header Actions (combines Cache Control and Theme Toggle) -->
+        <HeaderActions :collection-name="currentCollectionName" :on-refresh="handleRefresh" />
         
         <!-- User Menu -->
         <div class="relative">
@@ -148,8 +145,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useTheme } from '../../composables/useTheme'
-import ThemeToggle from './ThemeToggle.vue'
-import CacheControl from './CacheControl.vue'
+import HeaderActions from './HeaderActions.vue'
 
 const router = useRouter()
 const route = useRoute()
