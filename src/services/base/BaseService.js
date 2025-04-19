@@ -30,6 +30,23 @@ export class BaseService {
   }
 
   /**
+   * Get current user ID from localStorage for cache segmentation
+   * @returns {string|null} - User ID or null
+   */
+  getCurrentUserId() {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      
+      const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null}');
+      return authData.user?.id || 'anonymous';
+    } catch (error) {
+      console.warn('Failed to get current user ID for cache:', error);
+      return 'anonymous';
+    }
+  }
+
+  /**
    * Get a paginated list of entities
    * @param {Object} params - Query parameters
    * @param {Function} updateCallback - Optional callback for stale-while-revalidate updates
@@ -54,6 +71,7 @@ export class BaseService {
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       id: null,
+      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
       skipCache: params.skipCache === true || skipCacheFromURL,
       updateCallback: updateCallback ? (freshData) => {
         // Process the fresh data before passing to callback
@@ -117,6 +135,7 @@ export class BaseService {
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       id: id,
+      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
       skipCache: skipCacheFromURL,
       updateCallback: updateCallback ? (freshData) => {
         // Parse and map fields before calling the callback
@@ -154,8 +173,9 @@ export class BaseService {
     return apiHelpers.create(endpoint, processedData)
       .then(response => {
         // Clear collection cache when a new entity is created
+        // Include user ID for proper segmentation
         if (configService.isCacheEnabled()) {
-          clearCollectionCache(this.collectionName);
+          clearCollectionCache(this.collectionName, this.getCurrentUserId());
         }
         
         if (response.data) {
@@ -185,9 +205,9 @@ export class BaseService {
     return apiHelpers.update(endpoint, null, processedData)
       .then(response => {
         // Clear specific cache entries when entity is updated
+        // Include user ID for proper segmentation
         if (configService.isCacheEnabled()) {
-          // Clear collection list cache and the specific entity cache
-          clearCollectionCache(this.collectionName);
+          clearCollectionCache(this.collectionName, this.getCurrentUserId());
         }
         
         if (response.data) {
@@ -209,8 +229,9 @@ export class BaseService {
     return apiHelpers.delete(endpoint)
       .then(response => {
         // Clear collection cache when an entity is deleted
+        // Include user ID for proper segmentation
         if (configService.isCacheEnabled()) {
-          clearCollectionCache(this.collectionName);
+          clearCollectionCache(this.collectionName, this.getCurrentUserId());
         }
         return response;
       })

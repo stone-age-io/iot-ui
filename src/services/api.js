@@ -1,4 +1,4 @@
-// Updated src/services/api.js with stale-while-revalidate caching
+// Updated src/services/api.js with stale-while-revalidate caching and user segmentation
 import axios from 'axios'
 import configService from './config/configService'
 import { generateCacheKey, getCache, setCache, getCacheTimestamp } from '../utils/cacheUtils'
@@ -90,7 +90,8 @@ export const withCache = (apiCall, cacheOptions) => {
       id = null,
       params = null,
       skipCache = false,
-      updateCallback = null // New callback for UI updates
+      userId = null, // Added userId parameter for cache segmentation
+      updateCallback = null // Callback for UI updates
     } = cacheOptions;
     
     // Skip caching if disabled globally or for this specific call
@@ -98,8 +99,8 @@ export const withCache = (apiCall, cacheOptions) => {
       return apiCall();
     }
     
-    // Generate cache key
-    const cacheKey = generateCacheKey(collectionName, operation, id, params);
+    // Generate cache key with user segmentation
+    const cacheKey = generateCacheKey(collectionName, operation, id, params, userId);
     
     // Try to get from cache first
     const cachedData = getCache(cacheKey);

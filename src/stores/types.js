@@ -148,6 +148,32 @@ export const useTypesStore = defineStore('types', () => {
   }
 
   /**
+   * Refresh a specific type collection's data by forcing a refetch from API
+   * @param {string} collection - Collection name (edgeTypes, edgeRegions, locationTypes, thingTypes)
+   * @returns {Promise<Array>} - Refreshed data
+   */
+  async function refreshTypeCollection(collection) {
+    console.log(`Refreshing type collection: ${collection}`)
+    switch (collection) {
+      case 'edgeTypes':
+        edgeTypes.value = [] // Reset cache
+        return loadEdgeTypes() // Force reload
+      case 'edgeRegions':
+        edgeRegions.value = [] // Reset cache
+        return loadEdgeRegions() // Force reload
+      case 'locationTypes':
+        locationTypes.value = [] // Reset cache
+        return loadLocationTypes() // Force reload
+      case 'thingTypes':
+        thingTypes.value = [] // Reset cache
+        return loadThingTypes() // Force reload
+      default:
+        console.warn(`Unknown type collection: ${collection}`)
+        return []
+    }
+  }
+
+  /**
    * Load all type collections at once
    * @returns {Promise<Array>} - All type collections
    */
@@ -311,6 +337,7 @@ export const useTypesStore = defineStore('types', () => {
     loadThingTypes,
     loadAllTypes,
     resetTypes,
+    refreshTypeCollection,
     
     // Helpers
     getTypeName,

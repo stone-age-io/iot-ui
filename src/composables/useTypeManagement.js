@@ -1,9 +1,10 @@
 // src/composables/useTypeManagement.js
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { useApiOperation } from './useApiOperation'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Base composable for type management
@@ -18,11 +19,28 @@ export function useTypeManagement(typeService, routeNames, entityName) {
   const router = useRouter()
   const toast = useToast()
   const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
+  const typesStore = useTypesStore()
+  
+  // Determine the store collection name based on entityName
+  const storeCollectionName = getStoreCollectionName(entityName)
   
   // Common state
   const types = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  /**
+   * Determine the store collection name based on entity name
+   * @param {string} name - Entity name (Edge Type, Location Type, etc.)
+   * @returns {string} - Store collection name
+   */
+  function getStoreCollectionName(name) {
+    if (name.includes('Edge Type')) return 'edgeTypes'
+    if (name.includes('Edge Region')) return 'edgeRegions' 
+    if (name.includes('Location Type')) return 'locationTypes'
+    if (name.includes('Thing Type')) return 'thingTypes'
+    return null
+  }
   
   /**
    * Format date for display
@@ -107,7 +125,13 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorRef: error,
         errorMessage: `Failed to create ${entityName.toLowerCase()}`,
         successMessage: `${entityName} "${typeData.type}" has been created`,
-        onSuccess: (response) => response?.data || null
+        onSuccess: (response) => {
+          // Refresh the types store
+          if (storeCollectionName) {
+            typesStore.refreshTypeCollection(storeCollectionName)
+          }
+          return response?.data || null
+        }
       }
     )
   }
@@ -143,7 +167,13 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorRef: error,
         errorMessage: `Failed to update ${entityName.toLowerCase()}`,
         successMessage: `${entityName} "${typeData.type}" has been updated`,
-        onSuccess: (response) => response?.data || null
+        onSuccess: (response) => {
+          // Refresh the types store
+          if (storeCollectionName) {
+            typesStore.refreshTypeCollection(storeCollectionName)
+          }
+          return response?.data || null
+        }
       }
     )
   }
@@ -162,7 +192,14 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorRef: error,
         errorMessage: `Failed to delete ${entityName.toLowerCase()}`,
         entityName: entityName,
-        entityIdentifier: `"${name}"`
+        entityIdentifier: `"${name}"`,
+        onSuccess: () => {
+          // Refresh the types store
+          if (storeCollectionName) {
+            typesStore.refreshTypeCollection(storeCollectionName)
+          }
+          return true
+        }
       }
     )
   }

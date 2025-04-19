@@ -4,6 +4,7 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useTypesStore } from '../stores/types'
 
 /**
  * Composable for type form handling
@@ -20,6 +21,7 @@ import { useToast } from 'primevue/usetoast'
 export function useTypeForm(typeService, options) {
   const toast = useToast()
   const router = useRouter()
+  const typesStore = useTypesStore()
   
   const { 
     mode = 'create', 
@@ -27,6 +29,22 @@ export function useTypeForm(typeService, options) {
     routeNames, 
     validateCode = null 
   } = options || {}
+  
+  // Determine which store collection to refresh
+  const storeCollectionName = getStoreCollectionName(entityName)
+  
+  /**
+   * Determine the store collection name based on entity name
+   * @param {string} name - Entity name (Edge Type, Location Type, etc.)
+   * @returns {string} - Store collection name
+   */
+  function getStoreCollectionName(name) {
+    if (name.includes('Edge Type')) return 'edgeTypes'
+    if (name.includes('Edge Region')) return 'edgeRegions' 
+    if (name.includes('Location Type')) return 'locationTypes'
+    if (name.includes('Thing Type')) return 'thingTypes'
+    return null
+  }
   
   // Form data with defaults
   const type = ref({
@@ -145,6 +163,11 @@ export function useTypeForm(typeService, options) {
           detail: `${entityName} "${typeData.type}" has been created`,
           life: 3000
         })
+        
+        // Refresh the types store collection to make the new type immediately available
+        if (storeCollectionName) {
+          await typesStore.refreshTypeCollection(storeCollectionName)
+        }
       } else {
         // Update existing type
         response = await typeService.updateType(type.value.id, typeData)
@@ -159,6 +182,11 @@ export function useTypeForm(typeService, options) {
           detail: `${entityName} "${type.value.type}" has been updated`,
           life: 3000
         })
+        
+        // Refresh the types store collection to make the updated type immediately available
+        if (storeCollectionName) {
+          await typesStore.refreshTypeCollection(storeCollectionName)
+        }
       }
       
       // Navigate to type list view

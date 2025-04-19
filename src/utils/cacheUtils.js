@@ -7,15 +7,41 @@
 const CACHE_PREFIX = 'iot_api_cache_';
 
 /**
+ * Get the currently logged in user ID or null if not authenticated
+ * @returns {string|null} - User ID or null
+ */
+function getCurrentUserId() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    
+    // For simplicity, if we have a token we'll extract user ID from auth store
+    // Use a default 'anonymous' if somehow we don't have a user ID
+    // This could be improved by directly decoding the JWT, but we'll keep it simple
+    const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null}');
+    return authData.user?.id || 'anonymous';
+  } catch (error) {
+    console.warn('Failed to get current user ID for cache:', error);
+    return 'anonymous';
+  }
+}
+
+/**
  * Generate a cache key from the collection name and parameters
+ * Now includes user scoping for better isolation
+ * 
  * @param {string} collectionName - PocketBase collection name
  * @param {string} operation - Operation type (list, detail, etc)
  * @param {string} id - Optional record ID
  * @param {Object} params - Optional query parameters
+ * @param {string} userId - Optional user ID for scoping (defaults to current user)
  * @returns {string} - Cache key
  */
-export function generateCacheKey(collectionName, operation, id = null, params = null) {
-  const parts = [collectionName, operation];
+export function generateCacheKey(collectionName, operation, id = null, params = null, userId = null) {
+  // Get user ID for cache segmentation - use provided ID or get current user
+  const userScope = userId || getCurrentUserId() || 'anonymous';
+  
+  const parts = [userScope, collectionName, operation];
   
   if (id) {
     parts.push(id);
@@ -109,10 +135,33 @@ export function removeCache(key) {
 
 /**
  * Clear all cache items for a specific collection
+ * Now supports user-specific clearing
+ * 
  * @param {string} collectionName - PocketBase collection name
+ * @param {string} userId - Optional user ID to scope clearing (defaults to current user)
  */
-export function clearCollectionCache(collectionName) {
-  const prefix = `${CACHE_PREFIX}${collectionName}_`;
+export function clearCollectionCache(collectionName, userId = null) {
+  // Get user ID for cache segmentation - use provided ID or get current user
+  const userScope = userId || getCurrentUserId() || 'anonymous';
+  const prefix = `${CACHE_PREFIX}${userScope}_${collectionName}_`;
+  
+  // Get all keys in localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
+/**
+ * Clear all cache items for a specific user
+ * @param {string} userId - User ID
+ */
+export function clearUserCache(userId) {
+  if (!userId) return;
+  
+  const prefix = `${CACHE_PREFIX}${userId}_`;
   
   // Get all keys in localStorage
   for (let i = 0; i < localStorage.length; i++) {

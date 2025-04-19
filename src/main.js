@@ -15,6 +15,7 @@ import './assets/responsive-utilities.css'       // Responsive utilities
 import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
+import DialogService from 'primevue/dialogservice'
 import 'primevue/resources/primevue.min.css'
 import 'primeicons/primeicons.css'
 import Tooltip from 'primevue/tooltip'
@@ -23,6 +24,7 @@ import Tooltip from 'primevue/tooltip'
 import natsConnectionManager from './services/nats/natsConnectionManager'
 
 // Import stores
+import { useAuthStore } from './stores/auth'
 import { useTypesStore } from './stores/types'
 import { useThemeStore } from './stores/theme'
 
@@ -71,43 +73,88 @@ app.use(PrimeVue, {
 })
 app.use(ConfirmationService)
 app.use(ToastService)
+app.use(DialogService)
 
 // Track if stores have been initialized
 let storesInitialized = false
 
-// Initialize type store (only once)
-const initializeStores = () => {
+// Function to preload essential application data
+const preloadAppData = async () => {
   if (storesInitialized) {
-    console.log('Stores already initialized, skipping')
+    console.log('Stores already initialized, skipping preload')
     return
   }
   
-  console.log('Initializing application stores')
-  const typesStore = useTypesStore()
-  // Preload type data that's used across the app
-  typesStore.loadAllTypes()
-  storesInitialized = true
+  try {
+    console.log('Preloading application data...')
+    
+    // Initialize stores
+    const typesStore = useTypesStore()
+    
+    // Load all type collections for form dropdowns
+    await typesStore.loadAllTypes()
+    
+    // Additional preloading can be added here:
+    // - Dashboard data
+    // - User preferences
+    // - Recently viewed items
+    
+    console.log('Application data preloaded successfully')
+    storesInitialized = true
+  } catch (error) {
+    console.warn('Error during data preloading:', error)
+    // Continue even if preloading fails to avoid blocking the user
+  }
 }
 
-// Add navigation guard to check if user is logged in
-// and initialize NATS connection
-router.beforeEach((to, from, next) => {
-  if (to.meta.requiresAuth && localStorage.getItem('token')) {
-    // User is logged in
+// Add navigation guard to check auth, initialize stores, and manage NATS
+router.beforeEach(async (to, from, next) => {
+  // Initialize the auth store
+  const authStore = useAuthStore()
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  
+  // For auth routes when user is authenticated
+  if (requiresAuth && authStore.isAuthenticated) {
+    // Check token validity
+    const isValid = await authStore.checkToken()
     
-    // Initialize stores if not already done
-    if (!storesInitialized) {
-      initializeStores()
+    if (!isValid) {
+      // Token is invalid, redirect to login
+      next({ name: 'login', query: { redirect: to.fullPath } })
+      return
     }
     
-    // Only attempt NATS auto-connect once per session
+    // Token is valid, preload if needed
+    await preloadAppData()
+    
+    // Only attempt NATS auto-connect once per session - on initial login navigation
     if (from.name === 'login' && to.name === 'dashboard') {
       console.log('Initial login navigation detected, attempting NATS auto-connect')
       // This is the initial login navigation, attempt to connect NATS
       natsConnectionManager.attemptAutoConnect()
     }
+    
+    // Continue navigation
+    next()
+    return
   }
+  
+  // If route requires auth but user isn't authenticated
+  if (requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'login', query: { redirect: to.fullPath } })
+    return
+  }
+  
+  // For all other routes, just proceed
   next()
+})
+
+// Set document title based on route meta
+router.afterEach((to) => {
+  // Update document title
+  document.title = to.meta.title 
+    ? `${to.meta.title} | Stone-Age.io` 
+    : 'IoT Platform'
 })
 
 // Mount the app

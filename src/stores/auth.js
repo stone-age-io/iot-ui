@@ -5,6 +5,8 @@ import { ref, computed } from 'vue'
 import apiService from '../services/api'
 import router from '../router'
 import { ENDPOINTS } from '../services/pocketbase-config'
+import { useTypesStore } from './types'
+import { clearUserCache } from '../utils/cacheUtils'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -22,10 +24,14 @@ export const useAuthStore = defineStore('auth', () => {
         email: decoded.email,
         name: decoded.name
       }
+      
+      // Store user data in localStorage for cache segmentation
+      localStorage.setItem('auth', JSON.stringify({ user: user.value }))
     } catch (err) {
       // Invalid token
       token.value = ''
       localStorage.removeItem('token')
+      localStorage.removeItem('auth')
     }
   }
 
@@ -62,6 +68,9 @@ export const useAuthStore = defineStore('auth', () => {
           email: decoded.email,
           name: decoded.name || decoded.email
         }
+        
+        // Store user data in localStorage for cache segmentation
+        localStorage.setItem('auth', JSON.stringify({ user: user.value }))
       } catch (err) {
         console.warn('Error decoding token, using response data instead', err)
         // Fallback to response data if token cannot be decoded
@@ -70,10 +79,16 @@ export const useAuthStore = defineStore('auth', () => {
           email: response.data.record?.email,
           name: response.data.record?.name || response.data.record?.email
         }
+        
+        // Store user data in localStorage for cache segmentation even in fallback case
+        localStorage.setItem('auth', JSON.stringify({ user: user.value }))
       }
       
       // Set the authorization header for future requests
       apiService.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+      
+      // Preload essential data for better user experience
+      await preloadEssentialData()
       
       // Redirect to dashboard or the original requested page
       const redirectPath = router.currentRoute.value.query.redirect || '/'
@@ -90,10 +105,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    // Clear user-scoped cache before removing user data
+    if (user.value?.id) {
+      clearUserCache(user.value.id)
+    }
+    
     // Clear token and user
     token.value = ''
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('auth')
     
     // Remove authorization header
     delete apiService.defaults.headers.common['Authorization']
@@ -134,6 +155,29 @@ export const useAuthStore = defineStore('auth', () => {
       ...user.value,
       ...userData
     }
+    
+    // Update stored user data for cache segmentation
+    localStorage.setItem('auth', JSON.stringify({ user: user.value }))
+  }
+  
+  // Preload essential data after login for better UX
+  async function preloadEssentialData() {
+    try {
+      console.log('Preloading essential data...')
+      // Get the types store
+      const typesStore = useTypesStore()
+      
+      // Preload all type data for better user experience
+      await typesStore.loadAllTypes()
+      
+      // Additional preloading could be added here 
+      // such as dashboard data, user profile, settings, etc.
+      
+      console.log('Essential data preloaded successfully')
+    } catch (error) {
+      console.warn('Error preloading essential data:', error)
+      // Continue even if preloading fails - don't block user experience
+    }
   }
 
   return {
@@ -152,6 +196,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     checkToken,
-    updateUser
+    updateUser,
+    preloadEssentialData
   }
 })
