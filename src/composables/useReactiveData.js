@@ -35,12 +35,10 @@ export function useReactiveData(options) {
   const loading = ref(true);
   const error = ref(null);
   const initialLoadComplete = ref(false);
+  const data = ref(null);
   
-  // Get data from the cache store
-  const data = computed(() => {
-    const rawData = cacheStore.getData(collection, operation, id);
-    return rawData ? processData(rawData) : null;
-  });
+  // Get timestamp from the cache store
+  const timestamp = computed(() => cacheStore.lastUpdated[collection]);
   
   // Load data from API (initial load)
   const loadData = async () => {
@@ -48,19 +46,34 @@ export function useReactiveData(options) {
     error.value = null;
     
     try {
-      await performOperation(
+      const response = await performOperation(
         () => fetchFunction(),
         {
           loadingRef: loading,
           errorRef: error,
-          errorMessage: `Failed to load ${collection} data`
+          errorMessage: `Failed to load ${collection} data`,
+          collection
         }
       );
       
+      // Process the response data and store it
+      if (response && (response.data || response.fromCache)) {
+        // Handle different response formats
+        const rawData = response.data || response;
+        data.value = processData(rawData);
+        
+        // Also update the cache store if it's a cacheable operation
+        if (operation === 'list' || operation === 'detail') {
+          cacheStore.storeData(collection, operation, id, rawData);
+        }
+      }
+      
       initialLoadComplete.value = true;
+      return data.value;
     } catch (err) {
       console.error(`Error loading ${collection} data:`, err);
       error.value = err.message || `Failed to load ${collection} data`;
+      return null;
     } finally {
       loading.value = false;
     }
@@ -72,19 +85,55 @@ export function useReactiveData(options) {
     error.value = null;
     
     try {
-      await performOperation(
+      const response = await performOperation(
         () => fetchFunction({ skipCache }),
         {
           loadingRef: loading,
           errorRef: error,
-          errorMessage: `Failed to refresh ${collection} data`
+          errorMessage: `Failed to refresh ${collection} data`,
+          collection
         }
       );
+      
+      // Process the response data and store it
+      if (response && (response.data || response.fromCache)) {
+        // Handle different response formats
+        const rawData = response.data || response;
+        data.value = processData(rawData);
+        
+        // Also update the cache store
+        if (operation === 'list' || operation === 'detail') {
+          cacheStore.storeData(collection, operation, id, rawData);
+        }
+      }
+      
+      return data.value;
     } catch (err) {
       console.error(`Error refreshing ${collection} data:`, err);
       error.value = err.message || `Failed to refresh ${collection} data`;
+      return null;
     } finally {
       loading.value = false;
+    }
+  };
+  
+  /**
+   * Manually update the data in the reactive state and cache store
+   * Useful for when data is updated outside the normal fetch flow
+   * 
+   * @param {Object} newData - New data to store
+   */
+  const updateData = (newData) => {
+    if (!newData) return;
+    
+    // Update local state
+    const processedData = processData(newData.data || newData);
+    data.value = processedData;
+    
+    // Update the cache store
+    if (operation === 'list' || operation === 'detail') {
+      cacheStore.storeData(collection, operation, id, newData.data || newData);
+      cacheStore.updateTimestamp(collection);
     }
   };
   
@@ -112,6 +161,7 @@ export function useReactiveData(options) {
     loading,
     error,
     refreshData,
-    timestamp: computed(() => cacheStore.lastUpdated[collection])
+    updateData,
+    timestamp
   };
 }

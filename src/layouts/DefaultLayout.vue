@@ -46,6 +46,9 @@
           }
         ]"
       >
+        <!-- Last Updated Indicator -->
+        <LastUpdatedIndicator class="mb-4" />
+        
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
@@ -53,6 +56,12 @@
         </router-view>
       </main>
     </div>
+    
+    <!-- Mobile Navigation Bar (when needed) -->
+    <MobileNavBar 
+      v-if="isMobileView && showMobileNav" 
+      class="fixed bottom-0 left-0 right-0 z-30"
+    />
     
     <!-- Notifications -->
     <Toast position="bottom-right" />
@@ -69,6 +78,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppSidebar from '../components/common/AppSidebar.vue'
 import MobileNavBar from '../components/common/MobileNavBar.vue'
+import LastUpdatedIndicator from '../components/common/LastUpdatedIndicator.vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 

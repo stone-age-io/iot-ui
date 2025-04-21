@@ -8,10 +8,12 @@ import {
   validateTopic
 } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for topic permission-related functionality
  * Centralizes topic permission operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useTopicPermission() {
   const router = useRouter()
@@ -19,9 +21,19 @@ export function useTopicPermission() {
   const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
-  const permissions = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Set up reactive data from the cache store
+  const permissionsData = useReactiveData({
+    collection: 'topic_permissions',
+    operation: 'list',
+    fetchFunction: fetchPermissionsRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose permissions as a computed property that returns from reactive cache
+  const permissions = computed(() => permissionsData.data.value || [])
   
   /**
    * Format date for display
@@ -107,26 +119,57 @@ export function useTopicPermission() {
   }
   
   /**
-   * Fetch all permissions
+   * Raw function to fetch permissions - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchPermissionsRaw(options = {}) {
+    return await topicPermissionService.getList({
+      sort: '-created',
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
+   * Fetch all permissions with optional filtering
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of permissions
    */
   const fetchPermissions = async (params = {}) => {
-    return performOperation(
-      () => topicPermissionService.getList({
-        sort: '-created',
-        ...params
-      }),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load permissions',
-        onSuccess: (response) => {
-          permissions.value = response.data.items || []
-          return permissions.value
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      if (skipCache || Object.keys(params).length > 0) {
+        // For filtered queries, use direct API call
+        const response = await topicPermissionService.getList({
+          sort: '-created',
+          ...params,
+          skipCache
+        })
+        
+        // Update the cache with this response
+        if (response && response.data) {
+          permissionsData.updateData(response)
+          return response.data.items || []
         }
+        return []
+      } else {
+        // Use the reactive data system for standard fetches
+        await permissionsData.refreshData(skipCache)
+        return permissions.value
       }
-    )
+    } catch (err) {
+      console.error('Error in fetchPermissions:', err)
+      error.value = 'Failed to load permissions'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -146,6 +189,7 @@ export function useTopicPermission() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load permission details',
+        collection: 'topic_permissions', // Specify collection for cache updates
         onSuccess: (response) => {
           // Ensure arrays
           const permission = response.data
@@ -195,6 +239,7 @@ export function useTopicPermission() {
         errorMessage: 'Failed to create permission',
         entityName: 'Permission role',
         entityIdentifier: `'${permissionData.name}'`,
+        collection: 'topic_permissions', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -215,6 +260,7 @@ export function useTopicPermission() {
         errorMessage: 'Failed to update permission',
         entityName: 'Permission role',
         entityIdentifier: `'${permissionData.name}'`,
+        collection: 'topic_permissions', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -234,7 +280,8 @@ export function useTopicPermission() {
         errorRef: error,
         errorMessage: 'Failed to delete permission',
         entityName: 'Permission role',
-        entityIdentifier: `'${name}'`
+        entityIdentifier: `'${name}'`,
+        collection: 'topic_permissions' // Specify collection for cache updates
       }
     )
   }

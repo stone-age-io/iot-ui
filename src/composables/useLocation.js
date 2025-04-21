@@ -1,4 +1,4 @@
-// src/composables/useLocation.js - Updated to support MapView
+// src/composables/useLocation.js
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -13,10 +13,12 @@ import {
 } from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for location-related functionality
  * Centralizes location operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useLocation() {
   const router = useRouter()
@@ -28,14 +30,24 @@ export function useLocation() {
   typesStore.loadLocationTypes()
   
   // Common state
-  const locations = ref([])
   const childLocations = ref([])
-  const loading = ref(false)
   const childrenLoading = ref(false)
+  const loading = ref(false)
   const error = ref(null)
   
   // Location types from the store
   const locationTypes = computed(() => typesStore.locationTypes)
+  
+  // Set up reactive data from the cache store
+  const locationsData = useReactiveData({
+    collection: 'locations',
+    operation: 'list',
+    fetchFunction: fetchLocationsRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose locations as a computed property that returns from reactive cache
+  const locations = computed(() => locationsData.data.value || [])
   
   /**
    * Format date for display
@@ -139,27 +151,46 @@ export function useLocation() {
   }
   
   /**
+   * Raw function to fetch locations - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchLocationsRaw(options = {}) {
+    return await locationService.getList({
+      expand: 'edge_id,parent_id',
+      sort: '-created',
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
    * Fetch all locations with optional filtering
+   * Maintains backward compatibility while using the reactive cache
+   * 
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of locations
    */
   const fetchLocations = async (params = {}) => {
-    return performOperation(
-      () => locationService.getList({ 
-        expand: 'edge_id,parent_id',
-        sort: '-created',
-        ...params
-      }),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load locations',
-        onSuccess: (response) => {
-          locations.value = response.data.items || []
-          return locations.value
-        }
-      }
-    )
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      // Use the reactive data system for fetching
+      await locationsData.refreshData(skipCache)
+      
+      // Return locations from reactive state
+      return locations.value
+    } catch (err) {
+      console.error('Error in fetchLocations:', err)
+      error.value = 'Failed to load locations'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -183,6 +214,7 @@ export function useLocation() {
         loadingRef: childrenLoading,
         errorRef: null,
         errorMessage: 'Failed to load child locations',
+        collection: 'locations', // Specify collection for cache updates
         onSuccess: (response) => {
           childLocations.value = response.data.items || []
           return childLocations.value
@@ -207,6 +239,7 @@ export function useLocation() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load root locations',
+        collection: 'locations', // Specify collection for cache updates
         onSuccess: (response) => {
           locations.value = response.data.items || []
           return locations.value
@@ -232,6 +265,7 @@ export function useLocation() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load location details',
+        collection: 'locations', // Specify collection for cache updates
         onSuccess: (response) => {
           // Parse metadata if it's a string
           if (response.data.metadata && typeof response.data.metadata === 'string') {
@@ -262,7 +296,8 @@ export function useLocation() {
         errorRef: error,
         errorMessage: 'Failed to delete location',
         entityName: 'Location',
-        entityIdentifier: code
+        entityIdentifier: code,
+        collection: 'locations' // Specify collection for cache updates
       }
     )
   }
@@ -288,6 +323,7 @@ export function useLocation() {
         errorRef: error,
         errorMessage: 'Failed to upload floor plan',
         successMessage: 'Floor plan uploaded successfully',
+        collection: 'locations', // Specify collection for cache updates
         onSuccess: () => true
       }
     )
@@ -316,6 +352,7 @@ export function useLocation() {
         errorRef: error,
         errorMessage: 'Failed to update location coordinates',
         successMessage: 'Location coordinates updated',
+        collection: 'locations', // Specify collection for cache updates
         onSuccess: () => true
       }
     )

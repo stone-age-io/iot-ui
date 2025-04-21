@@ -11,10 +11,12 @@ import {
 } from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for thing-related functionality
  * Centralizes thing operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useThing() {
   const router = useRouter()
@@ -26,12 +28,28 @@ export function useThing() {
   typesStore.loadThingTypes()
   
   // Common state
-  const things = ref([])
   const loading = ref(false)
   const error = ref(null)
   
   // Thing types from store
   const thingTypes = computed(() => typesStore.thingTypes)
+  
+  // Set up reactive data from the cache store
+  const thingsData = useReactiveData({
+    collection: 'things',
+    operation: 'list',
+    fetchFunction: fetchThingsRaw,
+    // Make sure we properly process the data to maintain field mappings
+    processData: data => {
+      // First ensure we have valid data
+      if (!data || !data.items) return []
+      
+      return data.items
+    }
+  })
+  
+  // Expose things as a computed property that returns from reactive cache
+  const things = computed(() => thingsData.data.value || [])
   
   /**
    * Format date for display
@@ -125,27 +143,68 @@ export function useThing() {
   }
   
   /**
+   * Raw function to fetch things - used internally by useReactiveData
+   * This maintains the original field mappings by using the service directly
+   * 
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchThingsRaw(options = {}) {
+    const response = await thingService.getList({
+      expand: 'location_id,edge_id',
+      sort: '-created',
+      ...options,
+      skipCache: options?.skipCache
+    })
+    
+    // Return the entire response to ensure field mappings are preserved
+    return response
+  }
+  
+  /**
    * Fetch all things with optional filtering
+   * Maintains backward compatibility while using the reactive cache
+   * 
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of things
    */
   const fetchThings = async (params = {}) => {
-    return performOperation(
-      () => thingService.getList({
-        expand: 'location_id,edge_id',
-        sort: '-created',
-        ...params
-      }),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load things',
-        onSuccess: (response) => {
-          things.value = response.data.items || []
-          return things.value
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      if (skipCache || Object.keys(params).length > 0) {
+        // For filtered queries, we need to ensure we're using the original API
+        // to preserve all field mappings and processing
+        const response = await thingService.getList({
+          expand: 'location_id,edge_id',
+          sort: '-created',
+          ...params,
+          skipCache
+        })
+        
+        // Process the response to match expected format
+        if (response && response.data && response.data.items) {
+          // Update cache with this data to keep UI consistent
+          thingsData.updateData(response)
+          return response.data.items
         }
+        return []
+      } else {
+        // Use the reactive data system for standard fetches
+        await thingsData.refreshData(skipCache)
+        return things.value
       }
-    )
+    } catch (err) {
+      console.error('Error in fetchThings:', err)
+      error.value = 'Failed to load things'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -165,6 +224,7 @@ export function useThing() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load thing details',
+        collection: 'things', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -184,7 +244,8 @@ export function useThing() {
         errorRef: error,
         errorMessage: 'Failed to delete thing',
         entityName: 'Thing',
-        entityIdentifier: code
+        entityIdentifier: code,
+        collection: 'things' // Specify collection for cache updates
       }
     )
   }

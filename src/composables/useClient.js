@@ -9,10 +9,12 @@ import {
   generateSecurePassword 
 } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for client-related functionality
  * Centralizes client operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useClient() {
   const router = useRouter()
@@ -20,9 +22,19 @@ export function useClient() {
   const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
-  const clients = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Set up reactive data from the cache store
+  const clientsData = useReactiveData({
+    collection: 'clients',
+    operation: 'list',
+    fetchFunction: fetchClientsRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose clients as a computed property that returns from reactive cache
+  const clients = computed(() => clientsData.data.value || [])
   
   /**
    * Format date for display
@@ -43,27 +55,59 @@ export function useClient() {
   }
   
   /**
+   * Raw function to fetch clients - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchClientsRaw(options = {}) {
+    return await clientService.getList({
+      expand: 'role_id',
+      sort: '-created',
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
    * Fetch all clients with optional filtering
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of clients
    */
   const fetchClients = async (params = {}) => {
-    return performOperation(
-      () => clientService.getList({
-        expand: 'role_id',
-        sort: '-created',
-        ...params
-      }),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load clients',
-        onSuccess: (response) => {
-          clients.value = response.data.items || []
-          return clients.value
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      if (skipCache || Object.keys(params).length > 0) {
+        // For filtered queries, use direct API call
+        const response = await clientService.getList({
+          expand: 'role_id',
+          sort: '-created',
+          ...params,
+          skipCache
+        })
+        
+        // Update the cache with this response
+        if (response && response.data) {
+          clientsData.updateData(response)
+          return response.data.items || []
         }
+        return []
+      } else {
+        // Use the reactive data system for standard fetches
+        await clientsData.refreshData(skipCache)
+        return clients.value
       }
-    )
+    } catch (err) {
+      console.error('Error in fetchClients:', err)
+      error.value = 'Failed to load clients'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -83,6 +127,7 @@ export function useClient() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load client details',
+        collection: 'clients', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -130,7 +175,8 @@ export function useClient() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to create client',
-        successMessage: `Client ${clientData.username} has been created`
+        successMessage: `Client ${clientData.username} has been created`,
+        collection: 'clients' // Specify collection for cache updates
       }
     )
   }
@@ -159,6 +205,7 @@ export function useClient() {
         errorRef: error,
         errorMessage: 'Failed to update client',
         successMessage: 'Client has been updated',
+        collection: 'clients', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -178,7 +225,8 @@ export function useClient() {
         errorRef: error,
         errorMessage: 'Failed to delete client',
         entityName: 'Client',
-        entityIdentifier: username
+        entityIdentifier: username,
+        collection: 'clients' // Specify collection for cache updates
       }
     )
   }
@@ -208,7 +256,8 @@ export function useClient() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to reset password',
-        successMessage: 'Password has been reset successfully'
+        successMessage: 'Password has been reset successfully',
+        collection: 'clients' // Specify collection for cache updates
       }
     )
   }

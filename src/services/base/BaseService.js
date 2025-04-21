@@ -8,6 +8,10 @@ import {
   transformPaginationParams
 } from '../pocketbase-config'
 
+/**
+ * Base service class for entity operations
+ * Updated to integrate with the central cache store
+ */
 export class BaseService {
   /**
    * Create a new service instance
@@ -50,10 +54,9 @@ export class BaseService {
   /**
    * Get a paginated list of entities
    * @param {Object} params - Query parameters
-   * @param {Function} updateCallback - Optional callback for stale-while-revalidate updates
    * @returns {Promise} - Axios promise with data
    */
-  getList(params = {}, updateCallback = null) {
+  getList(params = {}) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     const transformedParams = transformPaginationParams(params)
     
@@ -71,14 +74,10 @@ export class BaseService {
     // Setup caching options if enabled
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
+      operation: 'list',
       id: null,
       userId: this.getCurrentUserId(), // Add user ID for cache segmentation
-      skipCache: params.skipCache === true || skipCacheFromURL,
-      updateCallback: updateCallback ? (freshData) => {
-        // Process the fresh data before passing to callback
-        const processedData = this.processResponseData(freshData);
-        updateCallback(processedData);
-      } : null
+      skipCache: params.skipCache === true || skipCacheFromURL
     } : null;
     
     return apiHelpers.getList(endpoint, transformedParams, cacheOptions)
@@ -117,10 +116,9 @@ export class BaseService {
   /**
    * Get a single entity by ID
    * @param {string} id - Entity ID
-   * @param {Function} updateCallback - Optional callback for stale-while-revalidate updates
    * @returns {Promise} - Axios promise with entity data
    */
-  getById(id, updateCallback = null) {
+  getById(id) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
     let url = endpoint
     
@@ -135,15 +133,10 @@ export class BaseService {
     // Setup caching options if enabled
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
+      operation: 'detail',
       id: id,
       userId: this.getCurrentUserId(), // Add user ID for cache segmentation
-      skipCache: skipCacheFromURL,
-      updateCallback: updateCallback ? (freshData) => {
-        // Parse and map fields before calling the callback
-        const parsedData = this.parseJsonFields(freshData);
-        const mappedData = this.mapApiToClientFields(parsedData);
-        updateCallback(mappedData);
-      } : null
+      skipCache: skipCacheFromURL
     } : null;
     
     return apiHelpers.getById(url, cacheOptions)
@@ -162,7 +155,7 @@ export class BaseService {
    * @param {Object} entity - Entity data
    * @returns {Promise} - Axios promise with created entity
    */
-  create(entity) {
+  async create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
     // Generate a UUIDv7 for the entity if ID is not already specified
@@ -178,21 +171,23 @@ export class BaseService {
     // Process entity data before sending to API
     const processedData = this.stringifyJsonFields(mappedEntity)
     
-    return apiHelpers.create(endpoint, processedData)
-      .then(response => {
-        // Clear collection cache when a new entity is created
-        // Include user ID for proper segmentation
-        if (configService.isCacheEnabled()) {
-          clearCollectionCache(this.collectionName, this.getCurrentUserId());
-        }
-        
-        if (response.data) {
-          // Apply JSON field parsing and field mappings to response
-          const parsedData = this.parseJsonFields(response.data)
-          response.data = this.mapApiToClientFields(parsedData)
-        }
-        return response
-      })
+    try {
+      const response = await apiHelpers.create(endpoint, processedData);
+      
+      // Clear both localStorage and reactive cache store
+      await this.clearCache();
+      
+      if (response.data) {
+        // Apply JSON field parsing and field mappings to response
+        const parsedData = this.parseJsonFields(response.data);
+        response.data = this.mapApiToClientFields(parsedData);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`Error creating ${this.collectionName}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -201,7 +196,7 @@ export class BaseService {
    * @param {Object} entity - Updated entity data
    * @returns {Promise} - Axios promise with updated entity
    */
-  update(id, entity) {
+  async update(id, entity) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
     
     // Map client fields to API fields
@@ -210,21 +205,23 @@ export class BaseService {
     // Process entity data before sending to API
     const processedData = this.stringifyJsonFields(mappedEntity)
     
-    return apiHelpers.update(endpoint, null, processedData)
-      .then(response => {
-        // Clear specific cache entries when entity is updated
-        // Include user ID for proper segmentation
-        if (configService.isCacheEnabled()) {
-          clearCollectionCache(this.collectionName, this.getCurrentUserId());
-        }
-        
-        if (response.data) {
-          // Apply JSON field parsing and field mappings to response
-          const parsedData = this.parseJsonFields(response.data)
-          response.data = this.mapApiToClientFields(parsedData)
-        }
-        return response
-      })
+    try {
+      const response = await apiHelpers.update(endpoint, null, processedData);
+      
+      // Clear both localStorage and reactive cache store
+      await this.clearCache();
+      
+      if (response.data) {
+        // Apply JSON field parsing and field mappings to response
+        const parsedData = this.parseJsonFields(response.data);
+        response.data = this.mapApiToClientFields(parsedData);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`Error updating ${this.collectionName}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -232,17 +229,47 @@ export class BaseService {
    * @param {string} id - Entity ID
    * @returns {Promise} - Axios promise
    */
-  delete(id) {
+  async delete(id) {
     const endpoint = this.collectionEndpoint(this.collectionName, id)
-    return apiHelpers.delete(endpoint)
-      .then(response => {
-        // Clear collection cache when an entity is deleted
-        // Include user ID for proper segmentation
-        if (configService.isCacheEnabled()) {
-          clearCollectionCache(this.collectionName, this.getCurrentUserId());
-        }
-        return response;
-      })
+    
+    try {
+      const response = await apiHelpers.delete(endpoint);
+      
+      // Clear both localStorage and reactive cache store
+      await this.clearCache();
+      
+      return response;
+    } catch (error) {
+      console.error(`Error deleting ${this.collectionName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache for this collection in both localStorage and reactive store
+   */
+  async clearCache() {
+    const userId = this.getCurrentUserId();
+    
+    // Clear localStorage cache
+    if (configService.isCacheEnabled()) {
+      clearCollectionCache(this.collectionName, userId);
+    }
+    
+    // Clear reactive store cache
+    try {
+      // Dynamically import the cache store to avoid circular dependencies
+      const { useCacheStore } = await import('../../stores/cacheStore');
+      const cacheStore = useCacheStore();
+      
+      // Clear collection data in the store
+      cacheStore.clearCollectionData(this.collectionName);
+      
+      // Update timestamp to show data was refreshed
+      cacheStore.updateTimestamp(this.collectionName);
+    } catch (error) {
+      console.warn('Failed to clear reactive cache store:', error);
+    }
   }
 
   /**

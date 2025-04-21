@@ -10,10 +10,12 @@ import {
 } from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for edge-related functionality
  * Centralizes edge operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useEdge() {
   const router = useRouter()
@@ -26,13 +28,24 @@ export function useEdge() {
   typesStore.loadEdgeRegions()
   
   // Common state
-  const edges = ref([])
   const loading = ref(false)
   const error = ref(null)
   
   // Edge types and regions from the store
   const edgeTypes = computed(() => typesStore.edgeTypes)
   const edgeRegions = computed(() => typesStore.edgeRegions)
+  
+  // Set up reactive data from the cache store
+  // This maintains backward compatibility while using the reactive cache
+  const edgesData = useReactiveData({
+    collection: 'edges',
+    operation: 'list',
+    fetchFunction: fetchEdgesRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose edges as a computed property that returns from reactive cache
+  const edges = computed(() => edgesData.data.value || [])
   
   /**
    * Format date for display
@@ -81,23 +94,45 @@ export function useEdge() {
   }
   
   /**
+   * Raw function to fetch edges - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchEdgesRaw(options = {}) {
+    return await edgeService.getList({
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
    * Fetch all edges with optional filtering
+   * Maintains backward compatibility while using the reactive cache
+   * 
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of edges
    */
   const fetchEdges = async (params = {}) => {
-    return performOperation(
-      () => edgeService.getList(params),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load edges',
-        onSuccess: (response) => {
-          edges.value = response.data.items || []
-          return edges.value
-        }
-      }
-    )
+    // For regular fetch, delegate to the real API call through useReactiveData
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      // Wait for the data to be fetched/refreshed
+      await edgesData.refreshData(skipCache)
+      
+      // Return edges from reactive state
+      return edges.value
+    } catch (err) {
+      console.error('Error in fetchEdges:', err)
+      error.value = 'Failed to load edges'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -117,6 +152,7 @@ export function useEdge() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load edge details',
+        collection: 'edges', // Specify collection for cache updates
         onSuccess: (response) => {
           // Parse metadata if it's a string
           if (response.data.metadata && typeof response.data.metadata === 'string') {
@@ -146,6 +182,7 @@ export function useEdge() {
         errorRef: error,
         errorMessage: 'Failed to create edge',
         successMessage: `Edge ${edge.code} has been created`,
+        collection: 'edges', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -165,6 +202,7 @@ export function useEdge() {
         errorRef: error,
         errorMessage: 'Failed to update edge',
         successMessage: `Edge ${edge.code} has been updated`,
+        collection: 'edges', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -184,7 +222,8 @@ export function useEdge() {
         errorRef: error,
         errorMessage: 'Failed to delete edge',
         entityName: 'Edge',
-        entityIdentifier: code
+        entityIdentifier: code,
+        collection: 'edges' // Specify collection for cache updates
       }
     )
   }
@@ -204,6 +243,7 @@ export function useEdge() {
         errorRef: error,
         errorMessage: 'Failed to update edge metadata',
         successMessage: 'Edge metadata has been updated',
+        collection: 'edges', // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )

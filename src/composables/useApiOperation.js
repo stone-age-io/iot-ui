@@ -1,14 +1,18 @@
 // src/composables/useApiOperation.js
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useCacheStore } from '../stores/cacheStore'
 
 /**
  * Composable for handling common API operations
  * Provides a consistent way to handle loading states, errors, and toast notifications
+ * Enhanced to work with the centralized cache store
+ * 
  * @returns {Object} - API operation handler functions
  */
 export function useApiOperation() {
   const toast = useToast()
+  const cacheStore = useCacheStore()
 
   /**
    * Perform an API operation with consistent loading state and error handling
@@ -20,6 +24,7 @@ export function useApiOperation() {
    * @param {string} options.successMessage - Success message to display (optional)
    * @param {Function} options.onSuccess - Callback for successful operation (optional)
    * @param {Function} options.onError - Callback for failed operation (optional)
+   * @param {string} options.collection - Collection name for cache updates (optional)
    * @returns {Promise<any>} - Result of the operation
    */
   const performOperation = async (operation, options) => {
@@ -29,7 +34,8 @@ export function useApiOperation() {
       errorMessage = 'Operation failed',
       successMessage,
       onSuccess,
-      onError
+      onError,
+      collection
     } = options
 
     let response = null;
@@ -41,6 +47,11 @@ export function useApiOperation() {
     try {
       // Perform the operation
       response = await operation()
+      
+      // Update cache store timestamp if collection is specified (for GET operations)
+      if (collection && response && !response.skipCacheUpdate) {
+        cacheStore.updateTimestamp(collection)
+      }
       
       // Skip loading indicator immediately if response is from cache
       if (response?.fromCache && loadingRef) {
@@ -91,6 +102,11 @@ export function useApiOperation() {
       if (loadingRef && !(response?.fromCache)) {
         loadingRef.value = false
       }
+      
+      // End refresh state in cache store if it was started
+      if (cacheStore.isRefreshing) {
+        cacheStore.endRefresh()
+      }
     }
   }
 
@@ -100,12 +116,14 @@ export function useApiOperation() {
    * @param {Object} options - Operation options
    * @param {string} options.entityName - Name of entity being created
    * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
    * @returns {Promise<any>} - Created entity
    */
   const performCreate = async (operation, options) => {
     const {
       entityName = 'item',
       entityIdentifier,
+      collection,
       ...restOptions
     } = options
 
@@ -113,6 +131,7 @@ export function useApiOperation() {
       successMessage: entityIdentifier 
         ? `${entityName} ${entityIdentifier} has been created`
         : `${entityName} has been created`,
+      collection,
       ...restOptions
     })
   }
@@ -123,12 +142,14 @@ export function useApiOperation() {
    * @param {Object} options - Operation options
    * @param {string} options.entityName - Name of entity being updated
    * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
    * @returns {Promise<any>} - Updated entity
    */
   const performUpdate = async (operation, options) => {
     const {
       entityName = 'item',
       entityIdentifier,
+      collection,
       ...restOptions
     } = options
 
@@ -136,6 +157,7 @@ export function useApiOperation() {
       successMessage: entityIdentifier 
         ? `${entityName} ${entityIdentifier} has been updated`
         : `${entityName} has been updated`,
+      collection,
       ...restOptions
     })
   }
@@ -146,12 +168,14 @@ export function useApiOperation() {
    * @param {Object} options - Operation options
    * @param {string} options.entityName - Name of entity being deleted
    * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
    * @returns {Promise<boolean>} - Success status
    */
   const performDelete = async (operation, options) => {
     const {
       entityName = 'item',
       entityIdentifier,
+      collection,
       ...restOptions
     } = options
 
@@ -160,6 +184,7 @@ export function useApiOperation() {
         ? `${entityName} ${entityIdentifier} has been deleted`
         : `${entityName} has been deleted`,
       onSuccess: () => true,
+      collection,
       ...restOptions
     })
   }
