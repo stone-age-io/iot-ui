@@ -2,10 +2,10 @@
 import { BaseService } from '../base/BaseService'
 import { 
   COLLECTIONS, 
-  collectionEndpoint,
-  ENDPOINTS
+  collectionEndpoint
 } from '../pocketbase-config'
 import { apiHelpers } from '../api'
+import configService from '../config/configService'
 
 /**
  * Service for User operations
@@ -40,8 +40,11 @@ export class UserService extends BaseService {
    * @returns {Promise} - Axios promise with user data
    */
   getCurrentUser() {
+    // Use proper path construction from config service
+    const endpoint = configService.getPocketBaseUrl(configService.endpoints.AUTH.REFRESH)
+    
     // Use POST method with auth token for refresh endpoint
-    return apiHelpers.axiosInstance.post('/pb/api' + ENDPOINTS.AUTH.REFRESH)
+    return apiHelpers.axiosInstance.post(endpoint)
       .then(response => {
         // Parse any potential JSON fields
         if (response.data && response.data.record) {
