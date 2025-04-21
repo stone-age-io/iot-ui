@@ -1,0 +1,430 @@
+# Composable Pattern Implementation
+
+## Overview
+
+The IoT Platform makes extensive use of Vue.js composables as a core architectural pattern. Composables are functions that encapsulate and reuse stateful logic, following Vue's Composition API approach. This pattern promotes code reuse, separation of concerns, and enhances maintainability.
+
+## Key Composables
+
+### API Operation Composable
+
+The `useApiOperation` composable standardizes all API interactions with consistent loading states, error handling, and success notifications. This is a key architectural improvement that centralizes API operation handling across the application:
+
+```javascript
+// src/composables/useApiOperation.js
+export function useApiOperation() {
+  const toast = useToast()
+  const cacheStore = useCacheStore()
+
+  /**
+   * Perform an API operation with consistent loading state and error handling
+   * @param {Function} operation - Async function that performs the API call
+   * @param {Object} options - Operation options
+   * @param {Ref} options.loadingRef - Loading state ref
+   * @param {Ref} options.errorRef - Error state ref
+   * @param {string} options.errorMessage - User-friendly error message
+   * @param {string} options.successMessage - Success message to display (optional)
+   * @param {Function} options.onSuccess - Callback for successful operation (optional)
+   * @param {Function} options.onError - Callback for failed operation (optional)
+   * @param {string} options.collection - Collection name for cache updates (optional)
+   * @returns {Promise<any>} - Result of the operation
+   */
+  const performOperation = async (operation, options) => {
+    const {
+      loadingRef,
+      errorRef,
+      errorMessage = 'Operation failed',
+      successMessage,
+      onSuccess,
+      onError,
+      collection
+    } = options
+
+    // Set loading state
+    if (loadingRef) loadingRef.value = true
+    if (errorRef) errorRef.value = null
+
+    try {
+      // Perform the operation
+      const response = await operation()
+      
+      // Update cache store timestamp if collection is specified
+      if (collection && response && !response.skipCacheUpdate) {
+        cacheStore.updateTimestamp(collection)
+      }
+      
+      // Skip loading indicator immediately if response is from cache
+      if (response?.fromCache && loadingRef) {
+        loadingRef.value = false
+      }
+
+      // Show success toast if provided (only for non-cache responses)
+      if (successMessage && !response?.fromCache) {
+        toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: successMessage,
+          life: 3000
+        })
+      }
+
+      // Call success callback if provided
+      if (onSuccess) {
+        return onSuccess(response)
+      }
+
+      return response
+    } catch (err) {
+      console.error(`Error: ${errorMessage}`, err)
+
+      // Set error state
+      if (errorRef) {
+        errorRef.value = errorMessage
+      }
+
+      // Show error toast
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: errorMessage,
+        life: 3000
+      })
+
+      // Call error callback if provided
+      if (onError) {
+        return onError(err)
+      }
+
+      // Return a default value or rethrow
+      return null
+    } finally {
+      // Reset loading state if not already done for cached responses
+      if (loadingRef && !(response?.fromCache)) {
+        loadingRef.value = false
+      }
+      
+      // End refresh state in cache store if it was started
+      if (cacheStore.isRefreshing) {
+        cacheStore.endRefresh()
+      }
+    }
+  }
+  
+  /**
+   * Perform a create operation with consistent handling
+   * @param {Function} operation - Create operation function
+   * @param {Object} options - Operation options
+   * @param {string} options.entityName - Name of entity being created
+   * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
+   * @returns {Promise<any>} - Created entity
+   */
+  const performCreate = async (operation, options) => {
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      collection,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been created`
+        : `${entityName} has been created`,
+      collection,
+      ...restOptions
+    })
+  }
+
+  /**
+   * Perform an update operation with consistent handling
+   * @param {Function} operation - Update operation function
+   * @param {Object} options - Operation options
+   * @param {string} options.entityName - Name of entity being updated
+   * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
+   * @returns {Promise<any>} - Updated entity
+   */
+  const performUpdate = async (operation, options) => {
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      collection,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been updated`
+        : `${entityName} has been updated`,
+      collection,
+      ...restOptions
+    })
+  }
+
+  /**
+   * Perform a delete operation with consistent handling
+   * @param {Function} operation - Delete operation function
+   * @param {Object} options - Operation options
+   * @param {string} options.entityName - Name of entity being deleted
+   * @param {string} options.entityIdentifier - Identifier field of entity (e.g., 'code', 'name')
+   * @param {string} options.collection - Collection name for cache updates
+   * @returns {Promise<boolean>} - Success status
+   */
+  const performDelete = async (operation, options) => {
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      collection,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been deleted`
+        : `${entityName} has been deleted`,
+      onSuccess: () => true,
+      collection,
+      ...restOptions
+    })
+  }
+
+  return {
+    performOperation,
+    performCreate,
+    performUpdate,
+    performDelete
+  }
+}
+```
+
+### Entity Composables
+
+Entity composables encapsulate all operations related to specific entity types:
+
+#### Edge Entities
+
+```javascript
+// src/composables/useEdge.js
+export function useEdge() {
+  // State management
+  const edges = computed(() => edgesData.value || [])
+  const loading = ref(false)
+  const error = ref(null)
+  
+  // Operations
+  const fetchEdges = async (params = {}) => {/* ... */}
+  const fetchEdge = async (id) => {/* ... */}
+  const createEdge = async (edge) => {/* ... */}
+  const updateEdge = async (id, edge) => {/* ... */}
+  const deleteEdge = async (id, code) => {/* ... */}
+  
+  // Helpers
+  const formatDate = (dateString) => {/* ... */}
+  const getTypeName = (typeCode) => {/* ... */}
+  
+  // Navigation
+  const navigateToEdgeList = (query = {}) => router.push({ name: 'edges', query })
+  const navigateToEdgeDetail = (id) => router.push({ name: 'edge-detail', params: { id } })
+  
+  return {
+    // State
+    edges,
+    loading,
+    error,
+    
+    // Operations
+    fetchEdges,
+    fetchEdge,
+    createEdge,
+    updateEdge,
+    deleteEdge,
+    
+    // Helpers
+    formatDate,
+    getTypeName,
+    
+    // Navigation methods
+    navigateToEdgeList,
+    navigateToEdgeDetail,
+    // ...other navigation methods
+  }
+}
+```
+
+Similar composables exist for Locations, Things, Clients, and Topic Permissions.
+
+### Form Composables
+
+Form composables manage form state, validation, and submission logic:
+
+```javascript
+// src/composables/useEdgeForm.js
+export function useEdgeForm(mode = 'create') {
+  // Form state
+  const edge = ref({/* initial state */})
+  const loading = ref(false)
+  
+  // Validation rules
+  const rules = {/* validation rules */}
+  const v$ = useVuelidate(rules, edge)
+  
+  // Form operations
+  const loadEdge = (edgeData) => {/* ... */}
+  const updateCode = () => {/* ... */}
+  const submitForm = async () => {/* ... */}
+  const resetForm = () => {/* ... */}
+  
+  return {
+    edge,
+    v$,
+    loading,
+    loadEdge,
+    updateCode,
+    submitForm,
+    resetForm
+  }
+}
+```
+
+### Reactive Data Composable
+
+The `useReactiveData` composable integrates with the cache system:
+
+```javascript
+// src/composables/useReactiveData.js
+export function useReactiveData(options) {
+  const {
+    collection,
+    operation,
+    id = null,
+    fetchFunction,
+    processData = data => data
+  } = options
+  
+  // State
+  const loading = ref(true)
+  const error = ref(null)
+  const data = ref(null)
+  
+  // Load and refresh methods
+  const loadData = async () => {/* ... */}
+  const refreshData = async (skipCache = true) => {/* ... */}
+  const updateData = (newData) => {/* ... */}
+  
+  return {
+    data,
+    loading,
+    error,
+    refreshData,
+    updateData
+  }
+}
+```
+
+### UI Composables
+
+Specialized composables for UI functionality:
+
+- `useTheme`: Manages theme settings and provides theme-aware styling
+- `useConfirmation`: Handles confirmation dialogs and user prompts
+- `useDataTable`: Manages PrimeVue DataTable state and operations
+- `useFloorPlanMap`: Handles floor plan visualization using Leaflet
+- `useGlobalMap`: Manages global map visualization with markers
+
+## Composable Integration
+
+Components integrate these composables to access their functionality:
+
+```javascript
+// Example component using composables
+import { defineComponent } from 'vue'
+import { useEdge } from '@/composables/useEdge'
+import { useConfirmation } from '@/composables/useConfirmation'
+
+export default defineComponent({
+  setup() {
+    // Entity operations
+    const { 
+      edges, 
+      loading, 
+      fetchEdges, 
+      deleteEdge 
+    } = useEdge()
+    
+    // Confirmation dialog
+    const { 
+      confirmDelete, 
+      deleteDialog 
+    } = useConfirmation()
+    
+    // Initialize
+    onMounted(() => {
+      fetchEdges()
+    })
+    
+    // Handle delete operation
+    const handleDelete = async (edge) => {
+      confirmDelete(edge, 'Edge', 'code')
+    }
+    
+    // Delete confirmation handler
+    const confirmDeleteEdge = async () => {
+      if (deleteDialog.value.item) {
+        await deleteEdge(
+          deleteDialog.value.item.id, 
+          deleteDialog.value.item.code
+        )
+        await fetchEdges()
+      }
+    }
+    
+    return {
+      edges,
+      loading,
+      handleDelete,
+      deleteDialog,
+      confirmDeleteEdge
+    }
+  }
+})
+```
+
+## Benefits of the Composable Pattern
+
+1. **Code Reuse**: Logic is encapsulated and reused across components
+2. **Separation of Concerns**: Business logic is separated from UI components
+3. **Testability**: Composables can be tested independently
+4. **Maintainability**: Each composable has a single responsibility
+5. **Flexibility**: Composables can be composed together for complex functionality
+6. **Type Safety**: TypeScript integration is enhanced with well-defined return types
+
+## Type Management Integration
+
+Entity composables integrate with the `useTypesStore` for consistent type handling:
+
+```javascript
+// Excerpt from useEdge.js
+export function useEdge() {
+  const typesStore = useTypesStore()
+  
+  // Load edge types and regions
+  typesStore.loadEdgeTypes()
+  typesStore.loadEdgeRegions()
+  
+  // Use computed properties from store
+  const edgeTypes = computed(() => typesStore.edgeTypes)
+  const edgeRegions = computed(() => typesStore.edgeRegions)
+  
+  // Helper functions using store data
+  const getTypeName = (typeCode) => {
+    return typesStore.getTypeName(typeCode, 'edgeTypes')
+  }
+  
+  // Rest of composable...
+}
+```
+
+## Conclusion
+
+The composable pattern is fundamental to the IoT Platform's architecture. It provides a clean, maintainable approach to managing complex state and operations while promoting code reuse. By organizing functionality into focused composables, the application achieves a logical separation of concerns that makes the codebase easier to maintain and extend.
