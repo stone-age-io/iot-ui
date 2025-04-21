@@ -5,16 +5,16 @@
     :class="navClasses"
     v-if="showMobileNav"
   >
-    <div class="flex justify-around items-center py-2">
+    <div class="flex w-full justify-between items-center py-2">
       <router-link 
         v-for="item in navItems" 
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center p-2 touch-target"
+        class="flex flex-col items-center justify-center flex-1 touch-target"
         :class="isActive(item.to) ? activeItemClass : inactiveItemClass"
       >
         <i :class="[item.icon, 'text-lg']"></i>
-        <span class="text-xs mt-1">{{ item.label }}</span>
+        <span class="text-xs mt-1 text-center">{{ item.label }}</span>
       </router-link>
     </div>
   </nav>
@@ -55,7 +55,8 @@ const navItems = [
   { label: 'Map', icon: 'pi pi-map', to: '/map' },
   { label: 'Edges', icon: 'pi pi-server', to: '/edges' },
   { label: 'Locations', icon: 'pi pi-map-marker', to: '/locations' },
-  { label: 'Things', icon: 'pi pi-wifi', to: '/things' }
+  { label: 'Things', icon: 'pi pi-wifi', to: '/things' },
+  { label: 'Clients', icon: 'pi pi-users', to: '/messaging/clients' }
 ]
 
 // Check if route is active
@@ -77,7 +78,7 @@ const isActive = (path) => {
 /* Ensure good touch target size */
 .touch-target {
   min-height: 44px;
-  min-width: 56px;
+  min-width: 44px;
 }
 
 /* Add subtle animation for active state */
