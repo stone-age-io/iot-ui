@@ -46,14 +46,14 @@
             :key="item.to"
             :to="item.to"
             custom
-            v-slot="{ href, navigate, isActive }"
+            v-slot="{ href, navigate, isActive, isExactActive }"
           >
             <a
               :href="href"
-              @click="navigate"
+              @click="(event) => handleNavigation(event, navigate)"
               class="flex items-center px-3 py-2 rounded-md transition-colors"
               :class="[
-                isActive
+                isRouteActive(item.to, isActive, isExactActive)
                   ? activeItemClass
                   : inactiveItemClass
               ]"
@@ -62,7 +62,7 @@
                 :class="[
                   item.icon, 
                   'text-lg', 
-                  isActive 
+                  isRouteActive(item.to, isActive, isExactActive)
                     ? 'text-primary-600 dark:text-primary-400' 
                     : 'text-gray-500 dark:text-gray-400'
                 ]"
@@ -98,6 +98,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Button from 'primevue/button'
 import { useTheme } from '../../composables/useTheme'
+import { useRoute } from 'vue-router'
 
 const props = defineProps({
   open: {
@@ -114,6 +115,29 @@ const emit = defineEmits(['close', 'toggle-collapse'])
 
 // Access the theme system
 const { isDarkMode, themeValue } = useTheme()
+// Get current route for active state determination
+const route = useRoute()
+
+// Custom function to determine if a route is active
+const isRouteActive = (to, isActive, isExactActive) => {
+  // For root path ("/"), only use exact matching
+  if (to === '/') {
+    return isExactActive
+  }
+  // For all other paths, use normal matching
+  return isActive
+}
+
+// Custom method to handle navigation and close sidebar in mobile view
+const handleNavigation = (event, navigate) => {
+  // Use the standard navigation function
+  navigate(event);
+  
+  // If we're in mobile view, automatically close the sidebar
+  if (isMobileView.value) {
+    emit('close');
+  }
+}
 
 // Theme-specific classes
 const activeItemClass = computed(() => 
