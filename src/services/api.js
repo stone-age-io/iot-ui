@@ -1,4 +1,4 @@
-// Updated src/services/api.js with stale-while-revalidate caching and user segmentation
+// Updated src/services/api.js with reactive store integration
 import axios from 'axios'
 import configService from './config/configService'
 import { generateCacheKey, getCache, setCache, getCacheTimestamp } from '../utils/cacheUtils'
@@ -77,7 +77,7 @@ apiService.interceptors.response.use(
 )
 
 /**
- * Wrapper for API calls with stale-while-revalidate caching
+ * Wrapper for API calls with reactive store-based caching
  * @param {Function} apiCall - Function that performs the API call
  * @param {Object} cacheOptions - Cache configuration
  * @returns {Promise} - Promise that resolves with the API response
@@ -89,39 +89,70 @@ export const withCache = (apiCall, cacheOptions) => {
       operation,
       id = null,
       params = null,
-      skipCache = false,
-      userId = null, // Added userId parameter for cache segmentation
-      updateCallback = null // Callback for UI updates
+      skipCache = false
     } = cacheOptions;
+    
+    // Get the cache store
+    let cacheStore = null;
+    try {
+      const { useCacheStore } = await import('../stores/cacheStore');
+      cacheStore = useCacheStore();
+    } catch (e) {
+      console.warn('Cache store not available:', e);
+    }
     
     // Skip caching if disabled globally or for this specific call
     if (!configService.isCacheEnabled() || skipCache) {
-      return apiCall();
+      // Update timestamp in store when doing a fresh call
+      if (cacheStore && collectionName) {
+        cacheStore.updateTimestamp(collectionName);
+      }
+      
+      // Make the API call
+      const response = await apiCall();
+      
+      // Store the response data in the cache store
+      if (cacheStore && collectionName && operation) {
+        cacheStore.storeData(collectionName, operation, id, response.data);
+      }
+      
+      return response;
     }
     
-    // Generate cache key with user segmentation
-    const cacheKey = generateCacheKey(collectionName, operation, id, params, userId);
+    // Generate cache key for localStorage
+    const cacheKey = generateCacheKey(collectionName, operation, id, params);
     
     // Try to get from cache first
     const cachedData = getCache(cacheKey);
     const cachedTimestamp = getCacheTimestamp(cacheKey);
     
     if (cachedData) {
-      // Start background refresh immediately
+      // Update cache store with the cached timestamp and data
+      if (cacheStore && collectionName && operation) {
+        cacheStore.updateTimestamp(collectionName, cachedTimestamp);
+        cacheStore.storeData(collectionName, operation, id, cachedData);
+      }
+      
+      // Start background refresh
+      if (cacheStore) cacheStore.startRefresh();
+      
       setTimeout(() => {
         apiCall()
           .then(freshResponse => {
-            // Always update cache with fresh data
+            // Update localStorage cache with fresh data
             setCache(cacheKey, freshResponse.data);
             
-            // Update UI with fresh data if callback provided
-            if (updateCallback) {
-              updateCallback(freshResponse.data);
+            // Update timestamp and data in the reactive store
+            if (cacheStore && collectionName && operation) {
+              cacheStore.updateTimestamp(collectionName);
+              cacheStore.storeData(collectionName, operation, id, freshResponse.data);
+              cacheStore.endRefresh();
             }
           })
           .catch(error => {
             // Log error but don't affect user experience
             console.warn('Background cache refresh failed:', error);
+            if (cacheStore) cacheStore.endRefresh();
           });
       }, 10);
       
@@ -135,10 +166,18 @@ export const withCache = (apiCall, cacheOptions) => {
     
     // No cache hit, perform actual API call
     try {
+      if (cacheStore) cacheStore.startRefresh();
       const response = await apiCall();
       
-      // Cache the successful response
+      // Cache the successful response in localStorage
       setCache(cacheKey, response.data);
+      
+      // Update timestamp and data in the store
+      if (cacheStore && collectionName && operation) {
+        cacheStore.updateTimestamp(collectionName);
+        cacheStore.storeData(collectionName, operation, id, response.data);
+        cacheStore.endRefresh();
+      }
       
       // Return response with current timestamp
       return {
@@ -147,6 +186,9 @@ export const withCache = (apiCall, cacheOptions) => {
         fromCache: false
       };
     } catch (error) {
+      // End refreshing state
+      if (cacheStore) cacheStore.endRefresh();
+      
       // Don't cache errors
       throw error;
     }
