@@ -228,8 +228,7 @@ const columns = [
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'region', header: 'Region', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'active', header: 'Status', sortable: true }
 ]
 
 // Load types for filters

@@ -58,11 +58,6 @@
             </span>
           </template>
           
-          <!-- Created column with formatted date -->
-          <template #created-body="{ data }">
-            <span :class="textColor.secondary">{{ formatDate(data.created) }}</span>
-          </template>
-          
           <!-- Actions column -->
           <template #row-actions="{ data }">
             <div class="flex gap-1 justify-center">
@@ -141,8 +136,7 @@ const {
 const columns = [
   { field: 'username', header: 'Username', sortable: true },
   { field: 'role_id', header: 'Role', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'active', header: 'Status', sortable: true }
 ]
 
 // Delete confirmation dialog

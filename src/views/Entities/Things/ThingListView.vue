@@ -77,11 +77,6 @@
             </span>
           </template>
           
-          <!-- Created Date column -->
-          <template #created-body="{ data }">
-            <div :class="textColor.secondary">{{ formatDate(data.created) }}</div>
-          </template>
-          
           <!-- Row actions -->
           <template #row-actions="{ data }">
             <div class="flex gap-1 justify-center">
@@ -248,8 +243,7 @@ const columns = [
   { field: 'thing_type', header: 'Type', sortable: true },
   { field: 'location_id', header: 'Location', sortable: true },
   { field: 'edge_id', header: 'Edge', sortable: true },
-  { field: 'active', header: 'Status', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'active', header: 'Status', sortable: true }
 ]
 
 // Filter state

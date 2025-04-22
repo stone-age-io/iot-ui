@@ -41,12 +41,6 @@
               >
                 {{ getTopicCount(data.publish_permissions) }}
               </span>
-              <span 
-                v-if="getTopicCount(data.publish_permissions) > 0" 
-                :class="['ml-2 text-sm', textColor.secondary]"
-              >
-                {{ getTopicSample(data.publish_permissions) }}
-              </span>
             </div>
           </template>
           
@@ -60,12 +54,6 @@
                 ]"
               >
                 {{ getTopicCount(data.subscribe_permissions) }}
-              </span>
-              <span 
-                v-if="getTopicCount(data.subscribe_permissions) > 0" 
-                :class="['ml-2 text-sm', textColor.secondary]"
-              >
-                {{ getTopicSample(data.subscribe_permissions) }}
               </span>
             </div>
           </template>

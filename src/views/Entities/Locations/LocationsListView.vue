@@ -58,7 +58,6 @@
               @click.stop
             >
               {{ data.expand.parent_id.code }}
-              <span :class="['ml-1 text-xs', textColor.secondary]">({{ data.expand.parent_id.name }})</span>
             </router-link>
             <span v-else :class="textColor.secondary">-</span>
           </template>
@@ -74,13 +73,6 @@
               {{ data.expand.edge_id.code }}
             </router-link>
             <span v-else :class="textColor.secondary">Unknown Edge</span>
-          </template>
-          
-          <!-- Created date column -->
-          <template #created-body="{ data }">
-            <div :class="['text-sm', textColor.secondary]">
-              {{ formatDate(data.created) }}
-            </div>
           </template>
           
           <!-- Row actions -->
@@ -258,8 +250,7 @@ const columns = [
   { field: 'path', header: 'Path', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'parent_id', header: 'Parent', sortable: true },
-  { field: 'edge_id', header: 'Edge', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'edge_id', header: 'Edge', sortable: true }
 ]
 
 // Filter state
