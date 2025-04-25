@@ -304,6 +304,122 @@ export function useNatsMessages(maxMessages = 100) {
     return String(data)
   }
   
+  /**
+   * Creates a minimized representation of message data
+   * Optimized for compact display while preserving key information
+   * 
+   * @param {any} data - Message data to extract payload from
+   * @param {number} maxLength - Maximum length for truncated output
+   * @returns {string} - Formatted payload
+   */
+  const extractPayload = (data, maxLength = 150) => {
+    if (!data) return "{}";
+    
+    try {
+      // Parse if it's a string
+      let parsed = data;
+      if (typeof data === 'string') {
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          // If not valid JSON, return the string truncated
+          return data.length > maxLength 
+            ? data.substring(0, maxLength) + '...'
+            : data;
+        }
+      }
+      
+      // Create a compact representation focusing on essential data
+      const compactView = {};
+      
+      // Priority fields to extract (in order of importance)
+      const priorityFields = ['type', 'event', 'action', 'command', 'status'];
+      const dataFields = ['payload', 'data', 'message', 'content', 'body', 'value'];
+      const metaFields = ['id', 'timestamp', 'ts', 'time', 'date', 'created'];
+      
+      // Extract type information (high priority)
+      for (const field of priorityFields) {
+        if (parsed[field] !== undefined) {
+          compactView[field] = parsed[field];
+          break; // Only get the first type field
+        }
+      }
+      
+      // Extract data content (second priority)
+      for (const field of dataFields) {
+        if (parsed[field] !== undefined) {
+          const fieldValue = parsed[field];
+          
+          // Handle nested objects by simplifying them
+          if (typeof fieldValue === 'object' && fieldValue !== null) {
+            // For arrays, show length and some items
+            if (Array.isArray(fieldValue)) {
+              compactView[field] = fieldValue.length > 3
+                ? `[${fieldValue.slice(0, 2).map(val => JSON.stringify(val)).join(', ')}, ... (${fieldValue.length} items)]`
+                : fieldValue;
+            } else {
+              // For objects, show a simplified version
+              const keys = Object.keys(fieldValue);
+              compactView[field] = keys.length > 3
+                ? `{${keys.slice(0, 2).join(', ')}, ... (${keys.length} keys)}`
+                : fieldValue;
+            }
+          } else {
+            compactView[field] = fieldValue;
+          }
+          
+          break; // Only include one data field
+        }
+      }
+      
+      // Add one meta field if available
+      for (const field of metaFields) {
+        if (parsed[field] !== undefined) {
+          compactView[field] = parsed[field];
+          break; // Only include one meta field
+        }
+      }
+      
+      // If we don't have any fields yet, show top-level structure
+      if (Object.keys(compactView).length === 0) {
+        if (Array.isArray(parsed)) {
+          return `Array with ${parsed.length} items`;
+        } else if (typeof parsed === 'object' && parsed !== null) {
+          const keys = Object.keys(parsed);
+          const preview = keys.length > 3
+            ? `{${keys.slice(0, 3).join(', ')}, ...}`
+            : JSON.stringify(parsed, null, 2);
+          return preview;
+        } else {
+          return String(parsed);
+        }
+      }
+      
+      // Format the result - stringify with limits
+      const result = JSON.stringify(compactView, null, 2);
+      if (result.length > maxLength) {
+        // Simple truncation for now
+        return result.substring(0, maxLength) + '...';
+      }
+      
+      return result;
+    } catch (e) {
+      console.error('Error processing message payload:', e);
+      // Fallback to string representation
+      if (typeof data === 'object') {
+        try {
+          const str = JSON.stringify(data);
+          return str.length > maxLength 
+            ? str.substring(0, maxLength) + '...' 
+            : str;
+        } catch {
+          return String(data);
+        }
+      }
+      return String(data);
+    }
+  };
+  
   // Generate human-readable timestamp
   const formatTimestamp = (timestamp, includeDate = false) => {
     if (!timestamp) return ''
@@ -480,6 +596,7 @@ export function useNatsMessages(maxMessages = 100) {
     togglePause,
     clearMessages,
     formatMessageData,
+    extractPayload,
     formatTimestamp,
     goToPage,
     nextPage,
