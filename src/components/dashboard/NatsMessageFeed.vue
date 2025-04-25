@@ -105,28 +105,36 @@
             class="message-item p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
           >
             <!-- Message Header with Topic and Actions -->
-            <div class="flex justify-between items-center mb-2">
-              <div class="badge badge-blue text-xs py-0.5 px-2 truncate max-w-[150px] sm:max-w-[200px]">
-                {{ message.topic }}
-              </div>
-              <div class="flex items-center space-x-1 shrink-0 ml-2">
+            <div class="flex flex-col mb-2">
+              <!-- Timestamp and Actions in one row -->
+              <div class="flex justify-between items-center mb-1">
                 <small class="text-xs text-theme-secondary whitespace-nowrap">
                   {{ formatTimestamp(message.timestamp) }}
                 </small>
-                <Button 
-                  icon="pi pi-copy" 
-                  class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
-                  v-tooltip.top="'Copy full message'" 
-                  @click="copyMessage(message)"
-                  style="width: 24px; height: 24px; padding: 0;"
-                />
-                <Button 
-                  :icon="expandedMessages.has(message.id) ? 'pi pi-minus' : 'pi pi-plus'" 
-                  class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
-                  v-tooltip.top="expandedMessages.has(message.id) ? 'Collapse' : 'Expand'" 
-                  @click="toggleExpand(message.id)"
-                  style="width: 24px; height: 24px; padding: 0;"
-                />
+                <div class="flex items-center space-x-1 shrink-0">
+                  <Button 
+                    icon="pi pi-copy" 
+                    class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
+                    v-tooltip.top="'Copy full message'" 
+                    @click="copyMessage(message)"
+                    style="width: 24px; height: 24px; padding: 0;"
+                  />
+                  <Button 
+                    :icon="expandedMessages.has(message.id) ? 'pi pi-minus' : 'pi pi-plus'" 
+                    class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
+                    v-tooltip.top="expandedMessages.has(message.id) ? 'Collapse' : 'Expand'" 
+                    @click="toggleExpand(message.id)"
+                    style="width: 24px; height: 24px; padding: 0;"
+                  />
+                </div>
+              </div>
+              
+              <!-- Topic with intelligent display -->
+              <div 
+                class="topic-container py-1 px-2 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded"
+                v-tooltip.top="message.topic"
+              >
+                <span class="topic-display">{{ formatTopicForDisplay(message.topic) }}</span>
               </div>
             </div>
             
@@ -176,6 +184,35 @@ const clipboardFallback = ref(null);
 const messagesContainer = ref(null);
 const messageListHeight = ref(300); // Default height
 
+// Function to intelligently format topics for display
+const formatTopicForDisplay = (topic) => {
+  // Check if topic exceeds a certain length
+  if (!topic) return '';
+  
+  // Try to intelligently format topic for display:
+  // 1. For long topics, show clear start/end parts
+  if (topic.length > 60) {
+    // Find the last part of the topic (after the last dot or slash)
+    const lastDotIndex = topic.lastIndexOf('.');
+    const lastSlashIndex = topic.lastIndexOf('/');
+    const lastSeparatorIndex = Math.max(lastDotIndex, lastSlashIndex);
+    
+    if (lastSeparatorIndex > 0 && lastSeparatorIndex > topic.length - 30) {
+      // Show first 30 chars + ellipsis + last part (after the last separator)
+      const prefix = topic.substring(0, 30);
+      const suffix = topic.substring(lastSeparatorIndex);
+      return `${prefix}...${suffix}`;
+    }
+    
+    // For extremely long topics without structure, just show truncated version 
+    // with ability to see full via tooltip
+    return topic;
+  }
+  
+  // For short topics, show the whole thing
+  return topic;
+};
+
 // Preserve expanded state across page changes
 const expandedMessagesByPage = ref(new Map());
 
@@ -197,6 +234,7 @@ const {
   togglePause,
   clearMessages,
   formatMessageData,
+  extractPayload,
   formatTimestamp,
   nextPage,
   prevPage
@@ -249,62 +287,7 @@ const setItemHeight = (el) => {
   el.style.height = height + 'px';
 };
 
-// Extract payload for compact display
-const extractPayload = (data) => {
-  if (!data) return "{}";
-  
-  try {
-    if (typeof data === 'string') {
-      data = JSON.parse(data);
-    }
-    
-    // Create a compact representation with type and payload
-    const compactView = {};
-    
-    // Always include type if available
-    if (data.type) {
-      compactView.type = data.type;
-    }
-    
-    // Include payload if it exists
-    if (data.payload) {
-      compactView.payload = data.payload;
-    } else {
-      // If no direct payload, look for other key fields
-      
-      // Add a few important fields that might be useful
-      if (data.id) compactView.id = data.id;
-      if (data.ts) compactView.ts = data.ts;
-      
-      // If we don't have any fields yet, include some core data
-      if (Object.keys(compactView).length <= 1) { // 1 because we might already have type
-        // Look for other fields that might contain data
-        if (data.context) compactView.context = data.context;
-        if (data.data) compactView.data = data.data;
-        if (data.message) compactView.message = data.message;
-      }
-    }
-    
-    // If we have fields, return the compact view
-    if (Object.keys(compactView).length > 0) {
-      return JSON.stringify(compactView, null, 2);
-    }
-    
-    // If we still don't have anything, just show abbreviated full message
-    // Limit to a reasonable preview size
-    const fullJson = JSON.stringify(data, null, 2);
-    if (fullJson.length > 150) {
-      return fullJson.substring(0, 150) + '...';
-    }
-    return fullJson;
-  } catch (e) {
-    // If anything goes wrong, just show the raw data
-    if (typeof data === 'object') {
-      return JSON.stringify(data, null, 2);
-    }
-    return String(data);
-  }
-};
+
 
 // Toggle expanded state for a message
 const toggleExpand = (messageId) => {
