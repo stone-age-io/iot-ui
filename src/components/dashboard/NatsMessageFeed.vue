@@ -132,12 +132,16 @@
             
             <!-- Message Payload Only (Default View) -->
             <div v-if="!expandedMessages.has(message.id)" class="message-payload">
-              <pre class="text-xs overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded font-mono break-words whitespace-pre-wrap" style="max-height: 100px;">{{ extractPayload(message.data) }}</pre>
+              <div class="code-container bg-gray-50 dark:bg-gray-900 rounded">
+                <pre class="text-xs p-2 font-mono break-words whitespace-pre-wrap">{{ extractPayload(message.data) }}</pre>
+              </div>
             </div>
             
             <!-- Full Message Details (Expanded View) -->
             <div v-else class="message-full transition-all duration-200">
-              <pre class="text-xs overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded font-mono break-words whitespace-pre-wrap" style="max-height: 300px;">{{ formatMessageData(message.data) }}</pre>
+              <div class="code-container bg-gray-50 dark:bg-gray-900 rounded">
+                <pre class="text-xs p-2 font-mono break-words whitespace-pre-wrap">{{ formatMessageData(message.data) }}</pre>
+              </div>
             </div>
           </div>
         </div>
