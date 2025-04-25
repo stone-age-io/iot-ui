@@ -1,5 +1,5 @@
 // src/composables/useNatsMessages.js
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import natsService from '../services/nats/natsService'
 import { natsConfigService } from '../services/nats/natsConfigService'
@@ -7,8 +7,7 @@ import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for managing NATS messages subscriptions and display
- * Provides functionality to subscribe to topics, manage received messages,
- * and control message flow (pause/resume)
+ * Improved to better handle pagination and UI updates
  * 
  * @param {number} maxMessages - Maximum number of messages to store
  * @returns {Object} - Messages state and methods
@@ -29,6 +28,7 @@ export function useNatsMessages(maxMessages = 100) {
   const activeSubscriptionIds = ref(new Set()) // Track active subscription IDs
   const isSubscribed = ref(false) // Flag to track if subscriptions are active
   const connectionReady = ref(natsService.isConnected()) // Track connection state
+  const isUpdating = ref(false) // Flag to prevent multiple concurrent updates
   
   // Get saved topics from config
   const loadTopics = () => {
@@ -69,8 +69,8 @@ export function useNatsMessages(maxMessages = 100) {
             return
           }
           
-          // Add message to list
-          addMessage({
+          // Add message to list with debounced updates
+          addMessageWithDebounce({
             id: generateMessageId(),
             topic: subject,
             data: message,
@@ -218,7 +218,56 @@ export function useNatsMessages(maxMessages = 100) {
     })
   }
   
-  // Add a message to the list
+  // Debounce timer for batch updates
+  let addMessageTimer = null
+  const pendingMessages = []
+  
+  // Add a message to the list with debouncing
+  const addMessageWithDebounce = (message) => {
+    // Add to pending messages
+    pendingMessages.push(message)
+    
+    // Clear existing timer
+    if (addMessageTimer) {
+      clearTimeout(addMessageTimer)
+    }
+    
+    // Set new timer to batch updates
+    addMessageTimer = setTimeout(() => {
+      // Process all pending messages
+      if (pendingMessages.length > 0) {
+        // Avoid processing if already updating
+        if (isUpdating.value) return
+        
+        isUpdating.value = true
+        
+        // Add all pending messages in a single update
+        const messagesToAdd = [...pendingMessages]
+        pendingMessages.length = 0 // Clear pending messages
+        
+        // Batch add messages to minimize reactivity triggers
+        nextTick(() => {
+          // Add in correct order (newest first)
+          messages.value = [...messagesToAdd.reverse(), ...messages.value]
+          
+          // Limit the number of messages
+          if (messages.value.length > maxMessages) {
+            messages.value = messages.value.slice(0, maxMessages)
+          }
+          
+          // Important: Only update page if on first page and not paused
+          // This prevents unwanted page shifts when viewing older messages
+          if (currentPage.value === 1 && !paused.value) {
+            refreshPaginatedMessages()
+          }
+          
+          isUpdating.value = false
+        })
+      }
+    }, 100) // 100ms debounce
+  }
+  
+  // Add a single message to the list (non-debounced version)
   const addMessage = (message) => {
     // Add to beginning of array (newest first)
     messages.value.unshift(message)
@@ -237,6 +286,7 @@ export function useNatsMessages(maxMessages = 100) {
   // Clear all messages
   const clearMessages = () => {
     messages.value = []
+    currentPage.value = 1
     
     toast.add({
       severity: 'info',
@@ -282,11 +332,28 @@ export function useNatsMessages(maxMessages = 100) {
     })
   }
   
+  // Computed for paginated messages with memoization
+  const paginatedMessagesCache = ref(null)
+  const currentPaginationKey = ref('')
+  
+  // Helper to refresh paginated messages
+  const refreshPaginatedMessages = () => {
+    const key = `${currentPage.value}-${pageSize.value}-${messages.value.length}`
+    
+    // Only recalculate if needed
+    if (key !== currentPaginationKey.value || !paginatedMessagesCache.value) {
+      const start = (currentPage.value - 1) * pageSize.value
+      const end = start + pageSize.value
+      paginatedMessagesCache.value = messages.value.slice(start, end)
+      currentPaginationKey.value = key
+    }
+    
+    return paginatedMessagesCache.value
+  }
+  
   // Computed for paginated messages
   const paginatedMessages = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return messages.value.slice(start, end)
+    return refreshPaginatedMessages()
   })
   
   // Computed for total pages
@@ -294,25 +361,31 @@ export function useNatsMessages(maxMessages = 100) {
     return Math.ceil(messages.value.length / pageSize.value) || 1
   })
   
-  // Go to specific page
+  // Go to specific page with smooth transitions
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
+      // Save current value for transition comparison
+      const oldPage = currentPage.value
+      
+      // Set new page
       currentPage.value = page
+      
+      // Clear cache to force recalculation
+      currentPaginationKey.value = ''
+      
+      return true
     }
+    return false
   }
   
   // Go to next page
   const nextPage = () => {
-    if (currentPage.value < totalPages.value) {
-      currentPage.value++
-    }
+    return goToPage(currentPage.value + 1)
   }
   
   // Go to previous page
   const prevPage = () => {
-    if (currentPage.value > 1) {
-      currentPage.value--
-    }
+    return goToPage(currentPage.value - 1)
   }
   
   // Reset all state to initial values
@@ -335,17 +408,24 @@ export function useNatsMessages(maxMessages = 100) {
     }
   }
   
-  // Watch for changes in messages and update current page if needed
-  watch(messages, () => {
+  // Watch for changes in messages to handle pagination properly
+  watch(() => messages.value.length, () => {
     // If we're on a page that no longer exists, go to the last page
     if (currentPage.value > totalPages.value && totalPages.value > 0) {
-      currentPage.value = totalPages.value
+      // Use nextTick to prevent issues with cascading updates
+      nextTick(() => {
+        currentPage.value = totalPages.value
+        
+        // Clear cache to force recalculation
+        currentPaginationKey.value = ''
+      })
     }
-    
-    // If we're not paused and new messages arrive, go to first page to show them
-    if (!paused.value && messages.value.length > 0) {
-      currentPage.value = 1
-    }
+  })
+  
+  // Watch for page size changes
+  watch(pageSize, () => {
+    // Clear cache to force recalculation
+    currentPaginationKey.value = ''
   })
   
   // Setup on mount
@@ -358,7 +438,7 @@ export function useNatsMessages(maxMessages = 100) {
       subscribeToAllTopics()
     }
     
-    // Debug - Check if we have topics configured
+    // Load topics from config
     loadTopics()
   })
   
@@ -366,6 +446,11 @@ export function useNatsMessages(maxMessages = 100) {
   onUnmounted(() => {
     // Remove connection listener
     natsService.removeStatusListener(connectionListener)
+    
+    // Clear any pending timers
+    if (addMessageTimer) {
+      clearTimeout(addMessageTimer)
+    }
     
     // Unsubscribe from all topics and reset state
     unsubscribeFromAllTopics().then(() => {

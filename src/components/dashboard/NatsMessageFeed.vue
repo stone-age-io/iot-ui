@@ -94,52 +94,54 @@
     </div>
     
     <!-- Messages - Compact view -->
-    <div v-else class="messages-container">
-      <TransitionGroup 
-        name="message-list" 
-        tag="div" 
-        class="space-y-2"
-      >
-        <div 
-          v-for="message in paginatedMessages" 
-          :key="message.id"
-          class="message-item p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-        >
-          <!-- Message Header with Topic and Actions -->
-          <div class="flex justify-between items-center mb-1">
-            <div class="badge badge-blue text-xs py-0.5 px-2">{{ message.topic }}</div>
-            <div class="flex items-center space-x-1">
-              <small class="text-xs text-theme-secondary mr-1">
-                {{ formatTimestamp(message.timestamp) }}
-              </small>
-              <Button 
-                icon="pi pi-copy" 
-                class="p-button-text p-button-rounded p-button-sm" 
-                v-tooltip.top="'Copy full message'" 
-                @click="copyMessage(message)"
-                style="width: 24px; height: 24px; padding: 0;"
-              />
-              <Button 
-                :icon="expandedMessages.has(message.id) ? 'pi pi-minus' : 'pi pi-plus'" 
-                class="p-button-text p-button-rounded p-button-sm" 
-                v-tooltip.top="expandedMessages.has(message.id) ? 'Collapse' : 'Expand'" 
-                @click="toggleExpand(message.id)"
-                style="width: 24px; height: 24px; padding: 0;"
-              />
+    <div v-else ref="messagesContainer" class="messages-container">
+      <!-- Fixed height container to prevent layout shifts -->
+      <div class="messages-viewport" :style="{ height: messageListHeight + 'px' }">
+        <div class="space-y-2 relative">
+          <div 
+            v-for="message in paginatedMessages" 
+            :key="message.id"
+            :data-message-id="message.id"
+            class="message-item p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          >
+            <!-- Message Header with Topic and Actions -->
+            <div class="flex justify-between items-center mb-2">
+              <div class="badge badge-blue text-xs py-0.5 px-2 truncate max-w-[150px] sm:max-w-[200px]">
+                {{ message.topic }}
+              </div>
+              <div class="flex items-center space-x-1 shrink-0 ml-2">
+                <small class="text-xs text-theme-secondary whitespace-nowrap">
+                  {{ formatTimestamp(message.timestamp) }}
+                </small>
+                <Button 
+                  icon="pi pi-copy" 
+                  class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
+                  v-tooltip.top="'Copy full message'" 
+                  @click="copyMessage(message)"
+                  style="width: 24px; height: 24px; padding: 0;"
+                />
+                <Button 
+                  :icon="expandedMessages.has(message.id) ? 'pi pi-minus' : 'pi pi-plus'" 
+                  class="p-button-text p-button-rounded p-button-sm flex-shrink-0" 
+                  v-tooltip.top="expandedMessages.has(message.id) ? 'Collapse' : 'Expand'" 
+                  @click="toggleExpand(message.id)"
+                  style="width: 24px; height: 24px; padding: 0;"
+                />
+              </div>
+            </div>
+            
+            <!-- Message Payload Only (Default View) -->
+            <div v-if="!expandedMessages.has(message.id)" class="message-payload">
+              <pre class="text-xs overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded font-mono break-words whitespace-pre-wrap" style="max-height: 100px;">{{ extractPayload(message.data) }}</pre>
+            </div>
+            
+            <!-- Full Message Details (Expanded View) -->
+            <div v-else class="message-full transition-all duration-200">
+              <pre class="text-xs overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded font-mono break-words whitespace-pre-wrap" style="max-height: 300px;">{{ formatMessageData(message.data) }}</pre>
             </div>
           </div>
-          
-          <!-- Message Payload Only (Default View) -->
-          <div v-if="!expandedMessages.has(message.id)" class="message-payload">
-            <pre class="text-xs overflow-x-auto p-1.5 bg-gray-50 dark:bg-gray-900 rounded font-mono" style="max-height: 100px;">{{ extractPayload(message.data) }}</pre>
-          </div>
-          
-          <!-- Full Message Details (Expanded View) -->
-          <div v-else class="message-full transition-all duration-200">
-            <pre class="text-xs overflow-x-auto p-1.5 bg-gray-50 dark:bg-gray-900 rounded font-mono" style="max-height: 300px;">{{ formatMessageData(message.data) }}</pre>
-          </div>
         </div>
-      </TransitionGroup>
+      </div>
     </div>
     
     <!-- Hidden textarea for clipboard copy fallback -->
@@ -151,7 +153,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, nextTick, watch, computed } from 'vue';
 import { useNatsMessages } from '../../composables/useNatsMessages';
 import { useToast } from 'primevue/usetoast';
 import NatsStatus from '../nats/NatsStatus.vue';
@@ -167,8 +169,13 @@ const showDebugInfo = ref(false);
 const expandedMessages = ref(new Set());
 const toast = useToast();
 const clipboardFallback = ref(null);
+const messagesContainer = ref(null);
+const messageListHeight = ref(300); // Default height
 
-// Use the NATS messages composable
+// Preserve expanded state across page changes
+const expandedMessagesByPage = ref(new Map());
+
+// Use the NATS messages composable with a maximum message limit
 const { 
   messages,
   paginatedMessages,
@@ -190,6 +197,53 @@ const {
   nextPage,
   prevPage
 } = useNatsMessages(100);
+
+// Update the container height based on content
+const updateListHeight = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      const container = messagesContainer.value.querySelector('.space-y-2');
+      if (container) {
+        // Get natural height but set a min/max
+        const height = Math.max(
+          200, // Min height
+          Math.min(
+            container.scrollHeight, 
+            500 // Max height
+          )
+        );
+        messageListHeight.value = height;
+      }
+    }
+  });
+};
+
+// Watch for page changes to save/restore expanded state
+// IMPORTANT: Define this watch AFTER updateListHeight is defined
+watch(currentPage, (newPage, oldPage) => {
+  // Save current expanded state
+  expandedMessagesByPage.value.set(oldPage, new Set(expandedMessages.value));
+  
+  // Clear current expanded state
+  expandedMessages.value.clear();
+  
+  // Restore expanded state for new page if exists
+  const savedState = expandedMessagesByPage.value.get(newPage);
+  if (savedState) {
+    expandedMessages.value = new Set(savedState);
+  }
+  
+  // Reset container height for smooth transition
+  nextTick(() => {
+    updateListHeight();
+  });
+});
+
+// Set item height for smooth animations
+const setItemHeight = (el) => {
+  const height = el.offsetHeight;
+  el.style.height = height + 'px';
+};
 
 // Extract payload for compact display
 const extractPayload = (data) => {
@@ -255,6 +309,11 @@ const toggleExpand = (messageId) => {
   } else {
     expandedMessages.value.add(messageId);
   }
+  
+  // Update list height after DOM updates
+  nextTick(() => {
+    updateListHeight();
+  });
 };
 
 // Copy full message to clipboard
@@ -351,6 +410,19 @@ const showCopyFailed = () => {
   });
 };
 
+// Initialize component - NOTE: All watchers are defined here to ensure proper initialization order
+onMounted(() => {
+  // Calculate initial height
+  updateListHeight();
+  
+  // Add watcher for paginated messages AFTER component is mounted
+  watch(() => paginatedMessages.value, () => {
+    nextTick(() => {
+      updateListHeight();
+    });
+  }, { deep: true });
+});
+
 // Clean up on component unmount
 onBeforeUnmount(() => {
   unsubscribeFromAllTopics();
@@ -362,6 +434,20 @@ onBeforeUnmount(() => {
   @apply flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400 text-sm;
 }
 
+.messages-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.375rem;
+}
+
+.messages-viewport {
+  width: 100%;
+  overflow-y: auto;
+  transition: height 0.2s ease-in-out;
+}
+
+/* Improved transition animations */
 .message-list-enter-active,
 .message-list-leave-active {
   transition: all 0.3s ease;
@@ -375,6 +461,12 @@ onBeforeUnmount(() => {
 .message-list-leave-to {
   opacity: 0;
   transform: translateY(10px);
+  position: absolute; /* Prevent layout shifts during leave animations */
+  width: 100%;
+}
+
+.message-list-move {
+  transition: transform 0.3s ease;
 }
 
 pre {
