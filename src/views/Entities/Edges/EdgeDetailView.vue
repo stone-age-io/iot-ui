@@ -109,6 +109,18 @@
                   </div>
                 </div>
                 
+                <!-- Created Date -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Created</div>
+                  <div :class="textColor.secondary">{{ formatDate(edge.created) }}</div>
+                </div>
+                
+                <!-- Last Updated -->
+                <div class="detail-field">
+                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
+                  <div :class="textColor.secondary">{{ formatDate(edge.updated) }}</div>
+                </div>
+                
                 <!-- Metadata (if any) -->
                 <div v-if="hasEdgeMetadata" class="md:col-span-2">
                   <div :class="['field-label', textColor.secondary]">Metadata</div>
@@ -162,18 +174,6 @@
                     class="p-button-text p-button-sm mt-2"
                     @click="navigateToThings(edge.id)"
                   />
-                </div>
-                
-                <!-- Created Date -->
-                <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Created</div>
-                  <div :class="textColor.secondary">{{ formatDate(edge.created) }}</div>
-                </div>
-                
-                <!-- Last Updated -->
-                <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
-                  <div :class="textColor.secondary">{{ formatDate(edge.updated) }}</div>
                 </div>
               </div>
             </template>

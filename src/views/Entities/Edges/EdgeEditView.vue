@@ -42,7 +42,7 @@
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
-            @submit="submitForm"
+            @submit="handleSubmit"
             @cancel="$router.back()"
           >
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -131,6 +131,27 @@
                 />
               </FormField>
               
+              <!-- Metadata -->
+              <FormField
+                id="metadata"
+                label="Metadata"
+                help-text="Edit or update JSON metadata for this edge"
+                class="md:col-span-2"
+              >
+                <Textarea
+                  id="metadata"
+                  v-model="metadataJson"
+                  rows="5"
+                  placeholder='{"key": "value", "nested": {"data": "value"}}'
+                  class="w-full form-input font-mono"
+                  :class="{ 'p-invalid': metadataError }"
+                  @change="validateMetadataJson"
+                />
+                <small v-if="metadataError" class="p-error block mt-1">
+                  {{ metadataError }}
+                </small>
+              </FormField>
+              
               <!-- Active Status -->
               <FormField
                 id="active"
@@ -174,7 +195,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useEdgeForm } from '../../../composables/useEdgeForm'
@@ -210,8 +231,62 @@ const {
   edgeTypes, 
   edgeRegions,
   loadEdge, 
-  submitForm 
+  submitForm,
+  validateMetadata 
 } = useEdgeForm('edit')
+
+// Metadata handling
+const metadataJson = ref('{}')
+const metadataError = ref('')
+const originalMetadata = ref({})
+
+// Validate JSON metadata and update edge object
+const validateMetadataJson = () => {
+  if (!metadataJson.value.trim()) {
+    // Empty string is allowed, convert to empty object
+    edge.value.metadata = {}
+    metadataError.value = ''
+    return
+  }
+  
+  try {
+    const parsedMetadata = JSON.parse(metadataJson.value)
+    // Successful parse, update edge object
+    edge.value.metadata = parsedMetadata
+    metadataError.value = ''
+  } catch (err) {
+    metadataError.value = 'Invalid JSON format. Please check your syntax.'
+    // Don't update edge.metadata with invalid JSON
+  }
+}
+
+// Handle form submission with metadata validation
+const handleSubmit = async () => {
+  // Validate metadata before form submission
+  validateMetadataJson()
+  
+  // Don't proceed if there's a metadata error
+  if (metadataError.value) {
+    return false
+  }
+  
+  // Submit the form using the composable
+  return submitForm()
+}
+
+// Watch for changes in edge.metadata and update the JSON string
+watch(() => edge.value.metadata, (newMetadata) => {
+  if (newMetadata && typeof newMetadata === 'object') {
+    try {
+      metadataJson.value = JSON.stringify(newMetadata, null, 2)
+    } catch (e) {
+      console.error("Error stringifying metadata:", e)
+      metadataJson.value = '{}'
+    }
+  } else {
+    metadataJson.value = '{}'
+  }
+}, { immediate: true, deep: true })
 
 // Load edge data on component mount
 onMounted(async () => {
@@ -225,6 +300,16 @@ onMounted(async () => {
     // Load data into form
     if (edgeData) {
       loadEdge(edgeData)
+      
+      // Store original metadata for comparison
+      originalMetadata.value = {...edgeData.metadata} || {}
+      
+      // Initialize metadata JSON
+      if (edgeData.metadata && Object.keys(edgeData.metadata).length > 0) {
+        metadataJson.value = JSON.stringify(edgeData.metadata, null, 2)
+      } else {
+        metadataJson.value = '{}'
+      }
     }
   } catch (err) {
     console.error('Failed to load edge:', err)

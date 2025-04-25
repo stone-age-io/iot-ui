@@ -117,6 +117,35 @@ export function useEdgeForm(mode = 'create') {
   }
   
   /**
+   * Validate metadata to ensure it's proper JSON
+   * This function can be called externally to validate before form submission
+   * @param {Object|string} metadata - Metadata to validate (either object or JSON string)
+   * @returns {Object} - Valid metadata object or empty object if invalid
+   */
+  const validateMetadata = (metadata) => {
+    // If no metadata is provided, use the current edge metadata
+    let metadataToValidate = metadata || edge.value.metadata
+    
+    // If metadata is already an object, it's valid
+    if (typeof metadataToValidate === 'object' && metadataToValidate !== null) {
+      return metadataToValidate;
+    }
+    
+    // If it's a string, try to parse it
+    if (typeof metadataToValidate === 'string') {
+      try {
+        return JSON.parse(metadataToValidate);
+      } catch (e) {
+        console.error("Invalid metadata JSON format:", e);
+        return {};
+      }
+    }
+    
+    // Default to empty object for any other case
+    return {};
+  }
+
+  /**
    * Handle form submission
    * @returns {Promise<boolean>} - Success status
    */
@@ -125,12 +154,16 @@ export function useEdgeForm(mode = 'create') {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
     
+    // Ensure metadata is valid
+    edge.value.metadata = validateMetadata(edge.value.metadata)
+    
     // Extract relevant data for API
     const edgeData = {
       code: edge.value.code,
       name: edge.value.name,
       description: edge.value.description,
-      active: edge.value.active
+      active: edge.value.active,
+      metadata: edge.value.metadata // Include metadata in API payload
     }
     
     // Add type and region for create mode
@@ -138,7 +171,7 @@ export function useEdgeForm(mode = 'create') {
       edgeData.type = edge.value.type
       edgeData.region = edge.value.region
     }
-    
+
     return performOperation(
       () => mode === 'create' 
         ? edgeService.create(edgeData)
@@ -185,6 +218,7 @@ export function useEdgeForm(mode = 'create') {
     loadEdge,
     updateCode,
     submitForm,
-    resetForm
+    resetForm,
+    validateMetadata
   }
 }
