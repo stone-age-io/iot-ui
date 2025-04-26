@@ -132,7 +132,6 @@
               <!-- Topic with intelligent display -->
               <div 
                 class="topic-container py-1 px-2 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded"
-                v-tooltip.top="message.topic"
               >
                 <span class="topic-display">{{ formatTopicForDisplay(message.topic) }}</span>
               </div>

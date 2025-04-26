@@ -7,7 +7,7 @@ import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for managing NATS messages subscriptions and display
- * Improved to better handle pagination and UI updates
+ * Simplified implementation for more reliable message handling
  * 
  * @param {number} maxMessages - Maximum number of messages to store
  * @returns {Object} - Messages state and methods
@@ -16,7 +16,7 @@ export function useNatsMessages(maxMessages = 100) {
   const toast = useToast()
   const { performOperation } = useApiOperation()
   
-  // State
+  // Core state
   const messages = ref([])
   const paused = ref(false)
   const subscriptions = ref({})
@@ -25,10 +25,17 @@ export function useNatsMessages(maxMessages = 100) {
   const pageSize = ref(5) // Default to 5 messages per page
   const loading = ref(false)
   const error = ref(null)
-  const activeSubscriptionIds = ref(new Set()) // Track active subscription IDs
-  const isSubscribed = ref(false) // Flag to track if subscriptions are active
-  const connectionReady = ref(natsService.isConnected()) // Track connection state
-  const isUpdating = ref(false) // Flag to prevent multiple concurrent updates
+  const isSubscribed = ref(false)
+  const connectionReady = ref(natsService.isConnected())
+  
+  // Pagination state
+  const paginatedMessagesCache = ref([])
+  const lastRefreshKey = ref('')
+
+  // Batching variables
+  let messageQueue = []
+  let processingTimer = null
+  let isProcessing = false
   
   // Get saved topics from config
   const loadTopics = () => {
@@ -44,9 +51,83 @@ export function useNatsMessages(maxMessages = 100) {
     return configTopics
   }
   
-  // Subscribe to a topic
+  /**
+   * Process queued messages efficiently
+   * Handles batching of messages and limiting the total count
+   */
+  const processMessageQueue = () => {
+    if (messageQueue.length === 0 || isProcessing || paused.value) {
+      return
+    }
+    
+    isProcessing = true
+    
+    try {
+      // Take all current messages from the queue
+      const newMessages = [...messageQueue]
+      messageQueue = [] // Clear the queue
+      
+      // Add new messages at the start (newest first)
+      // and ensure we stay within the limit
+      messages.value = [...newMessages.reverse(), ...messages.value].slice(0, maxMessages)
+      
+      // Only refresh pagination if we're on the first page
+      // This prevents UI jumps when viewing historical data
+      if (currentPage.value === 1 && !paused.value) {
+        refreshPaginatedMessages(true)
+      }
+      
+      // Debug count
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`NATS messages: ${messages.value.length}/${maxMessages}`)
+      }
+    } finally {
+      isProcessing = false
+      
+      // Process any new messages that arrived while we were updating
+      if (messageQueue.length > 0) {
+        scheduleProcessing(0) // Process immediately
+      }
+    }
+  }
+  
+  /**
+   * Schedule message processing with intelligent timing
+   * @param {number} delay - Delay in milliseconds
+   */
+  const scheduleProcessing = (delay = 100) => {
+    if (processingTimer) {
+      clearTimeout(processingTimer)
+    }
+    
+    processingTimer = setTimeout(processMessageQueue, delay)
+  }
+  
+  /**
+   * Add a new message to the queue
+   * @param {Object} message - Message to add
+   */
+  const queueMessage = (message) => {
+    if (paused.value) return
+    
+    // Add message to queue
+    messageQueue.push(message)
+    
+    // If we have lots of messages, process more frequently
+    const quickProcessThreshold = 20
+    const delay = messageQueue.length > quickProcessThreshold ? 0 : 100
+    
+    // Schedule processing
+    scheduleProcessing(delay)
+  }
+  
+  /**
+   * Subscribe to a topic with simplified error handling
+   * @param {string} topic - Topic to subscribe to
+   * @returns {Object|null} - Subscription object or null
+   */
   const subscribe = async (topic) => {
-    // Skip if already subscribed to this topic
+    // Skip if already subscribed
     if (subscriptions.value[topic]) {
       return subscriptions.value[topic]
     }
@@ -57,99 +138,81 @@ export function useNatsMessages(maxMessages = 100) {
       return null
     }
     
-    return performOperation(
-      async () => {
-        // Subscribe to the topic
-        const subscription = await natsService.subscribe(topic, (message, subject, subscriptionId) => {
-          // Skip if paused
-          if (paused.value) return
-          
-          // Skip if this subscription ID is not in our active set
-          if (!activeSubscriptionIds.value.has(subscriptionId)) {
-            return
-          }
-          
-          // Add message to list with debounced updates
-          addMessageWithDebounce({
-            id: generateMessageId(),
-            topic: subject,
-            data: message,
-            timestamp: new Date()
-          })
+    try {
+      // Subscribe to the topic
+      const subscription = await natsService.subscribe(topic, (message, subject) => {
+        // Queue message for processing
+        queueMessage({
+          id: generateMessageId(),
+          topic: subject,
+          data: message,
+          timestamp: new Date()
         })
+      })
+      
+      if (subscription) {
+        // Store subscription
+        subscriptions.value[topic] = subscription
+        isSubscribed.value = true
         
-        if (subscription) {
-          // Store subscription
-          subscriptions.value[topic] = subscription
-          
-          // Add subscription ID to active set
-          if (subscription.sid) {
-            activeSubscriptionIds.value.add(subscription.sid)
-          }
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug(`Subscribed to ${topic}`)
         }
-        
-        return subscription
-      },
-      {
-        loadingRef: false,
-        errorRef: error,
-        errorMessage: `Failed to subscribe to topic: ${topic}`,
-        onSuccess: (subscription) => subscription,
-        onError: () => null
       }
-    )
+      
+      return subscription
+    } catch (err) {
+      console.error(`Failed to subscribe to ${topic}:`, err)
+      error.value = `Failed to subscribe to topic: ${topic}`
+      return null
+    }
   }
   
-  // Unsubscribe from a topic
+  /**
+   * Unsubscribe from a topic
+   * @param {string} topic - Topic to unsubscribe from
+   * @returns {Promise<boolean>} - Success status
+   */
   const unsubscribe = async (topic) => {
     const subscription = subscriptions.value[topic]
-    if (subscription) {
-      return performOperation(
-        async () => {
-          // Remove from active subscription IDs
-          if (subscription.sid) {
-            activeSubscriptionIds.value.delete(subscription.sid)
-          }
-          
-          // Perform NATS unsubscribe
-          await natsService.unsubscribe(subscription)
-          
-          // Remove from subscriptions
-          delete subscriptions.value[topic]
-          
-          return true
-        },
-        {
-          loadingRef: false,
-          errorRef: error,
-          errorMessage: `Error unsubscribing from topic: ${topic}`,
-          onSuccess: () => true,
-          onError: () => false
-        }
-      )
+    if (!subscription) return true
+    
+    try {
+      // Perform NATS unsubscribe
+      await natsService.unsubscribe(subscription)
+      
+      // Remove from subscriptions
+      delete subscriptions.value[topic]
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`Unsubscribed from ${topic}`)
+      }
+      
+      return true
+    } catch (err) {
+      console.error(`Error unsubscribing from ${topic}:`, err)
+      error.value = `Error unsubscribing from topic: ${topic}`
+      return false
     }
-    return Promise.resolve(true)
   }
   
-  // Subscribe to all configured topics
+  /**
+   * Subscribe to all configured topics
+   * @returns {Promise<boolean>} - Success status
+   */
   const subscribeToAllTopics = async () => {
-    // Prevent duplicate subscriptions by checking if already subscribed
-    if (isSubscribed.value) {
-      return
+    if (isSubscribed.value && Object.keys(subscriptions.value).length > 0) {
+      return true
     }
     
-    // Don't set loading if we already have active subscriptions
-    const hasActiveSubscriptions = Object.keys(subscriptions.value).length > 0
-    if (!hasActiveSubscriptions) {
-      loading.value = true
-    }
+    loading.value = true
     
     try {
       // Load topics from config
       const configTopics = loadTopics()
       
-      // If we have topics but no active subscriptions, clear the messages to start fresh
-      if (configTopics.length > 0 && !hasActiveSubscriptions) {
+      // Clear messages if subscribing for the first time
+      if (configTopics.length > 0 && !isSubscribed.value) {
         messages.value = []
       }
       
@@ -169,17 +232,16 @@ export function useNatsMessages(maxMessages = 100) {
       // Mark as subscribed if at least one subscription succeeded
       isSubscribed.value = successCount > 0
       
-      if (successCount > 0) {
-        return true
-      } else {
-        return false
-      }
+      return successCount > 0
     } finally {
       loading.value = false
     }
   }
   
-  // Unsubscribe from all topics
+  /**
+   * Unsubscribe from all topics
+   * @returns {Promise<void>}
+   */
   const unsubscribeFromAllTopics = async () => {
     if (!isSubscribed.value && Object.keys(subscriptions.value).length === 0) {
       return
@@ -196,9 +258,6 @@ export function useNatsMessages(maxMessages = 100) {
         await unsubscribe(topic)
       }
       
-      // Clear active subscription IDs
-      activeSubscriptionIds.value.clear()
-      
       // Reset subscription flag
       isSubscribed.value = false
     } finally {
@@ -206,7 +265,9 @@ export function useNatsMessages(maxMessages = 100) {
     }
   }
   
-  // Toggle pause/resume
+  /**
+   * Toggle pause/resume of message reception
+   */
   const togglePause = () => {
     paused.value = !paused.value
     
@@ -218,75 +279,21 @@ export function useNatsMessages(maxMessages = 100) {
     })
   }
   
-  // Debounce timer for batch updates
-  let addMessageTimer = null
-  const pendingMessages = []
-  
-  // Add a message to the list with debouncing
-  const addMessageWithDebounce = (message) => {
-    // Add to pending messages
-    pendingMessages.push(message)
-    
-    // Clear existing timer
-    if (addMessageTimer) {
-      clearTimeout(addMessageTimer)
-    }
-    
-    // Set new timer to batch updates
-    addMessageTimer = setTimeout(() => {
-      // Process all pending messages
-      if (pendingMessages.length > 0) {
-        // Avoid processing if already updating
-        if (isUpdating.value) return
-        
-        isUpdating.value = true
-        
-        // Add all pending messages in a single update
-        const messagesToAdd = [...pendingMessages]
-        pendingMessages.length = 0 // Clear pending messages
-        
-        // Batch add messages to minimize reactivity triggers
-        nextTick(() => {
-          // Add in correct order (newest first)
-          messages.value = [...messagesToAdd.reverse(), ...messages.value]
-          
-          // Limit the number of messages
-          if (messages.value.length > maxMessages) {
-            messages.value = messages.value.slice(0, maxMessages)
-          }
-          
-          // Important: Only update page if on first page and not paused
-          // This prevents unwanted page shifts when viewing older messages
-          if (currentPage.value === 1 && !paused.value) {
-            refreshPaginatedMessages()
-          }
-          
-          isUpdating.value = false
-        })
-      }
-    }, 100) // 100ms debounce
-  }
-  
-  // Add a single message to the list (non-debounced version)
-  const addMessage = (message) => {
-    // Add to beginning of array (newest first)
-    messages.value.unshift(message)
-    
-    // Limit the number of messages
-    if (messages.value.length > maxMessages) {
-      messages.value = messages.value.slice(0, maxMessages)
-    }
-  }
-  
-  // Generate a unique message ID
+  /**
+   * Generate a unique message ID
+   * @returns {string} - Unique ID
+   */
   const generateMessageId = () => {
     return Date.now().toString(36) + Math.random().toString(36).substr(2)
   }
   
-  // Clear all messages
+  /**
+   * Clear all messages
+   */
   const clearMessages = () => {
     messages.value = []
     currentPage.value = 1
+    refreshPaginatedMessages(true)
     
     toast.add({
       severity: 'info',
@@ -296,7 +303,11 @@ export function useNatsMessages(maxMessages = 100) {
     })
   }
   
-  // Format message data for display
+  /**
+   * Format message data for display
+   * @param {any} data - Message data
+   * @returns {string} - Formatted data
+   */
   const formatMessageData = (data) => {
     if (typeof data === 'object') {
       return JSON.stringify(data, null, 2)
@@ -306,10 +317,8 @@ export function useNatsMessages(maxMessages = 100) {
   
   /**
    * Creates a minimized representation of message data
-   * Optimized for compact display while preserving key information
-   * 
-   * @param {any} data - Message data to extract payload from
-   * @param {number} maxLength - Maximum length for truncated output
+   * @param {any} data - Message data
+   * @param {number} maxLength - Maximum length for output
    * @returns {string} - Formatted payload
    */
   const extractPayload = (data, maxLength = 150) => {
@@ -420,7 +429,12 @@ export function useNatsMessages(maxMessages = 100) {
     }
   };
   
-  // Generate human-readable timestamp
+  /**
+   * Format timestamp for display
+   * @param {Date|string} timestamp - Timestamp to format
+   * @param {boolean} includeDate - Whether to include date
+   * @returns {string} - Formatted timestamp
+   */
   const formatTimestamp = (timestamp, includeDate = false) => {
     if (!timestamp) return ''
     
@@ -448,20 +462,20 @@ export function useNatsMessages(maxMessages = 100) {
     })
   }
   
-  // Computed for paginated messages with memoization
-  const paginatedMessagesCache = ref(null)
-  const currentPaginationKey = ref('')
-  
-  // Helper to refresh paginated messages
-  const refreshPaginatedMessages = () => {
+  /**
+   * Refresh paginated messages with optional force
+   * @param {boolean} force - Force refresh even if key hasn't changed
+   * @returns {Array} - Paginated messages
+   */
+  const refreshPaginatedMessages = (force = false) => {
     const key = `${currentPage.value}-${pageSize.value}-${messages.value.length}`
     
-    // Only recalculate if needed
-    if (key !== currentPaginationKey.value || !paginatedMessagesCache.value) {
+    // Only recalculate if needed or forced
+    if (force || key !== lastRefreshKey.value || paginatedMessagesCache.value.length === 0) {
       const start = (currentPage.value - 1) * pageSize.value
       const end = start + pageSize.value
       paginatedMessagesCache.value = messages.value.slice(start, end)
-      currentPaginationKey.value = key
+      lastRefreshKey.value = key
     }
     
     return paginatedMessagesCache.value
@@ -477,18 +491,15 @@ export function useNatsMessages(maxMessages = 100) {
     return Math.ceil(messages.value.length / pageSize.value) || 1
   })
   
-  // Go to specific page with smooth transitions
+  /**
+   * Go to a specific page
+   * @param {number} page - Page number
+   * @returns {boolean} - Success status
+   */
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
-      // Save current value for transition comparison
-      const oldPage = currentPage.value
-      
-      // Set new page
       currentPage.value = page
-      
-      // Clear cache to force recalculation
-      currentPaginationKey.value = ''
-      
+      refreshPaginatedMessages(true)
       return true
     }
     return false
@@ -511,10 +522,10 @@ export function useNatsMessages(maxMessages = 100) {
     currentPage.value = 1
     error.value = null
     isSubscribed.value = false
-    // Don't reset subscriptions here as they'll be handled by unsubscribeFromAllTopics
+    refreshPaginatedMessages(true)
   }
   
-  // Attempt to subscribe if connection becomes available
+  // Handle NATS connection status changes
   const connectionListener = (status) => {
     connectionReady.value = status === 'connected'
     
@@ -528,20 +539,16 @@ export function useNatsMessages(maxMessages = 100) {
   watch(() => messages.value.length, () => {
     // If we're on a page that no longer exists, go to the last page
     if (currentPage.value > totalPages.value && totalPages.value > 0) {
-      // Use nextTick to prevent issues with cascading updates
       nextTick(() => {
         currentPage.value = totalPages.value
-        
-        // Clear cache to force recalculation
-        currentPaginationKey.value = ''
+        refreshPaginatedMessages(true)
       })
     }
   })
   
   // Watch for page size changes
   watch(pageSize, () => {
-    // Clear cache to force recalculation
-    currentPaginationKey.value = ''
+    refreshPaginatedMessages(true)
   })
   
   // Setup on mount
@@ -564,8 +571,8 @@ export function useNatsMessages(maxMessages = 100) {
     natsService.removeStatusListener(connectionListener)
     
     // Clear any pending timers
-    if (addMessageTimer) {
-      clearTimeout(addMessageTimer)
+    if (processingTimer) {
+      clearTimeout(processingTimer)
     }
     
     // Unsubscribe from all topics and reset state
