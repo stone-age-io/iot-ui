@@ -7,6 +7,7 @@ import configService from '../services/config/configService'
 
 /**
  * Composable for dashboard functionality
+ * Enhanced to properly handle activity data
  * @returns {Object} - Dashboard state and methods
  */
 export function useDashboard() {
@@ -16,7 +17,7 @@ export function useDashboard() {
   const thingsCount = ref(0)
   const clientsCount = ref(0)
   
-  // Activity data
+  // Activity data - this is a ref that will hold the array of activities
   const activity = ref([])
   
   // Loading state
@@ -53,8 +54,10 @@ export function useDashboard() {
         fetchRecentActivity()
       ])
       
-      // Update activity data from audit logs
-      activity.value = auditLogs.value || []
+      // Copy the audit logs to our activity ref
+      // This ensures we have a clean reactive reference
+      activity.value = [...auditLogs.value]
+      console.log('Dashboard activity updated, count:', activity.value.length)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -116,13 +119,26 @@ export function useDashboard() {
   
   /**
    * Fetch recent activity from audit logs
+   * Modified to be more inclusive in filtering
    */
   const fetchRecentActivity = async () => {
     try {
-      await loadRecentLogs({ limit: 10 })
-      // The auditLogs ref will be updated by the loadRecentLogs function
+      console.log('Fetching recent activity for dashboard')
+      
+      // Use skipFiltering option to get more inclusive results
+      // This will show all activity types, not just "_request" ones
+      const logs = await loadRecentLogs({ 
+        limit: 15,
+        skipFiltering: true 
+      })
+      
+      console.log('Activity logs fetched:', logs?.length || 0)
+      
+      // The activity value will be updated in fetchDashboardData
+      return logs
     } catch (error) {
       console.error('Error fetching recent activity:', error)
+      return []
     }
   }
   
@@ -146,6 +162,7 @@ export function useDashboard() {
     
     // Methods
     fetchDashboardData,
+    fetchRecentActivity, // Exposed for debugging if needed
     openGrafana
   }
 }

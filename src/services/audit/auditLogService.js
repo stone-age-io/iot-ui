@@ -8,8 +8,10 @@ import configService from '../config/configService'
  */
 class AuditLogService extends BaseService {
   constructor() {
-    // Add audit_logs to the collections
-    configService.collections.AUDIT_LOGS = 'audit_logs'
+    // Add audit_logs to the collections if not already present
+    if (!configService.collections.AUDIT_LOGS) {
+      configService.collections.AUDIT_LOGS = 'audit_logs'
+    }
     
     super(
       configService.collections.AUDIT_LOGS,
@@ -48,8 +50,16 @@ class AuditLogService extends BaseService {
     }
 
     try {
-      const { data } = await this.getList(params)
-      return data.items || []
+      console.log('Fetching audit logs with params:', params)
+      
+      const response = await this.getList(params)
+      
+      // Handle both possible response formats
+      const items = response.data?.items || response?.items || []
+      
+      console.log(`Retrieved ${items.length} audit logs from API`)
+      
+      return items
     } catch (error) {
       console.error('Error fetching audit logs:', error)
       return []
@@ -62,38 +72,72 @@ class AuditLogService extends BaseService {
    * @returns {Object} - Formatted audit log for UI
    */
   formatLogForDisplay(log) {
+    if (!log) {
+      console.warn('Received empty log to format')
+      return {
+        id: 'unknown-' + Date.now(),
+        type: 'info',
+        title: 'Unknown activity',
+        timestamp: new Date().toLocaleString(),
+        user: 'System',
+        details: null
+      }
+    }
+    
+    // Log for debugging
+    console.log('Formatting log:', log.id, log.event_type)
+    
     // Map event type to UI display type
     const typeMap = {
       'create_request': 'create',
       'update_request': 'update',
       'delete_request': 'delete',
-      'auth': 'login'
+      'auth': 'login',
+      'auth_request': 'login',
+      // Add more mappings if needed
     }
 
     // Format the timestamp
-    const date = new Date(log.timestamp)
-    const formattedDate = new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
+    let formattedDate = 'Unknown time'
+    try {
+      if (log.timestamp) {
+        const date = new Date(log.timestamp)
+        formattedDate = new Intl.DateTimeFormat('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(date)
+      }
+    } catch (e) {
+      console.warn('Error formatting timestamp:', e)
+    }
 
     // Determine the user information
     const userName = log.expand?.user_id?.name || log.user_id || 'System'
 
-    // Format collection name for display
-    const collectionSingular = log.collection_name.replace(/_/g, ' ')
-      // Singularize by removing trailing 's' if present
-      .replace(/s$/, '')
-      // Capitalize first letter of each word
-      .replace(/\b\w/g, char => char.toUpperCase())
+    // Default to the raw collection name if formatting fails
+    let collectionSingular = log.collection_name || 'item'
+    
+    try {
+      // Format collection name for display
+      collectionSingular = log.collection_name.replace(/_/g, ' ')
+        // Singularize by removing trailing 's' if present
+        .replace(/s$/, '')
+        // Capitalize first letter of each word
+        .replace(/\b\w/g, char => char.toUpperCase())
+    } catch (e) {
+      console.warn('Error formatting collection name:', e)
+    }
 
     // Construct a title based on the event type and collection
     let title = ''
     
-    switch (log.event_type) {
+    const eventType = log.event_type || 'unknown'
+    
+    switch (eventType) {
       case 'auth':
+      case 'auth_request':
         title = `${userName} logged in`
         break
       case 'create_request':
@@ -106,7 +150,7 @@ class AuditLogService extends BaseService {
         title = `${userName} deleted a ${collectionSingular}`
         break
       default:
-        title = `${userName} performed action on ${log.collection_name}`
+        title = `${userName} performed ${eventType} on ${log.collection_name || 'unknown'}`
     }
 
     // Get changes information
@@ -119,18 +163,18 @@ class AuditLogService extends BaseService {
     }
 
     return {
-      id: log.id,
-      type: typeMap[log.event_type] || 'info',
+      id: log.id || 'unknown-' + Date.now(),
+      type: typeMap[eventType] || 'info',
       title: title,
       timestamp: formattedDate,
       user: userName,
       details: {
-        collection: log.collection_name,
-        recordId: log.record_id,
-        method: log.request_method,
-        url: log.request_url,
+        collection: log.collection_name || 'unknown',
+        recordId: log.record_id || null,
+        method: log.request_method || null,
+        url: log.request_url || null,
         changes: changesInfo,
-        eventType: log.event_type
+        eventType: eventType
       }
     }
   }

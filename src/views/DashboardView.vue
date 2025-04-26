@@ -26,7 +26,7 @@
         <ProgressSpinner style="width: 24px; height: 24px" />
       </div>
       
-      <div v-else-if="!activity || activity.length === 0" class="empty-state text-theme-secondary">
+      <div v-else-if="activityItems.length === 0" class="empty-state text-theme-secondary">
         No recent activity found.
       </div>
       
@@ -44,7 +44,7 @@
       </div>
       
       <!-- Activity Control Buttons -->
-      <div v-if="activity && activity.length > 0" class="mt-3 flex justify-between items-center">
+      <div v-if="activityItems.length > 0" class="mt-3 flex justify-between items-center">
         <Button
           :label="expandedDetails ? 'Hide Details' : 'Show Details'"
           :icon="expandedDetails ? 'pi pi-eye-slash' : 'pi pi-eye'"
@@ -54,7 +54,7 @@
         
         <div class="flex">
           <Button
-            v-if="activity.length > displayedItems"
+            v-if="activityItems.length > displayedItems"
             label="Show More"
             icon="pi pi-chevron-down"
             class="p-button-text p-button-sm mr-2"
@@ -62,7 +62,7 @@
           />
           
           <Button
-            v-if="activity.length > 5"
+            v-if="activityItems.length > 5"
             label="View All Activity"
             icon="pi pi-list"
             class="p-button-text p-button-sm"
@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboard } from '../composables/useDashboard'
 import { useTheme } from '../composables/useTheme'
@@ -128,12 +128,15 @@ const {
 const displayedItems = ref(5)
 const expandedDetails = ref(false)
 
+// Computed property to get activity items safely
+// This handles the ref properly and ensures it's always an array
+const activityItems = computed(() => {
+  return activity.value || []
+})
+
 // Computed property for displayed activities with proper array checking
 const displayedActivities = computed(() => {
-  if (!activity.value || !Array.isArray(activity.value)) {
-    return []
-  }
-  return activity.value.slice(0, displayedItems.value)
+  return activityItems.value.slice(0, displayedItems.value)
 })
 
 // Toggle expanded details view
@@ -143,13 +146,8 @@ const toggleExpandDetails = () => {
 
 // Show more activity items
 const showMoreActivity = () => {
-  // Check if activity is valid first
-  if (!activity.value || !Array.isArray(activity.value)) {
-    return
-  }
-  
   // Increase shown items by 5, up to the total count
-  displayedItems.value = Math.min(displayedItems.value + 5, activity.value.length)
+  displayedItems.value = Math.min(displayedItems.value + 5, activityItems.value.length)
 }
 
 // Method to navigate to the audit logs page (can be implemented later)
@@ -191,8 +189,14 @@ const statCards = computed(() => [
   }
 ])
 
+// Watch for changes in activity
+watch(activity, (newActivity) => {
+  console.log('Activity updated in dashboard view:', newActivity?.length || 0)
+})
+
 // Fetch dashboard data on mount
 onMounted(async () => {
+  console.log('Dashboard mounted, fetching data')
   await fetchDashboardData()
 })
 </script>

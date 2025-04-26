@@ -5,7 +5,7 @@ import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for working with audit logs
- * Simplified implementation that directly fetches data
+ * Enhanced implementation with improved filtering options
  * @returns {Object} - Audit logs state and methods
  */
 export function useAuditLogs() {
@@ -23,11 +23,14 @@ export function useAuditLogs() {
    * @param {number} options.limit - Maximum number of logs to return
    * @param {string} options.collection - Filter by collection name (optional)
    * @param {Array<string>} options.eventTypes - Filter by event types (optional)
+   * @param {boolean} options.skipFiltering - Skip the default event type filtering (optional)
    * @returns {Promise<Array>} - Formatted audit logs
    */
   const loadRecentLogs = async (options = {}) => {
     return performOperation(
       async () => {
+        console.log('Loading audit logs with options:', options)
+        
         // Get raw logs from service
         const rawLogs = await auditLogService.getRecentActivity({
           limit: options.limit || 10,
@@ -35,33 +38,44 @@ export function useAuditLogs() {
           sortDirection: 'desc'
         })
         
-        // Filter logs to only include *_request types by default
-        // unless specific event types are provided
-        let filteredLogs = rawLogs
+        console.log('Raw audit logs fetched:', rawLogs?.length || 0, 'items')
         
+        // Start with all logs
+        let filteredLogs = rawLogs || []
+        
+        // Filter logs based on options
         if (options.eventTypes && options.eventTypes.length > 0) {
           // Use provided event types filter if specified
+          console.log('Filtering by specified event types:', options.eventTypes)
           filteredLogs = filteredLogs.filter(log => 
             options.eventTypes.includes(log.event_type)
           )
-        } else {
-          // Default filter for *_request event types
+        } else if (!options.skipFiltering) {
+          // Default filter for *_request event types, but allow skipping
+          console.log('Applying default event type filter for *_request')
           filteredLogs = filteredLogs.filter(log => 
-            log.event_type.endsWith('_request')
+            log.event_type && log.event_type.endsWith('_request')
           )
+        } else {
+          console.log('Skipping event type filtering')
         }
         
         // Filter by collection if specified
         if (options.collection) {
+          console.log('Filtering by collection:', options.collection)
           filteredLogs = filteredLogs.filter(log => 
             log.collection_name === options.collection
           )
         }
         
+        console.log('Filtered logs count:', filteredLogs.length)
+        
         // Format logs for display
         const formattedLogs = filteredLogs.map(log => 
           auditLogService.formatLogForDisplay(log)
         )
+        
+        console.log('Formatted logs for display:', formattedLogs.length, 'items')
         
         // Update the auditLogs ref
         auditLogs.value = formattedLogs
@@ -99,7 +113,9 @@ export function useAuditLogs() {
         
         // Filter for request events only if specified
         if (requestEventsOnly) {
-          recordLogs = recordLogs.filter(log => log.event_type.endsWith('_request'))
+          recordLogs = recordLogs.filter(log => 
+            log.event_type && log.event_type.endsWith('_request')
+          )
         }
         
         // Format logs for display
