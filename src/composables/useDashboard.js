@@ -2,6 +2,7 @@
 import { ref, reactive } from 'vue'
 import { edgeService, locationService, thingService, clientService } from '../services/index'
 import { useAuditLogs } from './useAuditLogs'
+import { useApiOperation } from './useApiOperation'
 import configService from '../services/config/configService'
 
 /**
@@ -9,13 +10,13 @@ import configService from '../services/config/configService'
  * @returns {Object} - Dashboard state and methods
  */
 export function useDashboard() {
-  // Entity counts
+  // Direct state with initial values to prevent null
   const edgesCount = ref(0)
   const locationsCount = ref(0)
   const thingsCount = ref(0)
   const clientsCount = ref(0)
   
-  // Recent activity
+  // Activity data
   const activity = ref([])
   
   // Loading state
@@ -29,11 +30,14 @@ export function useDashboard() {
     error: 0
   })
 
-  // Load audit logs
-  const { loadRecentLogs, loading: auditLoading } = useAuditLogs()
+  // Use API operation for consistent handling
+  const { performOperation } = useApiOperation()
+  
+  // Load audit logs using the useAuditLogs composable
+  const { auditLogs, loading: auditLoading, loadRecentLogs } = useAuditLogs()
   
   /**
-   * Fetch dashboard data
+   * Fetch all dashboard data
    * @returns {Promise<void>}
    */
   const fetchDashboardData = async () => {
@@ -41,7 +45,7 @@ export function useDashboard() {
     
     try {
       // Fetch entity counts in parallel
-      const [edges, locations, things, clients, auditLogs] = await Promise.all([
+      await Promise.all([
         fetchEdgesCount(),
         fetchLocationsCount(),
         fetchThingsCount(),
@@ -49,12 +53,8 @@ export function useDashboard() {
         fetchRecentActivity()
       ])
       
-      // Update state
-      edgesCount.value = edges
-      locationsCount.value = locations
-      thingsCount.value = things
-      clientsCount.value = clients
-      activity.value = auditLogs
+      // Update activity data from audit logs
+      activity.value = auditLogs.value || []
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -63,76 +63,66 @@ export function useDashboard() {
   }
   
   /**
-   * Fetch edges count
-   * @returns {Promise<number>}
+   * Fetch edges count directly, no reactive data
    */
   const fetchEdgesCount = async () => {
     try {
       const { data } = await edgeService.getList({ rows: 1 })
-      return data.totalItems || 0
+      edgesCount.value = data.totalItems || 0
     } catch (error) {
       console.error('Error fetching edges count:', error)
-      return 0
+      // Keep existing value on error
     }
   }
   
   /**
-   * Fetch locations count
-   * @returns {Promise<number>}
+   * Fetch locations count directly
    */
   const fetchLocationsCount = async () => {
     try {
       const { data } = await locationService.getList({ rows: 1 })
-      return data.totalItems || 0
+      locationsCount.value = data.totalItems || 0
     } catch (error) {
       console.error('Error fetching locations count:', error)
-      return 0
+      // Keep existing value on error
     }
   }
   
   /**
-   * Fetch things count
-   * @returns {Promise<number>}
+   * Fetch things count directly
    */
   const fetchThingsCount = async () => {
     try {
       const { data } = await thingService.getList({ rows: 1 })
-      return data.totalItems || 0
+      thingsCount.value = data.totalItems || 0
     } catch (error) {
       console.error('Error fetching things count:', error)
-      return 0
+      // Keep existing value on error
     }
   }
   
   /**
-   * Fetch clients count
-   * @returns {Promise<number>}
+   * Fetch clients count directly
    */
   const fetchClientsCount = async () => {
     try {
       const { data } = await clientService.getList({ rows: 1 })
-      return data.totalItems || 0
+      clientsCount.value = data.totalItems || 0
     } catch (error) {
       console.error('Error fetching clients count:', error)
-      return 0
+      // Keep existing value on error
     }
   }
   
   /**
    * Fetch recent activity from audit logs
-   * @returns {Promise<Array>}
    */
   const fetchRecentActivity = async () => {
     try {
-      // Use the new audit logs composable
-      // Only load *_request event types (default behavior now in the composable)
-      return await loadRecentLogs({
-        limit: 10,
-        // Request event types filter is handled by default in the composable now
-      })
+      await loadRecentLogs({ limit: 10 })
+      // The auditLogs ref will be updated by the loadRecentLogs function
     } catch (error) {
       console.error('Error fetching recent activity:', error)
-      return []
     }
   }
   
@@ -145,12 +135,12 @@ export function useDashboard() {
   }
 
   return {
-    // State
+    // State - these are simple refs with primitive values
     edgesCount,
     locationsCount,
     thingsCount,
     clientsCount,
-    activity,
+    activity, 
     loading,
     statusCounts,
     

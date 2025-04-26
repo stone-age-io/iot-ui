@@ -1,14 +1,15 @@
 // src/composables/useAuditLogs.js
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { auditLogService } from '../services/audit/auditLogService'
 import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for working with audit logs
+ * Simplified implementation that directly fetches data
  * @returns {Object} - Audit logs state and methods
  */
 export function useAuditLogs() {
-  // State
+  // State for audit logs
   const auditLogs = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -17,7 +18,7 @@ export function useAuditLogs() {
   const { performOperation } = useApiOperation()
   
   /**
-   * Load recent audit logs with pagination support
+   * Load recent audit logs
    * @param {Object} options - Query options
    * @param {number} options.limit - Maximum number of logs to return
    * @param {string} options.collection - Filter by collection name (optional)
@@ -62,7 +63,7 @@ export function useAuditLogs() {
           auditLogService.formatLogForDisplay(log)
         )
         
-        // Update state
+        // Update the auditLogs ref
         auditLogs.value = formattedLogs
         return formattedLogs
       },
@@ -102,11 +103,9 @@ export function useAuditLogs() {
         }
         
         // Format logs for display
-        const formattedLogs = recordLogs.map(log => 
+        return recordLogs.map(log => 
           auditLogService.formatLogForDisplay(log)
         )
-        
-        return formattedLogs
       },
       {
         loadingRef: loading,
@@ -116,15 +115,11 @@ export function useAuditLogs() {
     )
   }
   
-  // Computed properties
-  const hasLogs = computed(() => auditLogs.value.length > 0)
-  
   return {
     // State
     auditLogs,
     loading,
     error,
-    hasLogs,
     
     // Methods
     loadRecentLogs,

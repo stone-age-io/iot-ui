@@ -2,20 +2,20 @@
   <div class="dashboard">
     <h1 class="page-header text-theme-primary">Dashboard</h1>
     
-    <!-- Status Cards Grid - Updated to single row on desktop -->
+    <!-- Status Cards Grid -->
     <div class="stat-cards-grid mb-6">
       <StatCard
         v-for="(card, index) in statCards"
         :key="index"
         :label="card.label"
-        :value="card.value"
+        :value="card.value || 0"
         :icon="card.icon"
         :color="card.color"
         :link-to="card.linkTo"
       />
     </div>
     
-    <!-- NATS Message Feed - NatsStatus now integrated inside this component -->
+    <!-- NATS Message Feed -->
     <DashboardCard>
       <NatsMessageFeed />
     </DashboardCard>
@@ -26,13 +26,13 @@
         <ProgressSpinner style="width: 24px; height: 24px" />
       </div>
       
-      <div v-else-if="activity.length === 0" class="empty-state text-theme-secondary">
+      <div v-else-if="!activity || activity.length === 0" class="empty-state text-theme-secondary">
         No recent activity found.
       </div>
       
       <div v-else class="activity-feed">
         <ActivityItem
-          v-for="item in activity.slice(0, displayedItems)" 
+          v-for="item in displayedActivities" 
           :key="item.id"
           :type="item.type"
           :title="item.title"
@@ -44,9 +44,8 @@
       </div>
       
       <!-- Activity Control Buttons -->
-      <div class="mt-3 flex justify-between items-center">
+      <div v-if="activity && activity.length > 0" class="mt-3 flex justify-between items-center">
         <Button
-          v-if="activity.length > 0"
           :label="expandedDetails ? 'Hide Details' : 'Show Details'"
           :icon="expandedDetails ? 'pi pi-eye-slash' : 'pi pi-eye'"
           class="p-button-text p-button-sm"
@@ -128,6 +127,14 @@ const {
 const displayedItems = ref(5)
 const expandedDetails = ref(false)
 
+// Computed property for displayed activities with proper array checking
+const displayedActivities = computed(() => {
+  if (!activity.value || !Array.isArray(activity.value)) {
+    return []
+  }
+  return activity.value.slice(0, displayedItems.value)
+})
+
 // Toggle expanded details view
 const toggleExpandDetails = () => {
   expandedDetails.value = !expandedDetails.value
@@ -135,6 +142,11 @@ const toggleExpandDetails = () => {
 
 // Show more activity items
 const showMoreActivity = () => {
+  // Check if activity is valid first
+  if (!activity.value || !Array.isArray(activity.value)) {
+    return
+  }
+  
   // Increase shown items by 5, up to the total count
   displayedItems.value = Math.min(displayedItems.value + 5, activity.value.length)
 }
@@ -144,9 +156,6 @@ const navigateToAuditLogs = () => {
   // This will be implemented when you create an audit logs page
   // For now, just show a notification
   alert('Audit Logs page coming soon!')
-  
-  // When you have an actual audit logs page, uncomment this line:
-  // router.push('/admin/audit-logs')
 }
 
 // Computed stat cards for better maintainability
@@ -196,14 +205,12 @@ onMounted(async () => {
   transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
 }
 
-/* New stat cards grid layout - single row on desktop, stack on mobile */
 .stat-cards-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 
-/* Tablet breakpoint - 2 cards per row */
 @media (min-width: 640px) {
   .stat-cards-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -211,7 +218,6 @@ onMounted(async () => {
   }
 }
 
-/* Desktop breakpoint - all cards in a single row */
 @media (min-width: 1024px) {
   .stat-cards-grid {
     grid-template-columns: repeat(4, 1fr);
@@ -224,13 +230,11 @@ onMounted(async () => {
   transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
 }
 
-/* Make the activity feed scrollable if there are many items */
 .activity-feed {
   max-height: 350px;
   overflow-y: auto;
 }
 
-/* Ensure bottom spacing on mobile */
 @media (max-width: 640px) {
   .dashboard {
     padding-bottom: 2rem;
