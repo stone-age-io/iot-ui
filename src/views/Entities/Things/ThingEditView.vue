@@ -22,7 +22,7 @@
     <div v-else>
       <PageHeader 
         title="Edit Thing" 
-        :subtitle="`Updating ${thing.thing_code}`"
+        :subtitle="`Updating ${thing.code}`"
       >
         <template #actions>
           <Button 
@@ -48,14 +48,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
               <!-- Thing Code (readonly) -->
               <FormField
-                id="thing_code"
+                id="code"
                 label="Code"
                 :required="true"
                 hint="Not editable"
               >
                 <InputText
-                  id="thing_code"
-                  v-model="thing.thing_code"
+                  id="code"
+                  v-model="thing.code"
                   class="w-full font-mono form-input disabled-field"
                   readonly
                   disabled
@@ -64,13 +64,13 @@
               
               <!-- Type (readonly) -->
               <FormField
-                id="thing_type"
+                id="type"
                 label="Type"
                 hint="Not editable after creation"
               >
                 <Dropdown
-                  id="thing_type"
-                  v-model="thing.thing_type"
+                  id="type"
+                  v-model="thing.type"
                   :options="thingTypes"
                   optionLabel="label"
                   optionValue="value"

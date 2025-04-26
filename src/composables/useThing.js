@@ -73,20 +73,20 @@ export function useThing() {
   
   /**
    * Get thing type display name
-   * @param {string} thingType - Thing type code
+   * @param {string} type - Thing type code
    * @returns {string} - Display name
    */
-  const getTypeName = (thingType) => {
-    return typesStore.getTypeName(thingType, 'thingTypes')
+  const getTypeName = (type) => {
+    return typesStore.getTypeName(type, 'thingTypes')
   }
   
   /**
    * Get CSS class for thing type badge
-   * @param {string} thingType - Thing type code
+   * @param {string} type - Thing type code
    * @returns {string} - CSS class
    */
-  const getTypeClass = (thingType) => {
-    switch (thingType) {
+  const getTypeClass = (type) => {
+    switch (type) {
       case 'reader': return 'bg-blue-100 text-blue-800'
       case 'controller': return 'bg-purple-100 text-purple-800'
       case 'lock': return 'bg-amber-100 text-amber-800'
@@ -144,7 +144,6 @@ export function useThing() {
   
   /**
    * Raw function to fetch things - used internally by useReactiveData
-   * This maintains the original field mappings by using the service directly
    * 
    * @param {Object} options - Fetch options including skipCache flag
    * @returns {Promise<Object>} - Response from API
@@ -157,7 +156,7 @@ export function useThing() {
       skipCache: options?.skipCache
     })
     
-    // Return the entire response to ensure field mappings are preserved
+    // Return the entire response
     return response
   }
   
@@ -178,7 +177,6 @@ export function useThing() {
       
       if (skipCache || Object.keys(params).length > 0) {
         // For filtered queries, we need to ensure we're using the original API
-        // to preserve all field mappings and processing
         const response = await thingService.getList({
           expand: 'location_id,edge_id',
           sort: '-created',
@@ -263,7 +261,7 @@ export function useThing() {
   // Navigation methods
   const navigateToThingList = (query = {}) => router.push({ name: 'things', query })
   const navigateToThingDetail = (id) => router.push({ name: 'thing-detail', params: { id } })
-  const navigateToThingEdit = (id) => router.push({ name: 'edit-thing', params: { id } })
+  const navigateToThingEdit = (id) => router.push({ name: 'thing-edit', params: { id } })
   const navigateToThingCreate = (query = {}) => router.push({ name: 'create-thing', query })
   const navigateToLocationDetail = (id) => router.push({ name: 'location-detail', params: { id } })
   const navigateToEdgeDetail = (id) => router.push({ name: 'edge-detail', params: { id } })

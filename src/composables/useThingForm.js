@@ -33,9 +33,9 @@ export function useThingForm(mode = 'create') {
   const thing = ref({
     id: '',
     location_id: route.query.location_id || '',
-    thing_type: '',
+    type: '',
     number: null,
-    thing_code: '',
+    code: '',
     name: '',
     description: '',
     active: true,
@@ -65,17 +65,15 @@ export function useThingForm(mode = 'create') {
   // Add create-specific validation rules
   if (mode === 'create') {
     rules.location_id = { required: helpers.withMessage('Location is required', required) }
-    rules.thing_type = { required: helpers.withMessage('Thing type is required', required) }
+    rules.type = { required: helpers.withMessage('Thing type is required', required) }
     rules.number = { required: helpers.withMessage('Number is required', required) }
-    rules.thing_code = { 
+    rules.code = { 
       required: helpers.withMessage('Code is required', required),
       validFormat: helpers.withMessage(
         'Code must follow format: [type]-[location]-[number]', 
         validateThingCode
       )
     }
-    rules.type = { required: helpers.withMessage('Type is required', required) }
-    rules.path = { required: helpers.withMessage('Path is required', required) }
   }
   
   // Initialize Vuelidate
@@ -121,8 +119,8 @@ export function useThingForm(mode = 'create') {
     thing.value = {
       id: thingData.id || '',
       location_id: thingData.location_id || '',
-      thing_type: thingData.thing_type || '',
-      thing_code: thingData.thing_code || '',
+      type: thingData.type || '',
+      code: thingData.code || '',
       name: thingData.name || '',
       description: thingData.description || '',
       active: thingData.active ?? true,
@@ -153,10 +151,10 @@ export function useThingForm(mode = 'create') {
    * Generate thing code when type, location, or number changes
    */
   const updateCode = () => {
-    if (thing.value.thing_type && selectedLocationCode.value && thing.value.number) {
-      const typeAbbreviation = getThingTypeAbbreviation(thing.value.thing_type)
+    if (thing.value.type && selectedLocationCode.value && thing.value.number) {
+      const typeAbbreviation = getThingTypeAbbreviation(thing.value.type)
       
-      thing.value.thing_code = generateThingCode(
+      thing.value.code = generateThingCode(
         typeAbbreviation,
         selectedLocationCode.value,
         thing.value.number
@@ -199,8 +197,8 @@ export function useThingForm(mode = 'create') {
     // Add fields for create mode
     if (mode === 'create') {
       thingData.location_id = thing.value.location_id
-      thingData.thing_type = thing.value.thing_type
-      thingData.thing_code = thing.value.thing_code
+      thingData.type = thing.value.type
+      thingData.code = thing.value.code
     }
     
     return performOperation(
@@ -211,7 +209,7 @@ export function useThingForm(mode = 'create') {
         loadingRef: loading,
         errorRef: null,
         errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} thing`,
-        successMessage: `Thing ${mode === 'create' ? thingData.thing_code : thing.value.thing_code} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        successMessage: `Thing ${mode === 'create' ? thingData.code : thing.value.code} has been ${mode === 'create' ? 'created' : 'updated'}`,
         onSuccess: (response) => {
           // Navigate to thing detail view
           router.push({ name: 'thing-detail', params: { id: response.data.id } })
@@ -229,9 +227,9 @@ export function useThingForm(mode = 'create') {
     thing.value = {
       id: '',
       location_id: route.query.location_id || '',
-      thing_type: '',
+      type: '',
       number: null,
-      thing_code: '',
+      code: '',
       name: '',
       description: '',
       active: true,

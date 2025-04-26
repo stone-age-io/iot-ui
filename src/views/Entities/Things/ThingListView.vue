@@ -17,7 +17,7 @@
           :columns="columns"
           :loading="loading"
           :searchable="true"
-          :searchFields="['thing_code', 'name', 'thing_type', 'expand.location_id.code', 'expand.edge_id.code']"
+          :searchFields="['code', 'name', 'type', 'expand.location_id.code', 'expand.edge_id.code']"
           empty-message="No things found"
           @row-click="(data) => navigateToThingDetail(data.id)"
           :paginated="true"
@@ -25,17 +25,17 @@
           :rowsPerPageOptions="[5, 10, 25, 50]"
         >
           <!-- Code column with custom formatting -->
-          <template #thing_code-body="{ data }">
-            <div :class="['font-medium font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.thing_code }}</div>
+          <template #code-body="{ data }">
+            <div :class="['font-medium font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.code }}</div>
           </template>
           
           <!-- Type column with badge -->
-          <template #thing_type-body="{ data }">
+          <template #type-body="{ data }">
             <span 
               class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-              :class="getTypeClass(data.thing_type)"
+              :class="getTypeClass(data.type)"
             >
-              {{ getTypeName(data.thing_type) }}
+              {{ getTypeName(data.type) }}
             </span>
           </template>
           
@@ -123,7 +123,7 @@
           >Thing Type</label>
           <Dropdown
             id="filter-type"
-            v-model="filters.thing_type"
+            v-model="filters.type"
             :options="thingTypes"
             optionLabel="label"
             optionValue="value"
@@ -238,9 +238,9 @@ const {
 
 // Table columns definition - updated to use correct field names
 const columns = [
-  { field: 'thing_code', header: 'Code', sortable: true },
+  { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'thing_type', header: 'Type', sortable: true },
+  { field: 'type', header: 'Type', sortable: true },
   { field: 'location_id', header: 'Location', sortable: true },
   { field: 'edge_id', header: 'Edge', sortable: true },
   { field: 'active', header: 'Status', sortable: true }
@@ -249,7 +249,7 @@ const columns = [
 // Filter state
 const showFilters = ref(false)
 const filters = ref({
-  thing_type: null,
+  type: null,
   location_id: null,
   active: null
 })
@@ -274,7 +274,7 @@ const routeQuery = computed(() => {
 
 // Computed to check if filters are active
 const isFilterActive = computed(() => {
-  return filters.value.thing_type || 
+  return filters.value.type || 
          filters.value.location_id || 
          filters.value.active !== null
 })
@@ -291,7 +291,7 @@ const toggleFilters = () => {
 
 const resetFilters = () => {
   filters.value = {
-    thing_type: null,
+    type: null,
     location_id: null,
     active: null
   }
@@ -333,7 +333,7 @@ const handleFilterClick = () => {
 
 // Handle delete button click
 const handleDeleteClick = (thing) => {
-  confirmDelete(thing, 'Thing', 'thing_code')
+  confirmDelete(thing, 'Thing', 'code')
 }
 
 // Handle delete confirmation
@@ -344,7 +344,7 @@ const handleDeleteConfirm = async () => {
   
   const success = await deleteThing(
     deleteDialog.value.item.id, 
-    deleteDialog.value.item.thing_code
+    deleteDialog.value.item.code
   )
   
   if (success) {

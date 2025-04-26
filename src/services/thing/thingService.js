@@ -15,11 +15,8 @@ export class ThingService extends BaseService {
       collectionEndpoint,
       {
         jsonFields: ['metadata', 'current_state'],
-        expandFields: ['location_id', 'edge_id'],
-        fieldMappings: {
-          'code': 'thing_code',
-          'type': 'thing_type'
-        }
+        expandFields: ['location_id', 'edge_id']
+        // Removed field mappings to be consistent with other services
       }
     )
   }
@@ -94,23 +91,23 @@ export class ThingService extends BaseService {
   }
   
   /**
-   * Create a new thing with proper field mapping
-   * @param {Object} thingData - Thing data with client-side field names
+   * Create a new thing
+   * @param {Object} thingData - Thing data
    * @returns {Promise} - Axios promise with created thing
    */
   createThing(thingData) {
-    // Let the BaseService handle the field mapping
+    // Let the BaseService handle the API call
     return this.create(thingData)
   }
   
   /**
-   * Update an existing thing with proper field mapping
+   * Update an existing thing
    * @param {string} id - Thing ID
-   * @param {Object} thingData - Updated thing data with client-side field names
+   * @param {Object} thingData - Updated thing data
    * @returns {Promise} - Axios promise with updated thing
    */
   updateThing(id, thingData) {
-    // Let the BaseService handle the field mapping
+    // Let the BaseService handle the API call
     return this.update(id, thingData)
   }
   

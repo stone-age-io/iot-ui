@@ -26,12 +26,12 @@
           <div :class="['text-sm mb-1', textColor.secondary]">Thing</div>
           <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ thing.name }}</h1>
           <div class="flex flex-wrap items-center gap-2">
-            <span :class="['font-mono', themeValue.class('text-primary-600', 'text-primary-400')]">{{ thing.thing_code }}</span>
+            <span :class="['font-mono', themeValue.class('text-primary-600', 'text-primary-400')]">{{ thing.code }}</span>
             <span 
               class="badge"
-              :class="getTypeClass(thing.thing_type)"
+              :class="getTypeClass(thing.type)"
             >
-              {{ getTypeName(thing.thing_type) }}
+              {{ getTypeName(thing.type) }}
             </span>
           </div>
         </div>
@@ -65,7 +65,7 @@
                 <!-- Code -->
                 <div class="detail-field">
                   <div :class="['field-label', textColor.secondary]">Code</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ thing.thing_code }}</div>
+                  <div :class="['font-mono text-lg', textColor.primary]">{{ thing.code }}</div>
                 </div>
                 
                 <!-- Name -->
@@ -80,9 +80,9 @@
                   <div class="flex items-center">
                     <span 
                       class="badge"
-                      :class="getTypeClass(thing.thing_type)"
+                      :class="getTypeClass(thing.type)"
                     >
-                      {{ getTypeName(thing.thing_type) }}
+                      {{ getTypeName(thing.type) }}
                     </span>
                   </div>
                 </div>
@@ -288,7 +288,7 @@
             <Button
               icon="pi pi-refresh"
               class="p-button-text p-button-sm"
-              @click="loadMessages(thing.thing_type)"
+              @click="loadMessages(thing.type)"
               :loading="messagesLoading"
             />
             <Button
@@ -491,7 +491,7 @@ const loadThingDetail = async () => {
       ])
       
       // Load initial messages
-      await loadMessages(thing.value.thing_type)
+      await loadMessages(thing.value.type)
     }
   } catch (err) {
     // Error handling is done in the composable
@@ -560,7 +560,7 @@ const getMessageTypeLabel = (type) => {
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!thing.value) return
-  confirmDelete(thing.value, 'Thing', 'thing_code')
+  confirmDelete(thing.value, 'Thing', 'code')
 }
 
 // Handle delete confirmation
@@ -569,7 +569,7 @@ const handleDeleteConfirm = async () => {
   
   updateDeleteDialog({ loading: true })
   
-  const success = await deleteThing(thing.value.id, thing.value.thing_code)
+  const success = await deleteThing(thing.value.id, thing.value.code)
   
   if (success) {
     resetDeleteDialog()

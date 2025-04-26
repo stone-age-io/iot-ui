@@ -67,20 +67,20 @@
             
             <!-- Thing Type -->
             <FormField
-              id="thing_type"
+              id="type"
               label="Type"
               :required="true"
-              :error-message="v$.thing_type.$errors[0]?.$message"
+              :error-message="v$.type.$errors[0]?.$message"
             >
               <Dropdown
-                id="thing_type"
-                v-model="thing.thing_type"
+                id="type"
+                v-model="thing.type"
                 :options="thingTypes"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Select Thing Type"
                 class="w-full form-input"
-                :class="{ 'p-invalid': v$.thing_type.$error }"
+                :class="{ 'p-invalid': v$.type.$error }"
                 @change="updateCode"
               />
             </FormField>
@@ -107,18 +107,18 @@
             
             <!-- Code (calculated field) -->
             <FormField
-              id="thing_code"
+              id="code"
               label="Code"
               :required="true"
-              :error-message="v$.thing_code.$errors[0]?.$message"
+              :error-message="v$.code.$errors[0]?.$message"
               hint="Auto-generated"
             >
               <InputText
-                id="thing_code"
-                v-model="thing.thing_code"
+                id="code"
+                v-model="thing.code"
                 placeholder="rdr-main-001"
                 class="w-full font-mono form-input code-field"
-                :class="{ 'p-invalid': v$.thing_code.$error }"
+                :class="{ 'p-invalid': v$.code.$error }"
                 readonly
               />
             </FormField>
