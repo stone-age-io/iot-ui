@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <h1 class="page-header text-theme-primary">Dashboard</h1>
+    <PageHeader title="Dashboard"/>
     
     <!-- Status Cards Grid -->
     <div class="stat-cards-grid mb-6">
@@ -98,6 +98,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboard } from '../composables/useDashboard'
 import { useTheme } from '../composables/useTheme'
+import PageHeader from '../components/common/PageHeader.vue'
 import StatCard from '../components/dashboard/StatCard.vue'
 import ActivityItem from '../components/dashboard/ActivityItem.vue'
 import DashboardCard from '../components/dashboard/DashboardCard.vue'
@@ -199,10 +200,6 @@ onMounted(async () => {
 <style scoped>
 .dashboard {
   padding-bottom: 1.5rem;
-}
-
-.page-header {
-  transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
 }
 
 .stat-cards-grid {
