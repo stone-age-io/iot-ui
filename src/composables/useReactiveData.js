@@ -40,9 +40,32 @@ export function useReactiveData(options) {
   // Get timestamp from the cache store
   const timestamp = computed(() => cacheStore.lastUpdated[collection]);
   
+  /**
+   * Retrieve data from cache and update the local reference
+   * @returns {boolean} - Whether data was successfully retrieved from cache
+   */
+  const getDataFromCache = () => {
+    try {
+      const cachedData = cacheStore.getData(collection, operation, id);
+      if (cachedData) {
+        data.value = processData(cachedData);
+        return true;
+      }
+    } catch (err) {
+      console.warn(`Error retrieving ${collection} data from cache:`, err);
+    }
+    return false;
+  };
+  
   // Load data from API (initial load)
   const loadData = async () => {
-    loading.value = true;
+    // Check cache first for immediate display
+    if (getDataFromCache()) {
+      loading.value = false; // Data from cache is immediately available
+    } else {
+      loading.value = true;
+    }
+    
     error.value = null;
     
     try {
@@ -136,6 +159,17 @@ export function useReactiveData(options) {
       cacheStore.updateTimestamp(collection);
     }
   };
+  
+  // Watch for changes in the cache timestamp for this collection
+  // This is the key fix to ensure reactivity when the cache is updated
+  watch(
+    () => timestamp.value,
+    (newTimestamp, oldTimestamp) => {
+      if (newTimestamp && initialLoadComplete.value) {
+        getDataFromCache();
+      }
+    }
+  );
   
   // Watch for changes in the current collection
   watch(
