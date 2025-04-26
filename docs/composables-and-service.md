@@ -7,7 +7,6 @@
 3. [Recent Improvements](#recent-improvements)
 4. [Service Layer](#service-layer)
     - [Base Service Pattern](#base-service-pattern)
-    - [Field Mapping](#field-mapping)
     - [Entity Services](#entity-services)
 5. [Composables](#composables)
     - [API Operation Pattern](#api-operation-pattern)
@@ -43,13 +42,13 @@ The codebase has undergone several significant improvements to enhance maintaina
 
 2. **Removal of Duplicate Entity Service Methods** - Service methods that simply passed through to the base service without adding functionality have been removed to reduce redundancy.
 
-3. **Enhanced Field Mapping in BaseService** - The BaseService now includes standardized field mapping between API and client fields, ensuring consistency across all services.
+3. **Consistent Field Naming** - Entity services now use consistent field naming across all entities, eliminating the need for field mapping.
 
 ## Service Layer
 
 ### Base Service Pattern
 
-All entity services are built upon a common BaseService class that provides standard CRUD operations and handles field mapping.
+All entity services are built upon a common BaseService class that provides standard CRUD operations.
 
 ```javascript
 // src/services/base/BaseService.js
@@ -60,7 +59,6 @@ export class BaseService {
     this.options = {
       jsonFields: [], // Fields to be parsed/stringified as JSON
       expandFields: [], // Fields to expand in queries
-      fieldMappings: {}, // Field mappings between API and client fields
       ...options
     };
   }
@@ -71,10 +69,6 @@ export class BaseService {
   create(entity) { /* ... */ }
   update(id, entity) { /* ... */ }
   delete(id) { /* ... */ }
-
-  // Field mapping methods
-  mapApiToClientFields(apiData) { /* ... */ }
-  mapClientToApiFields(clientData) { /* ... */ }
 
   // Utility methods
   parseJsonFields(entity) { /* ... */ }
@@ -87,44 +81,15 @@ The BaseService provides:
 
 - Standardized CRUD operations (getList, getById, create, update, delete)
 - JSON field parsing and stringification
-- Field mapping between API and client formats
 - Query parameter transformation
 - Extension points for entity-specific services
 
-### Field Mapping
-
-A key improvement is the standardized field mapping mechanism in the BaseService. This allows for consistent handling of field names between the API and client:
-
-```javascript
-// Field mapping example in ThingService
-constructor() {
-  super(
-    COLLECTIONS.THINGS, 
-    collectionEndpoint,
-    {
-      jsonFields: ['metadata', 'current_state'],
-      expandFields: ['location_id', 'edge_id'],
-      fieldMappings: {
-        'code': 'thing_code',
-        'type': 'thing_type'
-      }
-    }
-  )
-}
-```
-
-The mapping system:
-- Automatically converts API field names to client field names when retrieving data
-- Converts client field names back to API field names when sending data
-- Works seamlessly with all CRUD operations
-- Reduces the need for custom mapping code in entity services
-
 ### Entity Services
 
-Entity services extend the BaseService to provide entity-specific functionality while leveraging the base functionality:
+Entity services extend the BaseService to provide entity-specific functionality, focusing on specialized methods only:
 
 ```javascript
-// Example: Simplified ThingService
+// Example: Entity Service
 export class ThingService extends BaseService {
   constructor() {
     super(
@@ -132,11 +97,7 @@ export class ThingService extends BaseService {
       collectionEndpoint,
       {
         jsonFields: ['metadata', 'current_state'],
-        expandFields: ['location_id', 'edge_id'],
-        fieldMappings: {
-          'code': 'thing_code',
-          'type': 'thing_type'
-        }
+        expandFields: ['location_id', 'edge_id']
       }
     )
   }
@@ -148,11 +109,14 @@ export class ThingService extends BaseService {
 }
 ```
 
-Entity services now:
-- Avoid duplicating CRUD methods already provided by BaseService
-- Focus on providing only entity-specific functionality
-- Use field mappings to handle API/client field name differences
-- Override transformParams when needed for entity-specific query transformations
+Entity services rely on the BaseService for standard CRUD operations and focus on providing only entity-specific functionality:
+
+1. **EdgeService**: Edge-specific operations
+2. **LocationService**: Location-specific operations
+3. **ThingService**: Thing-specific operations
+4. **ClientService**: Client-specific operations
+5. **TopicPermissionService**: Topic permission-specific operations
+6. **UserService**: User profile-specific operations
 
 ## Composables
 
@@ -422,13 +386,13 @@ onMounted(() => {
 
 The improved architecture enforces several best practices:
 
-1. **DRY Principle**: Avoid duplicating code by using the common patterns in `useApiOperation` and BaseService field mapping.
+1. **DRY Principle**: Avoid duplicating code by using the common patterns in `useApiOperation` and BaseService.
 
 2. **Single Responsibility**: Entity services focus on entity-specific functionality instead of duplicating CRUD operations.
 
 3. **Consistent Error Handling**: Use the standardized error handling in `useApiOperation` instead of implementing custom error handling.
 
-4. **Field Mapping**: Use the field mapping mechanism in BaseService to handle differences between API and client field names.
+4. **Consistent Field Naming**: Use consistent field names across all entities in the application.
 
 5. **Separation of Concerns**: 
    - Services handle data access and API interactions
