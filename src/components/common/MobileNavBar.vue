@@ -11,7 +11,7 @@
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center justify-center flex-1 touch-target"
-        :class="isActive(item.to) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+        :class="isActive(item.to) ? 'text-primary-600 dark:text-primary-400' : 'text-content-secondary dark:text-content-secondary-dark'"
       >
         <i :class="[item.icon, 'text-lg']"></i>
         <span class="text-xs mt-1 text-center">{{ item.label }}</span>

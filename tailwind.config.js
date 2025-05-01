@@ -24,7 +24,9 @@ export default {
         'surface': {
           'primary': '#ffffff',
           'primary-dark': '#1f2937',
-          'secondary': '#f9fafb',
+          'hover': '#f3f3f6',
+	  'hover-dark': '#374151',
+	  'secondary': '#f9fafb',
           'secondary-dark': '#111827',
           'tertiary': '#f3f4f6',
           'tertiary-dark': '#374151'

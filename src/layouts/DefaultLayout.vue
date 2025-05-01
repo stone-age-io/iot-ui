@@ -1,6 +1,6 @@
 <!-- src/layouts/DefaultLayout.vue -->
 <template>
-  <div class="min-h-screen flex flex-col theme-transition">
+  <div class="min-h-screen flex flex-col bg-surface-primary dark:bg-surface-primary-dark text-content-primary dark:text-content-primary-dark theme-transition">
     <!-- Fixed Header -->
     <AppHeader 
       @toggle-sidebar="toggleSidebar" 
@@ -192,6 +192,4 @@ main {
     display: none !important;
   }
 }
-
-/* Theme transitions - Already defined in our index.css, can be removed from here */
 </style>

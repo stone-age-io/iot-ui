@@ -3,7 +3,7 @@
   <div class="theme-toggle-wrapper">
     <button
       type="button"
-      class="p-button p-button-text p-button-rounded theme-toggle-button"
+      class="p-button p-button-text p-button-rounded theme-toggle-button theme-transition"
       @click="toggleTheme"
       :title="tooltipText"
       aria-label="Toggle theme"
