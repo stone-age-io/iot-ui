@@ -3,7 +3,7 @@
   <div 
     :id="mapId" 
     :style="{ height: height || '400px', width: '100%' }" 
-    class="leaflet-map rounded-lg overflow-hidden border border-theme-border dark:border-gray-700"
+    class="leaflet-map rounded-lg overflow-hidden border border-border-primary dark:border-border-primary-dark theme-transition"
   ></div>
 </template>
 
@@ -11,7 +11,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useThemeStore } from '../../stores/theme';
+import { useTheme } from '../../composables/useTheme';
 
 // Props definition
 const props = defineProps({
@@ -37,13 +37,7 @@ const props = defineProps({
 const mapId = `map-${Math.random().toString(36).substring(2, 9)}`;
 const map = ref(null);
 const markersLayer = ref(null);
-const themeStore = useThemeStore();
-
-// Detect if dark mode is active - use the theme store for this
-const isDarkMode = computed(() => {
-  return themeStore.theme === 'dark' || 
-    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-});
+const { isDarkMode } = useTheme();
 
 // Initialize map on mount
 onMounted(() => {
@@ -275,6 +269,10 @@ const fixLeafletIconPaths = () => {
 }
 
 /* Smooth transitions for theme changes */
+.theme-transition {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
 .leaflet-control-attribution,
 .leaflet-control-zoom a {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;

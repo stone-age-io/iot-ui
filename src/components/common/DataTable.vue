@@ -3,7 +3,7 @@
   <div class="data-table-wrapper">
     <!-- Table Header with Title, Search and Actions -->
     <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h2 v-if="title" class="text-xl font-semibold text-theme-primary dark:text-gray-200 m-0">{{ title }}</h2>
+      <h2 v-if="title" class="text-xl font-semibold text-content-primary dark:text-content-primary-dark m-0">{{ title }}</h2>
       
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center ml-auto">
         <!-- Search Input -->
@@ -41,7 +41,6 @@
       :scrollable="scrollable"
       :scrollHeight="scrollHeight"
       :rowHover="true"
-      stripedRows
       v-model:selection="selectedItems"
       :selectionMode="selectionMode"
       class="p-datatable-sm custom-datatable theme-transition"
@@ -65,7 +64,7 @@
         <template #body="slotProps">
           <div class="cell-content">
             <!-- Column Header in Mobile View -->
-            <span v-if="isMobileView" class="column-header text-theme-secondary">{{ col.header }}</span>
+            <span v-if="isMobileView" class="column-header text-content-secondary dark:text-content-secondary-dark">{{ col.header }}</span>
             
             <!-- Actual Content -->
             <div class="cell-value">
@@ -94,7 +93,7 @@
         <template #body="slotProps">
           <div class="cell-content actions-cell">
             <!-- Column Header in Mobile View -->
-            <span v-if="isMobileView" class="column-header text-theme-secondary">Actions</span>
+            <span v-if="isMobileView" class="column-header text-content-secondary dark:text-content-secondary-dark">Actions</span>
             
             <!-- Actions -->
             <div @click.stop class="action-buttons">
@@ -106,14 +105,14 @@
       
       <!-- Empty Message -->
       <template #empty>
-        <div class="text-center p-4 text-theme-secondary">
+        <div class="text-center p-4 text-content-secondary dark:text-content-secondary-dark">
           {{ emptyMessage || "No records found" }}
         </div>
       </template>
       
       <!-- Loading Message -->
       <template #loading>
-        <div class="text-center p-4 text-theme-secondary">
+        <div class="text-center p-4 text-content-secondary dark:text-content-secondary-dark">
           Loading data...
         </div>
       </template>
@@ -122,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, useSlots, onMounted, onUnmounted } from 'vue'
+import { ref, computed, useSlots, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { FilterMatchMode } from 'primevue/api'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -290,9 +289,7 @@ const onSort = (event) => {
 <style>
 /* Base datatable styles using theme variables */
 .custom-datatable {
-  @apply w-full border-collapse border rounded-lg overflow-hidden;
-  border-color: rgb(var(--color-border) / 0.5);
-  background-color: rgb(var(--color-surface));
+  @apply w-full border-collapse overflow-hidden rounded-lg border border-border-primary dark:border-border-primary-dark bg-surface-primary dark:bg-surface-primary-dark;
 }
 
 .custom-datatable .p-datatable-wrapper {
@@ -305,31 +302,25 @@ const onSort = (event) => {
 
 /* Row styles */
 .custom-datatable .p-datatable-tbody > tr {
-  @apply transition-colors;
-  background-color: rgb(var(--color-surface));
+  @apply transition-colors bg-surface-primary dark:bg-surface-primary-dark;
 }
 
 .custom-datatable .p-datatable-tbody > tr:hover {
-  background-color: var(--surface-hover);
+  @apply bg-surface-hover dark:bg-surface-hover-dark;
 }
 
 .custom-datatable .p-datatable-tbody > tr:nth-child(even) {
-  background-color: rgba(var(--color-bg), 0.5);
+  @apply bg-surface-secondary dark:bg-surface-secondary-dark;
 }
 
 /* Header styles */
 .custom-datatable .p-datatable-thead > tr > th {
-  @apply font-medium p-3 text-left border-b;
-  background-color: rgb(var(--color-bg));
-  color: rgb(var(--color-text-secondary));
-  border-color: rgb(var(--color-border));
+  @apply font-medium p-3 text-left border-b border-border-primary dark:border-border-primary-dark bg-surface-secondary dark:bg-surface-secondary-dark text-content-secondary dark:text-content-secondary-dark;
 }
 
 /* Cell styles */
 .custom-datatable .p-datatable-tbody > tr > td {
-  @apply p-3 whitespace-nowrap border-b;
-  color: rgb(var(--color-text));
-  border-color: rgb(var(--color-border));
+  @apply p-3 whitespace-nowrap border-b border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark;
 }
 
 /* Cell Content Layout */
@@ -360,14 +351,11 @@ const onSort = (event) => {
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr {
-  @apply flex flex-col mb-4 border rounded-lg overflow-hidden shadow-sm hover:shadow w-full;
-  background-color: rgb(var(--color-surface));
-  border-color: rgb(var(--color-border));
+  @apply flex flex-col mb-4 border rounded-lg overflow-hidden shadow-sm hover:shadow w-full bg-surface-primary dark:bg-surface-primary-dark border-border-primary dark:border-border-primary-dark;
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr > td {
-  @apply flex w-full border-0 border-b p-3;
-  border-color: rgb(var(--color-border));
+  @apply flex w-full border-0 border-b p-3 border-border-primary dark:border-border-primary-dark;
 }
 
 .custom-datatable.mobile-view .p-datatable-tbody > tr > td:last-child {
@@ -379,8 +367,7 @@ const onSort = (event) => {
 }
 
 .custom-datatable.mobile-view .column-header {
-  @apply block font-medium text-sm w-1/3 text-left;
-  color: rgb(var(--color-text-secondary));
+  @apply block font-medium text-sm w-1/3 text-left text-content-secondary dark:text-content-secondary-dark;
 }
 
 .custom-datatable.mobile-view .cell-value {
@@ -401,9 +388,7 @@ const onSort = (event) => {
 
 /* Paginator Styling */
 .p-paginator {
-  @apply flex justify-center items-center p-3 border-t gap-1;
-  background-color: rgb(var(--color-surface));
-  border-color: rgb(var(--color-border));
+  @apply flex justify-center items-center p-3 border-t gap-1 border-border-primary dark:border-border-primary-dark bg-surface-primary dark:bg-surface-primary-dark;
 }
 
 .p-paginator .p-paginator-first,
@@ -411,10 +396,7 @@ const onSort = (event) => {
 .p-paginator .p-paginator-next,
 .p-paginator .p-paginator-last,
 .p-paginator .p-paginator-page {
-  @apply inline-flex justify-center items-center min-w-[2.5rem] h-10 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
-  color: rgb(var(--color-text-secondary));
-  background-color: rgb(var(--color-surface));
-  border-color: rgb(var(--color-border));
+  @apply inline-flex justify-center items-center min-w-[2.5rem] h-10 rounded-md border border-border-primary dark:border-border-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark transition-colors bg-surface-primary dark:bg-surface-primary-dark text-content-secondary dark:text-content-secondary-dark;
 }
 
 .p-paginator .p-paginator-first.p-disabled,
@@ -425,7 +407,7 @@ const onSort = (event) => {
 }
 
 .p-paginator .p-paginator-page.p-highlight {
-  @apply bg-blue-600 dark:bg-blue-600 text-white border-blue-600 dark:border-blue-600;
+  @apply bg-primary-600 dark:bg-primary-600 text-white border-primary-600 dark:border-primary-600;
 }
 
 /* Action buttons styling */
@@ -439,10 +421,7 @@ const onSort = (event) => {
 
 /* Form controls in tables */
 .custom-datatable .p-inputtext {
-  @apply p-2 rounded-md;
-  background-color: rgb(var(--color-surface));
-  border-color: rgb(var(--color-border));
-  color: rgb(var(--color-text));
+  @apply p-2 rounded-md bg-surface-primary dark:bg-surface-primary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark;
 }
 
 /* Fix for selection checkbox */
@@ -456,20 +435,25 @@ const onSort = (event) => {
 }
 
 .custom-datatable .p-sortable-column .p-sortable-column-icon {
-  @apply ml-2;
-  color: rgb(var(--color-text-secondary) / 0.7);
+  @apply ml-2 text-content-secondary dark:text-content-secondary-dark opacity-70;
 }
 
 .custom-datatable .p-sortable-column.p-highlight {
-  background-color: rgb(var(--color-bg));
+  @apply bg-surface-secondary dark:bg-surface-secondary-dark;
 }
 
 .custom-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
-  color: var(--primary-color);
+  @apply text-primary-600 dark:text-primary-400;
 }
 
 /* Fix for loading overlay */
 .p-datatable .p-datatable-loading-overlay {
-  background-color: rgba(var(--color-surface), 0.7);
+  @apply bg-surface-primary dark:bg-surface-primary-dark bg-opacity-70 dark:bg-opacity-70;
+}
+
+/* Theme transition for smooth color changes */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 </style>

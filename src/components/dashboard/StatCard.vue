@@ -1,12 +1,12 @@
 <!-- src/components/dashboard/StatCard.vue -->
 <template>
-  <div class="stat-card bg-theme-surface border border-theme" :class="[hoverEffect ? 'hover:shadow-md hover:-translate-y-1' : '']">
+  <div class="stat-card bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark theme-transition" :class="[hoverEffect ? 'hover:shadow-md hover:-translate-y-1' : '']">
     <div class="stat-card-icon" :class="iconClass">
       <i :class="[icon, textClass]"></i>
     </div>
     <div class="stat-card-content">
-      <div class="stat-card-label text-theme-secondary">{{ label }}</div>
-      <div class="stat-card-value text-theme-primary">{{ value }}</div>
+      <div class="stat-card-label text-content-secondary dark:text-content-secondary-dark">{{ label }}</div>
+      <div class="stat-card-value text-content-primary dark:text-content-primary-dark">{{ value }}</div>
     </div>
     <router-link :to="linkTo" class="stat-card-link" :class="textClass">
       <span>{{ linkText }}</span>
@@ -19,8 +19,8 @@
 import { computed } from 'vue';
 import { useTheme } from '../../composables/useTheme';
 
-// Use theme composable for reactive theme values
-const { themeValue } = useTheme();
+// Use theme composable for reactive theme
+const { isDarkMode } = useTheme();
 
 const props = defineProps({
   label: {
@@ -56,28 +56,28 @@ const props = defineProps({
 
 // Computed classes for theming
 const iconClass = computed(() => {
-  // Theme-aware icon background classes
+  // Icon background classes with dark mode variants
   const colorClassMap = {
-    blue: themeValue.value.class('bg-blue-50', 'bg-blue-900/20'),
-    green: themeValue.value.class('bg-green-50', 'bg-green-900/20'),
-    purple: themeValue.value.class('bg-purple-50', 'bg-purple-900/20'),
-    orange: themeValue.value.class('bg-orange-50', 'bg-orange-900/20'),
-    red: themeValue.value.class('bg-red-50', 'bg-red-900/20'),
-    gray: themeValue.value.class('bg-gray-50', 'bg-gray-700')
+    blue: 'bg-blue-50 dark:bg-blue-900/20',
+    green: 'bg-green-50 dark:bg-green-900/20',
+    purple: 'bg-purple-50 dark:bg-purple-900/20',
+    orange: 'bg-orange-50 dark:bg-orange-900/20',
+    red: 'bg-red-50 dark:bg-red-900/20',
+    gray: 'bg-gray-50 dark:bg-gray-700'
   };
   
   return colorClassMap[props.color] || colorClassMap.gray;
 });
 
 const textClass = computed(() => {
-  // Theme-aware text color classes
+  // Text color classes with dark mode variants
   const colorClassMap = {
-    blue: themeValue.value.class('text-blue-600', 'text-blue-400'),
-    green: themeValue.value.class('text-green-600', 'text-green-400'),
-    purple: themeValue.value.class('text-purple-600', 'text-purple-400'),
-    orange: themeValue.value.class('text-orange-600', 'text-orange-400'),
-    red: themeValue.value.class('text-red-600', 'text-red-400'),
-    gray: themeValue.value.class('text-gray-600', 'text-gray-400')
+    blue: 'text-blue-600 dark:text-blue-400',
+    green: 'text-green-600 dark:text-green-400',
+    purple: 'text-purple-600 dark:text-purple-400',
+    orange: 'text-orange-600 dark:text-orange-400',
+    red: 'text-red-600 dark:text-red-400',
+    gray: 'text-gray-600 dark:text-gray-400'
   };
   
   return colorClassMap[props.color] || colorClassMap.gray;

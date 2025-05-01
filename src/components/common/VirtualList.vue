@@ -2,7 +2,7 @@
 <template>
   <div 
     ref="container" 
-    class="virtual-list-container" 
+    class="virtual-list-container bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg overflow-y-auto theme-transition" 
     :style="{ height: containerHeight + 'px' }"
     @scroll="onScroll"
   >
@@ -27,6 +27,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useTheme } from '../../composables/useTheme';
 
 const props = defineProps({
   // List of items to render
@@ -54,6 +55,9 @@ const props = defineProps({
   }
 });
 
+// Initialize theme
+const { isDarkMode } = useTheme();
+
 // References
 const container = ref(null);
 const scrollTop = ref(0);
@@ -61,7 +65,7 @@ const itemsWithMeta = ref([]);
 
 // Update items with metadata for virtualization
 watch(() => props.items, (newItems) => {
-  // Add orignal index and height metadata to each item
+  // Add original index and height metadata to each item
   itemsWithMeta.value = newItems.map((item, index) => ({
     ...item,
     originalIndex: index,
@@ -163,13 +167,6 @@ defineExpose({
 </script>
 
 <style scoped>
-.virtual-list-container {
-  overflow-y: auto;
-  position: relative;
-  width: 100%;
-  border-radius: 0.375rem;
-}
-
 .virtual-list-spacer {
   position: relative;
   width: 100%;
