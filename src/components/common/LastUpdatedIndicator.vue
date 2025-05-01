@@ -1,10 +1,11 @@
+<!-- src/components/common/LastUpdatedIndicator.vue -->
 <template>
-  <div class="last-updated-indicator" :class="{ 'is-updating': isRefreshing }">
-    <span v-if="isRefreshing" class="refresh-indicator">
-      <i class="pi pi-spin pi-sync"></i> Updating...
+  <div class="last-updated-indicator theme-transition p-2" :class="{ 'is-updating': isRefreshing }">
+    <span v-if="isRefreshing" class="refresh-indicator text-primary-600 dark:text-primary-400 flex items-center">
+      <i class="pi pi-spin pi-sync mr-1"></i> Updating...
     </span>
-    <span v-else-if="timestamp" class="timestamp">
-      <i class="pi pi-clock"></i> Last updated: {{ formattedTime }}
+    <span v-else-if="timestamp" class="timestamp text-content-secondary dark:text-content-secondary-dark flex items-center">
+      <i class="pi pi-clock mr-1"></i> Last updated: {{ formattedTime }}
     </span>
   </div>
 </template>
@@ -12,10 +13,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useCacheStore } from '../../stores/cacheStore';
-import { useTheme } from '../../composables/useTheme';
 
 const cacheStore = useCacheStore();
-const { isDarkMode } = useTheme();
 
 const timestamp = computed(() => cacheStore.currentTimestamp);
 const isRefreshing = computed(() => cacheStore.isRefreshing);
@@ -60,22 +59,7 @@ const formattedTime = computed(() => {
 
 <style scoped>
 .last-updated-indicator {
-  padding: 0.5rem;
   font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s ease;
-}
-
-.is-updating {
-  color: var(--primary-color);
-}
-
-:deep(.pi) {
-  margin-right: 0.25rem;
-}
-
-.timestamp, .refresh-indicator {
   display: flex;
   align-items: center;
 }

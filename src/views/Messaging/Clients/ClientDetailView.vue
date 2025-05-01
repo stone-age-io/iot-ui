@@ -1,20 +1,21 @@
+<!-- src/views/Messaging/Clients/ClientDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
     <div v-if="loading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="p-error-container p-6 text-center">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load client details
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -22,9 +23,9 @@
     <div v-else-if="client">
       <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div :class="['text-sm mb-1', textColor.secondary]">Messaging Client</div>
-          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ client.username }}</h1>
-          <div :class="[textColor.secondary]" v-if="client.expand && client.expand.role_id">
+          <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Messaging Client</div>
+          <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ client.username }}</h1>
+          <div class="text-content-secondary dark:text-content-secondary-dark" v-if="client.expand && client.expand.role_id">
             <span>{{ client.expand.role_id.name }}</span>
           </div>
         </div>
@@ -48,64 +49,76 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card>
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Client Details</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Client Details</h2>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Username -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Username</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ client.username }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Username</div>
+                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ client.username }}</div>
                 </div>
                 
                 <!-- Role -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Role</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Role</div>
                   <div class="flex items-center">
                     <router-link 
                       v-if="client.expand && client.expand.role_id"
                       :to="{ name: 'topic-permission-detail', params: { id: client.role_id } }"
-                      :class="themeValue.class('text-primary-600 hover:text-primary-700', 'text-primary-400 hover:text-primary-300') + ' flex items-center'"
+                      class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center"
                     >
                       {{ client.expand.role_id.name }}
                     </router-link>
-                    <span v-else :class="textColor.secondary">No role assigned</span>
+                    <span v-else class="text-content-secondary dark:text-content-secondary-dark">No role assigned</span>
                   </div>
                 </div>
                 
                 <!-- Status -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Status</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Status</div>
                   <div class="flex items-center">
                     <span 
                       class="badge"
                       :class="client.active ? 
-                        themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
-                        themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
                     >
                       {{ client.active ? 'Active' : 'Inactive' }}
                     </span>
                   </div>
                 </div>
+                
+                <!-- Created Date -->
+                <div class="detail-field">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(client.created) }}</div>
+                </div>
+                
+                <!-- Last Updated -->
+                <div class="detail-field">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(client.updated) }}</div>
+                </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Information Card -->
         <div>
-          <Card>
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Information</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Information</h2>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Role Details -->
                 <div v-if="client.expand && client.expand.role_id">
-                  <div :class="['field-label', textColor.secondary]">Role Details</div>
-                  <div :class="textColor.primary">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Role Details</div>
+                  <div class="text-content-primary dark:text-content-primary-dark">
                     <p>Role: {{ client.expand.role_id.name }}</p>
                     <Button
                       label="View Role Details"
@@ -115,64 +128,70 @@
                     />
                   </div>
                 </div>
-                
-                <!-- Created Date -->
-                <div>
-                  <div :class="['field-label', textColor.secondary]">Created</div>
-                  <div :class="textColor.secondary">{{ formatDate(client.created) }}</div>
-                </div>
-                
-                <!-- Last Updated -->
-                <div>
-                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
-                  <div :class="textColor.secondary">{{ formatDate(client.updated) }}</div>
-                </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Credentials Section -->
       <div class="mt-6">
-        <Card>
-          <template #title>
-            <h2 :class="['text-xl font-semibold', textColor.primary]">Connection Credentials</h2>
-          </template>
-          <template #content>
-            <div :class="[
-              'p-4 rounded border',
-              backgroundColor.secondary,
-              borderColor.default
-            ]">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Connection Credentials</h2>
+          </div>
+          <div class="p-6">
+            <div class="p-4 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark theme-transition">
+              <div class="grid grid-cols-1 gap-4">
                 <div>
-                  <div :class="['field-label', textColor.secondary]">Connection URL</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">MQTT Connection URL</div>
                   <div class="flex items-center">
-                    <code :class="[
-                      'p-2 rounded text-sm flex-1 font-mono',
-                      backgroundColor.tertiary,
-                      textColor.primary
-                    ]">
-                      {{ connectionUrl }}
+                    <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
+                      {{ mqttConnectionUrl }}
                     </code>
                     <Button 
                       icon="pi pi-copy" 
                       class="p-button-text ml-2" 
-                      @click="copyToClipboard(connectionUrl)"
+                      @click="copyToClipboard(mqttConnectionUrl)"
                       tooltip="Copy"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <div :class="['field-label', textColor.secondary]">Username</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">NATS Connection URL</div>
                   <div class="flex items-center">
-                    <code :class="[
-                      'p-2 rounded text-sm flex-1 font-mono',
-                      backgroundColor.tertiary,
-                      textColor.primary
-                    ]">
+                    <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
+                      {{ natsConnectionUrl }}
+                    </code>
+                    <Button 
+                      icon="pi pi-copy" 
+                      class="p-button-text ml-2" 
+                      @click="copyToClipboard(natsConnectionUrl)"
+                      tooltip="Copy"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">WebSocket Connection URL</div>
+                  <div class="flex items-center">
+                    <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
+                      {{ wsConnectionUrl }}
+                    </code>
+                    <Button 
+                      icon="pi pi-copy" 
+                      class="p-button-text ml-2" 
+                      @click="copyToClipboard(wsConnectionUrl)"
+                      tooltip="Copy"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Username</div>
+                  <div class="flex items-center">
+                    <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                       {{ client.username }}
                     </code>
                     <Button 
@@ -186,12 +205,9 @@
               </div>
               
               <div class="mt-4">
-                <div :class="['field-label', textColor.secondary]">Password</div>
-                <div :class="[
-                  'p-2 rounded text-sm flex items-center',
-                  backgroundColor.tertiary
-                ]">
-                  <div :class="['flex-1 italic', textColor.secondary]">Password hidden for security</div>
+                <div class="field-label text-content-secondary dark:text-content-secondary-dark">Password</div>
+                <div class="p-2 rounded text-sm flex items-center bg-surface-tertiary dark:bg-surface-tertiary-dark">
+                  <div class="flex-1 italic text-content-secondary dark:text-content-secondary-dark">Password hidden for security</div>
                   <Button
                     label="Reset Password"
                     icon="pi pi-refresh"
@@ -201,8 +217,8 @@
                 </div>
               </div>
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -228,17 +244,13 @@
       :closable="!resetPasswordDialog.loading"
     >
       <div class="p-4">
-        <p :class="['mb-4', textColor.primary]">Are you sure you want to reset the password for <strong>{{ client?.username }}</strong>?</p>
-        <p :class="['text-sm mb-4', textColor.secondary]">A new secure password will be generated. You will only see this password once, so make sure to copy it.</p>
+        <p class="mb-4 text-content-primary dark:text-content-primary-dark">Are you sure you want to reset the password for <strong>{{ client?.username }}</strong>?</p>
+        <p class="text-sm mb-4 text-content-secondary dark:text-content-secondary-dark">A new secure password will be generated. You will only see this password once, so make sure to copy it.</p>
         
         <div v-if="resetPasswordDialog.newPassword" class="my-4">
-          <div :class="['field-label', textColor.secondary]">New Password</div>
+          <div class="field-label text-content-secondary dark:text-content-secondary-dark">New Password</div>
           <div class="flex items-center">
-            <code :class="[
-              'p-2 rounded text-sm flex-1 font-mono',
-              backgroundColor.tertiary,
-              textColor.primary
-            ]">
+            <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
               {{ resetPasswordDialog.newPassword }}
             </code>
             <Button 
@@ -285,26 +297,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useClient } from '../../../composables/useClient'
-import { useTheme } from '../../../composables/useTheme'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
-import Card from 'primevue/card'
 
 const route = useRoute()
 const router = useRouter()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the client composable
 const { 
   loading,
   error,
   formatDate,
-  getConnectionUrl,
   fetchClient,
   deleteClient,
   resetPassword,
@@ -329,7 +335,26 @@ const resetPasswordDialog = ref({
 })
 
 // Computed properties
-const connectionUrl = computed(() => getConnectionUrl())
+const mqttConnectionUrl = computed(() => {
+  // Use environment variable or fallback value
+  const mqttHost = import.meta.env.VITE_MQTT_HOST || 'mqtt.example.com';
+  const mqttPort = import.meta.env.VITE_MQTT_PORT || '8883';
+  return `${mqttHost}:${mqttPort}`;
+});
+
+const natsConnectionUrl = computed(() => {
+  // Use environment variable or fallback value
+  const natsHost = import.meta.env.VITE_NATS_HOST || 'nats.example.com';
+  const natsPort = import.meta.env.VITE_NATS_PORT || '4222';
+  return `${natsHost}:${natsPort}`;
+});
+
+const wsConnectionUrl = computed(() => {
+  // Use environment variable or fallback value
+  const wsHost = import.meta.env.VITE_WS_HOST || 'ws.example.com';
+  const wsPort = import.meta.env.VITE_WS_PORT || '9001';
+  return `${wsHost}:${wsPort}`;
+});
 
 // Fetch client data on component mount
 onMounted(async () => {
@@ -375,33 +400,6 @@ const handleResetPassword = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 .field-label {
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
@@ -422,25 +420,7 @@ const handleResetPassword = async () => {
   flex-direction: column;
 }
 
-/* Error container styling */
-.p-error-container {
-  background-color: var(--surface-card);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
-}
-
+/* Fix PrimeVue Dialog styling in dark mode */
 :deep(.dark .p-dialog) {
   background-color: var(--surface-card);
   color: var(--text-color);

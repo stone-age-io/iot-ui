@@ -1,11 +1,12 @@
+<!-- src/components/common/FormField.vue -->
 <template>
-  <div class="form-field-wrapper mb-4">
+  <div class="form-field-wrapper mb-4 theme-transition">
     <div class="flex justify-between items-start mb-1 flex-wrap">
-      <label :for="id" class="block text-sm font-medium text-theme-primary dark:text-gray-300">
+      <label :for="id" class="block text-sm font-medium text-content-primary dark:text-content-primary-dark">
         {{ label }}
         <span v-if="required" class="text-red-500 dark:text-red-400">*</span>
       </label>
-      <small v-if="hint" class="text-theme-secondary dark:text-gray-400 w-full sm:w-auto">{{ hint }}</small>
+      <small v-if="hint" class="text-content-secondary dark:text-content-secondary-dark w-full sm:w-auto">{{ hint }}</small>
     </div>
     
     <slot></slot>
@@ -14,17 +15,14 @@
       {{ errorMessage }}
     </small>
     
-    <small v-if="helpText" class="text-theme-secondary dark:text-gray-400 mt-1 block">
+    <small v-if="helpText" class="text-content-secondary dark:text-content-secondary-dark mt-1 block">
       {{ helpText }}
     </small>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useThemeStore } from '../../stores/theme';
-
-const props = defineProps({
+defineProps({
   id: {
     type: String,
     required: true
@@ -50,27 +48,9 @@ const props = defineProps({
     default: ''
   }
 });
-
-// Access the theme store - this allows components to react to theme changes
-const themeStore = useThemeStore();
-
-// Computed property to determine if we're in dark mode
-const isDarkMode = computed(() => {
-  return themeStore.theme === 'dark' || 
-    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-});
 </script>
 
 <style>
-/* Using the theme variables consistently */
-.form-field-wrapper label {
-  color: rgb(var(--color-text));
-}
-
-.form-field-wrapper small {
-  color: rgb(var(--color-text-secondary));
-}
-
 /* Specific error styling for dark mode */
 :deep(.p-error) {
   @apply dark:text-red-400;

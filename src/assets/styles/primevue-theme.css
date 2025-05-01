@@ -1,0 +1,165 @@
+/* src/assets/styles/primevue-theme.css */
+
+/* PrimeVue CSS variable mappings for theme consistency */
+:root {
+  /* Light theme PrimeVue variables */
+  --primary-color: #3B82F6;
+  --primary-color-hover: #2563EB;
+  --text-color: rgb(17, 24, 39);
+  --text-color-secondary: rgb(107, 114, 128);
+  --surface-a: rgb(255, 255, 255);
+  --surface-b: rgb(249, 250, 251);
+  --surface-c: rgb(229, 231, 235 / 30%);
+  --surface-d: rgb(229, 231, 235);
+  --surface-e: rgb(255, 255, 255);
+  --surface-f: rgb(255, 255, 255);
+  --surface-hover: rgb(243, 244, 246);
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #3B82F6;
+}
+
+/* Dark theme PrimeVue variables */
+.dark {
+  --primary-color: #60A5FA;
+  --primary-color-hover: #3B82F6;
+  --text-color: rgb(243, 244, 246);
+  --text-color-secondary: rgb(156, 163, 175);
+  --surface-a: rgb(42, 42, 60);
+  --surface-b: rgb(30, 41, 59);
+  --surface-c: rgb(75, 85, 99 / 30%);
+  --surface-d: rgb(75, 85, 99);
+  --surface-e: rgb(42, 42, 60);
+  --surface-f: rgb(42, 42, 60);
+  --surface-hover: rgb(55, 65, 81);
+  --focus-ring: 0 0 0 2px rgb(30, 41, 59), 0 0 0 4px rgb(96, 165, 250);
+}
+
+/* PrimeVue component styling overrides */
+
+/* Base component styles */
+.p-component {
+  font-family: inherit;
+}
+
+/* Button styling */
+.p-button {
+  @apply font-medium;
+}
+
+.p-button.p-button-sm {
+  @apply text-xs px-2 py-1;
+}
+
+.dark .p-button.p-button-text {
+  @apply text-gray-300;
+}
+
+.dark .p-button.p-button-text:hover {
+  @apply bg-gray-700;
+}
+
+.dark .p-button.p-button-danger.p-button-text {
+  @apply text-red-400;
+}
+
+.dark .p-button.p-button-danger.p-button-text:hover {
+  @apply bg-red-900/20;
+}
+
+/* Form controls in dark mode */
+.dark .p-inputtext {
+  @apply bg-gray-700 text-gray-200 border-gray-600;
+}
+
+.dark .p-inputtext:enabled:focus {
+  @apply border-blue-500 shadow-none;
+}
+
+.dark .p-dropdown,
+.dark .p-multiselect,
+.dark .p-calendar {
+  @apply bg-gray-700 text-gray-200 border-gray-600;
+}
+
+.dark .p-dropdown-panel,
+.dark .p-multiselect-panel,
+.dark .p-calendar-panel {
+  @apply bg-gray-700 border-gray-600;
+}
+
+.dark .p-dropdown-items-wrapper,
+.dark .p-multiselect-items-wrapper {
+  @apply bg-gray-700;
+}
+
+.dark .p-dropdown-item,
+.dark .p-multiselect-item {
+  @apply text-gray-300;
+}
+
+.dark .p-dropdown-item:hover,
+.dark .p-multiselect-item:hover {
+  @apply bg-gray-600;
+}
+
+/* DataTable styling */
+.p-datatable .p-datatable-header {
+  @apply bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  @apply bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-600;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  @apply bg-gray-50 dark:bg-gray-700;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  @apply border-gray-200 dark:border-gray-600;
+}
+
+/* Dialog styling */
+.p-dialog {
+  @apply rounded-lg shadow-lg border border-gray-200 dark:border-gray-700;
+}
+
+.p-dialog .p-dialog-header {
+  @apply border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+}
+
+.p-dialog .p-dialog-content {
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200;
+}
+
+.p-dialog .p-dialog-footer {
+  @apply border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800;
+}
+
+/* Toast styling */
+.p-toast {
+  @apply opacity-95;
+}
+
+.p-toast .p-toast-message {
+  @apply rounded-md shadow-md mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700;
+}
+
+.p-toast .p-toast-message-success {
+  @apply border-l-4 border-l-green-500 dark:border-l-green-400;
+}
+
+.p-toast .p-toast-message-info {
+  @apply border-l-4 border-l-blue-500 dark:border-l-blue-400;
+}
+
+.p-toast .p-toast-message-warn {
+  @apply border-l-4 border-l-amber-500 dark:border-l-amber-400;
+}
+
+.p-toast .p-toast-message-error {
+  @apply border-l-4 border-l-red-500 dark:border-l-red-400;
+}

@@ -1,13 +1,13 @@
 <!-- src/components/dashboard/ActivityItem.vue -->
 <template>
-  <div class="activity-item border-theme">
-    <div class="activity-icon" :class="getIconColorClass">
+  <div class="activity-item flex items-start py-3 first:pt-0 last:pb-0 border-b border-border-primary dark:border-border-primary-dark last:border-0 theme-transition">
+    <div class="activity-icon w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0" :class="getIconColorClass">
       <i :class="iconClass"></i>
     </div>
-    <div class="activity-content">
-      <div class="activity-title text-theme-primary">{{ title }}</div>
-      <div class="activity-time text-theme-secondary">{{ time }}</div>
-      <div v-if="showDetails && details" class="activity-details mt-2 text-xs text-theme-secondary">
+    <div class="activity-content flex-1 min-w-0">
+      <div class="activity-title text-content-primary dark:text-content-primary-dark text-sm font-medium">{{ title }}</div>
+      <div class="activity-time text-content-secondary dark:text-content-secondary-dark text-xs mt-1">{{ time }}</div>
+      <div v-if="showDetails && details" class="activity-details mt-2 text-xs text-content-secondary dark:text-content-secondary-dark bg-surface-secondary dark:bg-surface-secondary-dark rounded p-2">
         <div class="activity-collection">
           <span class="font-medium">Collection:</span> {{ formatCollection(details.collection) }}
         </div>
@@ -18,14 +18,14 @@
           <span class="font-medium">Method:</span> {{ details.method }}
         </div>
         <div v-if="details.changes && (details.changes.before || details.changes.after)" class="activity-changes mt-1">
-          <div v-if="showChanges" class="changes-container">
+          <div v-if="showChanges" class="changes-container bg-surface-tertiary dark:bg-surface-tertiary-dark rounded p-2 max-h-50 overflow-y-auto">
             <div v-if="details.changes.before" class="changes-before">
               <div class="font-medium mb-1">Before:</div>
-              <pre class="changes-data">{{ formatChanges(details.changes.before) }}</pre>
+              <pre class="changes-data bg-surface-primary dark:bg-surface-primary-dark p-1 rounded overflow-x-auto">{{ formatChanges(details.changes.before) }}</pre>
             </div>
             <div v-if="details.changes.after" class="changes-after mt-1">
               <div class="font-medium mb-1">After:</div>
-              <pre class="changes-data">{{ formatChanges(details.changes.after) }}</pre>
+              <pre class="changes-data bg-surface-primary dark:bg-surface-primary-dark p-1 rounded overflow-x-auto">{{ formatChanges(details.changes.after) }}</pre>
             </div>
           </div>
           <Button 
@@ -52,12 +52,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useTheme } from '../../composables/useTheme';
 import Button from 'primevue/button';
-
-// Use theme composable for reactive theme values
-const { themeValue } = useTheme();
-const router = useRouter();
 
 // Component state
 const detailsExpanded = ref(false);
@@ -116,15 +111,15 @@ const iconClass = computed(() => {
   }
 });
 
-// Get the appropriate color class based on activity type
+// Get the appropriate color class based on activity type with dark mode support
 const getIconColorClass = computed(() => {
   const colorMap = {
-    login: themeValue.value.class('bg-blue-100 text-blue-700', 'bg-blue-900/30 text-blue-400'),
-    create: themeValue.value.class('bg-green-100 text-green-700', 'bg-green-900/30 text-green-400'),
-    update: themeValue.value.class('bg-purple-100 text-purple-700', 'bg-purple-900/30 text-purple-400'),
-    delete: themeValue.value.class('bg-red-100 text-red-700', 'bg-red-900/30 text-red-400'),
-    error: themeValue.value.class('bg-amber-100 text-amber-700', 'bg-amber-900/30 text-amber-400'),
-    info: themeValue.value.class('bg-gray-100 text-gray-700', 'bg-gray-700 text-gray-400')
+    login: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    create: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    update: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    error: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    info: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
   };
 
   return colorMap[props.type] || colorMap.info;
@@ -162,71 +157,3 @@ const formatChanges = (changes) => {
   return JSON.stringify(changes, null, 2);
 };
 </script>
-
-<style scoped>
-.activity-item {
-  display: flex;
-  align-items: flex-start;
-  padding: 0.75rem 0;
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 0.75rem;
-  flex-shrink: 0;
-}
-
-.activity-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.25;
-}
-
-.activity-time {
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.activity-details {
-  background-color: rgba(var(--color-surface-alt), 0.6);
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  transition: background-color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
-}
-
-.changes-container {
-  background-color: rgba(var(--color-surface-alt), 0.4);
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.changes-data {
-  font-family: monospace;
-  font-size: 0.75rem;
-  white-space: pre-wrap;
-  margin: 0;
-  background-color: rgba(var(--color-code-bg, 241, 245, 249), 0.6);
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  overflow-x: auto;
-}
-</style>

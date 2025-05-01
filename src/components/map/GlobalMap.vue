@@ -1,13 +1,13 @@
 <!-- src/components/map/GlobalMap.vue -->
 <template>
-  <div :id="mapId" class="global-map theme-transition" style="height: 100%; width: 100%"></div>
+  <div :id="mapId" class="global-map theme-transition rounded-md relative z-[1] h-full w-full"></div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useGlobalMap } from '../../composables/useGlobalMap'
 import { useTypesStore } from '../../stores/types'
-import { useTheme } from '../../composables/useTheme' // Import theme composable
+import { useTheme } from '../../composables/useTheme'
 import L from 'leaflet'
 
 // Initialize composables and store
@@ -38,7 +38,7 @@ const mapId = `global-map-${Math.random().toString(36).substring(2, 9)}`
 const shouldRenderMarkers = ref(false)
 const mapInitialized = ref(false)
 
-  // Initialize map on mount
+// Initialize map on mount
 onMounted(() => {
   nextTick(() => {
     // Initialize map with the uniquely generated ID and pass the theme state
@@ -163,12 +163,6 @@ defineExpose({
 </script>
 
 <style scoped>
-.global-map {
-  border-radius: 6px;
-  position: relative;
-  z-index: 1; /* Lower z-index to prevent overlay issues with sidebar */
-}
-
 /* Theme transition for map components */
 .theme-transition,
 .theme-transition * {

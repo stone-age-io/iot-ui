@@ -1,8 +1,8 @@
 <!-- src/components/common/AppHeader.vue -->
 <template>
   <header 
-    class="app-header h-16 border-b theme-transition shadow-sm fixed top-0 left-0 right-0 z-40"
-    :class="headerClasses"
+    class="app-header h-16 border-b theme-transition shadow-sm fixed top-0 left-0 right-0 z-40
+           bg-surface-primary dark:bg-surface-primary-dark border-border-primary dark:border-border-primary-dark"
   >
     <div class="flex items-center justify-between h-full px-4 w-full">
       <!-- Left section - Contains logo (desktop) and mobile menu button -->
@@ -10,7 +10,7 @@
         <!-- Mobile menu button - hidden on desktop -->
         <button 
           @click="$emit('toggle-sidebar')"
-          class="p-2 rounded-md text-theme-secondary touch-target dark:text-gray-300 focus-ring mobile-menu-button hidden"
+          class="p-2 rounded-md text-content-secondary dark:text-gray-300 focus-ring mobile-menu-button hidden"
           :class="{'block lg:!hidden': true}"
           aria-label="Toggle navigation menu"
         >
@@ -22,7 +22,7 @@
           to="/" 
           class="hidden lg:flex items-center space-x-2 ml-1"
         >
-          <div class="w-8 h-8 flex items-center justify-center rounded-md" :class="logoClasses">
+          <div class="w-8 h-8 flex items-center justify-center rounded-md text-primary-600 dark:text-primary-400">
             <!-- Custom SVG Logo -->
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -38,14 +38,14 @@
               />
             </svg>
           </div>
-          <h1 class="text-xl font-semibold whitespace-nowrap text-theme-primary dark:text-white">Stone-Age.io</h1>
+          <h1 class="text-xl font-semibold whitespace-nowrap text-content-primary dark:text-content-primary-dark">Stone-Age.io</h1>
         </router-link>
       </div>
       
       <!-- Center section - Logo only (mobile view) - Hidden on desktop -->
       <div class="flex lg:hidden items-center justify-center absolute left-1/2 transform -translate-x-1/2">
         <router-link to="/" class="flex items-center">
-          <div class="w-8 h-8 flex items-center justify-center rounded-md" :class="logoClasses">
+          <div class="w-8 h-8 flex items-center justify-center rounded-md text-primary-600 dark:text-primary-400">
             <!-- Custom SVG Logo -->
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -79,12 +79,12 @@
             :aria-expanded="isUserMenuOpen ? 'true' : 'false'"
           >
             <div 
-              class="w-8 h-8 rounded-full flex items-center justify-center font-semibold"
-              :class="userInitialsClasses"
+              class="w-8 h-8 rounded-full flex items-center justify-center font-semibold
+                     bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
             >
               {{ userInitials }}
             </div>
-            <span class="hidden sm:inline-block ml-2 text-theme-primary dark:text-white">{{ userFullName }}</span>
+            <span class="hidden sm:inline-block ml-2 text-content-primary dark:text-content-primary-dark">{{ userFullName }}</span>
             <i class="pi pi-angle-down ml-1 hidden sm:block dark:text-gray-300"></i>
           </button>
           
@@ -144,7 +144,6 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { useTheme } from '../../composables/useTheme'
 import HeaderActions from './HeaderActions.vue'
 
 const router = useRouter()
@@ -153,28 +152,9 @@ const authStore = useAuthStore()
 const isUserMenuOpen = ref(false)
 const userMenuDropdown = ref(null)
 
-// Use our theme composable
-const { isDarkMode } = useTheme()
-
 // User info from the auth store
 const userFullName = computed(() => authStore.userFullName)
 const userInitials = computed(() => authStore.userInitials)
-
-// Theme-based classes
-const headerClasses = computed(() => ({
-  'bg-white border-gray-200': !isDarkMode.value,
-  'dark:bg-gray-800 dark:border-gray-700': isDarkMode.value
-}))
-
-const logoClasses = computed(() => ({
-  'text-primary-600': !isDarkMode.value,
-  'dark:text-primary-400': isDarkMode.value
-}))
-
-const userInitialsClasses = computed(() => ({
-  'bg-primary-100 text-primary-700': !isDarkMode.value,
-  'dark:bg-primary-900 dark:text-primary-300': isDarkMode.value
-}))
 
 // Get the current collection name based on route
 const currentCollectionName = computed(() => {
@@ -215,8 +195,6 @@ const toggleUserMenu = () => {
 const closeUserMenu = () => {
   isUserMenuOpen.value = false;
 }
-
-
 
 // Handle logout action
 const handleLogout = () => {
@@ -288,22 +266,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-/* App header consistent styling */
-.app-header {
-  background-color: rgb(var(--color-surface));
-  border-color: rgb(var(--color-border));
-}
-
 /* Custom styling for the logo */
 .logo-image {
-  fill: var(--primary-color, #3B82F6);
+  fill: currentColor;
   transition: fill 0.2s ease;
 }
 
 /* Hover effect for the logo */
 .router-link-active .logo-image,
 a:hover .logo-image {
-  fill: var(--primary-color-hover, #1D4ED8);
+  fill: var(--primary-color-hover);
 }
 
 /* Force important for mobile menu visibility */

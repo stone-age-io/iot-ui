@@ -1,6 +1,6 @@
 <!-- src/layouts/DefaultLayout.vue -->
 <template>
-  <div class="min-h-screen flex flex-col theme-transition">
+  <div class="min-h-screen flex flex-col bg-surface-primary dark:bg-surface-primary-dark text-content-primary dark:text-content-primary-dark theme-transition">
     <!-- Fixed Header -->
     <AppHeader 
       @toggle-sidebar="toggleSidebar" 
@@ -38,7 +38,7 @@
       <main 
         :class="[
           'w-full min-h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out p-4 sm:p-6',
-          backgroundColor.primary,
+          'bg-surface-primary dark:bg-surface-primary-dark',
           { 
             'lg:ml-64': !sidebarCollapsed && !isMobileView,
             'lg:ml-16': sidebarCollapsed && !isMobileView,
@@ -46,13 +46,12 @@
           }
         ]"
       >
-        
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
-	<LastUpdatedIndicator class="mb-4" />
+        <LastUpdatedIndicator class="mb-4" />
       </main>
     </div>
     
@@ -72,7 +71,6 @@
 import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
-import { useTheme } from '../composables/useTheme'
 import { useRoute } from 'vue-router'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppSidebar from '../components/common/AppSidebar.vue'
@@ -89,9 +87,6 @@ const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const windowWidth = ref(window.innerWidth)
 const previousWindowWidth = ref(window.innerWidth) // Track previous window width
-
-// Theme composable for theme-aware styling
-const { backgroundColor, textColor } = useTheme()
 
 // Methods - Define these before providing them
 // Close sidebar with a specific method to ensure consistent behavior
@@ -196,13 +191,5 @@ main {
   .mobile-menu-button {
     display: none !important;
   }
-}
-
-/* Theme transitions */
-.theme-transition,
-.theme-transition * {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: ease;
-  transition-duration: 0.2s;
 }
 </style>

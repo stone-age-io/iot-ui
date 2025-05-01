@@ -11,8 +11,8 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
         <DataTable
           :items="permissions"
           :columns="columns"
@@ -27,17 +27,14 @@
         >
           <!-- Name column with custom formatting -->
           <template #name-body="{ data }">
-            <div :class="['font-medium', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.name }}</div>
+            <div class="font-medium text-primary-700 dark:text-primary-400">{{ data.name }}</div>
           </template>
           
           <!-- Publish Permissions column -->
           <template #publish_permissions-body="{ data }">
             <div class="flex items-center">
               <span 
-                :class="[
-                  'px-2 py-1 text-xs rounded-full',
-                  themeValue.class('bg-blue-100 text-blue-800', 'bg-blue-900/30 text-blue-300')
-                ]"
+                class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
               >
                 {{ getTopicCount(data.publish_permissions) }}
               </span>
@@ -48,10 +45,7 @@
           <template #subscribe_permissions-body="{ data }">
             <div class="flex items-center">
               <span 
-                :class="[
-                  'px-2 py-1 text-xs rounded-full',
-                  themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300')
-                ]"
+                class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
               >
                 {{ getTopicCount(data.subscribe_permissions) }}
               </span>
@@ -97,8 +91,8 @@
             </div>
           </template>
         </DataTable>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
@@ -122,10 +116,10 @@
     >
       <div class="p-4">
         <div v-if="clientsDialog.loading" class="flex justify-center py-4">
-          <ProgressSpinner :class="themeValue.class('text-primary-500', 'text-primary-400')" />
+          <ProgressSpinner class="text-primary-500 dark:text-primary-400" />
         </div>
         <div v-else-if="clientsDialog.clients.length === 0" 
-            :class="['py-4 text-center', textColor.secondary]">
+            class="py-4 text-center text-content-secondary dark:text-content-secondary-dark">
           No clients are using this role.
         </div>
         <div v-else>
@@ -140,7 +134,7 @@
               <template #username-body="{ data }">
                 <router-link
                   :to="{ name: 'client-detail', params: { id: data.id } }"
-                  :class="themeValue.class('text-primary-600 hover:underline', 'text-primary-400 hover:underline')"
+                  class="text-primary-600 hover:underline dark:text-primary-400 dark:hover:underline"
                   @click="clientsDialog.visible = false"
                 >
                   {{ data.username }}
@@ -152,8 +146,8 @@
                 <span 
                   class="px-2 py-1 text-xs rounded-full font-medium inline-block"
                   :class="data.active ? 
-                    themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
-                    themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
                 >
                   {{ data.active ? 'Active' : 'Inactive' }}
                 </span>
@@ -179,19 +173,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
-import { useTheme } from '../../../composables/useTheme'
 import { topicPermissionService } from '../../../services'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
-
-// Theme composable
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the topic permission composable
 const { 
@@ -298,27 +287,10 @@ const viewClientsUsingRole = async (role) => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
+/* Basic DataTable styling */
+:deep(.p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
+  cursor: pointer;
 }
 
 /* Fix dialog styling in dark mode */
@@ -341,12 +313,6 @@ const viewClientsUsingRole = async (role) => {
 :deep(.p-dialog .p-dialog-footer) {
   background-color: var(--surface-card);
   border-color: var(--surface-border);
-}
-
-/* Basic DataTable styling */
-:deep(.p-datatable-tbody > tr:hover) {
-  background-color: var(--surface-hover);
-  cursor: pointer;
 }
 
 /* Dark mode specific overrides */

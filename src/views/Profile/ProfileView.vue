@@ -7,28 +7,28 @@
     />
     
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" />
+      <ProgressSpinner strokeWidth="4" class="text-primary-500 dark:text-primary-400" />
     </div>
     
-    <div v-else-if="error" class="p-6 text-center rounded-lg" :class="[backgroundColor.surface, borderColor.default]">
-      <div class="text-theme-error text-xl mb-4">
+    <div v-else-if="error" class="p-6 text-center rounded-lg bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark">
+      <div class="text-red-600 dark:text-red-400 text-xl mb-4">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load profile
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Try Again" icon="pi pi-refresh" @click="fetchProfile" />
     </div>
     
     <div v-else class="grid grid-cols-1 gap-6">
       <!-- Profile Information Card -->
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
             <i class="pi pi-user mr-2"></i>
             Profile Information
           </h2>
-        </template>
-        <template #content>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
@@ -96,25 +96,25 @@
                   id="username"
                   v-model="profileForm.username"
                   placeholder="Username"
-                  class="w-full form-input bg-theme-surface-alt"
+                  class="w-full form-input bg-surface-secondary dark:bg-surface-secondary-dark"
                   readonly
                   disabled
                 />
               </FormField>
             </div>
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Password Change Card -->
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
             <i class="pi pi-lock mr-2"></i>
             Change Password
           </h2>
-        </template>
-        <template #content>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Update Password"
@@ -176,41 +176,41 @@
               </FormField>
             </div>
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Account Information Card -->
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
             <i class="pi pi-info-circle mr-2"></i>
             Account Information
           </h2>
-        </template>
-        <template #content>
+        </div>
+        <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Created Date -->
-            <div :class="['p-3 rounded-lg', backgroundColor.secondary, borderColor.light]">
-              <div :class="['text-sm mb-1', textColor.secondary]">Account Created</div>
-              <div :class="['font-medium', textColor.primary]">
+            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
+              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Account Created</div>
+              <div class="font-medium text-content-primary dark:text-content-primary-dark">
                 <i class="pi pi-calendar mr-2 text-blue-500 dark:text-blue-400"></i>
                 {{ formatDate(profile.created) }}
               </div>
             </div>
             
             <!-- Last Updated -->
-            <div :class="['p-3 rounded-lg', backgroundColor.secondary, borderColor.light]">
-              <div :class="['text-sm mb-1', textColor.secondary]">Last Updated</div>
-              <div :class="['font-medium', textColor.primary]">
+            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
+              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+              <div class="font-medium text-content-primary dark:text-content-primary-dark">
                 <i class="pi pi-clock mr-2 text-blue-500 dark:text-blue-400"></i>
                 {{ formatDate(profile.updated) }}
               </div>
             </div>
             
             <!-- Verified Status -->
-            <div :class="['p-3 rounded-lg', backgroundColor.secondary, borderColor.light]">
-              <div :class="['text-sm mb-1', textColor.secondary]">Email Verified</div>
-              <div :class="['font-medium flex items-center', textColor.primary]">
+            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
+              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Email Verified</div>
+              <div class="font-medium flex items-center text-content-primary dark:text-content-primary-dark">
                 <i 
                   :class="[
                     profile.verified ? 'pi pi-check-circle text-green-500 dark:text-green-400' : 'pi pi-times-circle text-red-500 dark:text-red-400', 
@@ -221,8 +221,8 @@
               </div>
             </div>
           </div>
-        </template>
-      </Card>
+        </div>
+      </div>
     </div>
     
     <Toast />
@@ -233,7 +233,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useUserProfile } from '../../composables/useUserProfile'
 import { useProfileForm } from '../../composables/useProfileForm'
-import { useTheme } from '../../composables/useTheme'
 import PageHeader from '../../components/common/PageHeader.vue'
 import EntityForm from '../../components/common/EntityForm.vue'
 import FormField from '../../components/common/FormField.vue'
@@ -242,7 +241,6 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
-import Card from 'primevue/card'
 
 // Get user profile functionality
 const { profile, error, loading: profileLoading, fetchProfile, formatDate } = useUserProfile()
@@ -258,9 +256,6 @@ const {
   submitProfileForm,
   submitPasswordForm
 } = useProfileForm()
-
-// Theme composable for theme-aware styling
-const { textColor, backgroundColor, borderColor } = useTheme()
 
 // Combined loading state
 const loading = ref(false)
@@ -289,26 +284,6 @@ onMounted(async () => {
 .profile-container {
   margin-bottom: 2rem;
   transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
 }
 
 /* Form input styling for consistency */
@@ -352,12 +327,6 @@ onMounted(async () => {
 }
 
 /* Fix for dark mode styling */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
 :deep(.dark .p-inputtext),
 :deep(.dark .p-dropdown),
 :deep(.dark .p-inputnumber) {

@@ -1,3 +1,4 @@
+<!-- src/views/Messaging/Clients/ClientCreateView.vue -->
 <template>
   <div>
     <PageHeader 
@@ -14,11 +15,11 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #title>
-        <h2 :class="['text-xl font-semibold', textColor.primary]">Client Information</h2>
-      </template>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+        <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Client Information</h2>
+      </div>
+      <div class="p-6">
         <EntityForm
           :loading="loading"
           submit-label="Create Client"
@@ -83,10 +84,7 @@
                   tooltip="Copy Password"
                 />
               </div>
-              <div :class="[
-                'mt-2 text-xs p-2 rounded flex items-start',
-                themeValue.class('bg-amber-50 text-amber-600', 'bg-amber-900/20 text-amber-400')
-              ]">
+              <div class="mt-2 text-xs p-2 rounded flex items-start bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
                 <i class="pi pi-exclamation-triangle mr-2 mt-0.5"></i>
                 <span>Make sure to save this password securely. You won't be able to view it again after creation.</span>
               </div>
@@ -115,7 +113,7 @@
               >
                 <template #option="slotProps">
                   <div>
-                    <div :class="['font-medium', textColor.primary]">{{ slotProps.option.name }}</div>
+                    <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ slotProps.option.name }}</div>
                   </div>
                 </template>
               </Dropdown>
@@ -142,8 +140,7 @@
                 />
                 <label 
                   for="active" 
-                  class="cursor-pointer"
-                  :class="textColor.primary"
+                  class="cursor-pointer text-content-primary dark:text-content-primary-dark"
                 >
                   {{ client.active ? 'Active' : 'Inactive' }}
                 </label>
@@ -151,8 +148,8 @@
             </FormField>
           </div>
         </EntityForm>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Generate Username Dialog -->
     <Dialog
@@ -162,13 +159,13 @@
       :modal="true"
     >
       <div class="p-4">
-        <p :class="['mb-4', textColor.primary]">Generate a username based on client type and descriptive name.</p>
+        <p class="mb-4 text-content-primary dark:text-content-primary-dark">Generate a username based on client type and descriptive name.</p>
         
         <div class="space-y-3">
           <div>
             <label 
               for="gen-client-type" 
-              :class="['block text-sm font-medium mb-1', textColor.primary]"
+              class="block text-sm font-medium mb-1 text-content-primary dark:text-content-primary-dark"
             >
               Client Type
             </label>
@@ -186,7 +183,7 @@
           <div>
             <label 
               for="gen-name" 
-              :class="['block text-sm font-medium mb-1', textColor.primary]"
+              class="block text-sm font-medium mb-1 text-content-primary dark:text-content-primary-dark"
             >
               Descriptive Name
             </label>
@@ -199,7 +196,7 @@
           </div>
           
           <div v-if="generatedUsername">
-            <label :class="['block text-sm font-medium mb-1', textColor.primary]">Generated Username</label>
+            <label class="block text-sm font-medium mb-1 text-content-primary dark:text-content-primary-dark">Generated Username</label>
             <div class="flex items-center">
               <InputText
                 v-model="generatedUsername"
@@ -251,7 +248,6 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
 import { useClient } from '../../../composables/useClient'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
-import { useTheme } from '../../../composables/useTheme'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -263,10 +259,6 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
-import Card from 'primevue/card'
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the client composable
 const { 
@@ -390,46 +382,12 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 /* Form input styling */
 .form-input {
   transition: all 0.2s ease;
 }
 
 /* Fix PrimeVue components styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
 :deep(.dark .p-inputtext),
 :deep(.dark .p-dropdown),
 :deep(.dark .p-inputnumber),

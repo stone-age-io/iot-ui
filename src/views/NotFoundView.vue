@@ -1,9 +1,9 @@
 <template>
-  <div :class="['min-h-screen flex items-center justify-center px-4', backgroundColor.primary]">
+  <div class="min-h-screen flex items-center justify-center px-4 bg-surface-primary dark:bg-surface-primary-dark theme-transition">
     <div class="text-center max-w-md">
-      <div :class="['text-7xl font-bold mb-4', isDarkMode ? 'text-primary-400' : 'text-primary-600']">404</div>
-      <h1 :class="['text-3xl font-bold mb-2', textColor.primary]">Page Not Found</h1>
-      <p :class="['mb-6', textColor.secondary]">The page you're looking for doesn't exist or has been moved.</p>
+      <div class="text-7xl font-bold mb-4 text-primary-600 dark:text-primary-400">404</div>
+      <h1 class="text-3xl font-bold mb-2 text-content-primary dark:text-content-primary-dark">Page Not Found</h1>
+      <p class="mb-6 text-content-secondary dark:text-content-secondary-dark">The page you're looking for doesn't exist or has been moved.</p>
       
       <div class="flex gap-3 justify-center">
         <Button
@@ -36,12 +36,6 @@
 import { useTheme } from '../composables/useTheme'
 import Button from 'primevue/button'
 
-// Theme composable for theme-aware styling
-const { 
-  isDarkMode,
-  toggleTheme,
-  backgroundColor, 
-  textColor,
-  borderColor 
-} = useTheme()
+// Only use what we need from the theme composable
+const { isDarkMode, toggleTheme } = useTheme()
 </script>

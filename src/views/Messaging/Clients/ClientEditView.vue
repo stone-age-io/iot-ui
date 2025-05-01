@@ -1,20 +1,21 @@
+<!-- src/views/Messaging/Clients/ClientEditView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="p-error-container p-6 text-center">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load client
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -34,11 +35,11 @@
         </template>
       </PageHeader>
       
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">Client Information</h2>
-        </template>
-        <template #content>
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Client Information</h2>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
@@ -70,7 +71,7 @@
                 class="md:col-span-2"
               >
                 <div class="flex items-center">
-                  <div :class="['italic flex-1', textColor.secondary]">
+                  <div class="italic flex-1 text-content-secondary dark:text-content-secondary-dark">
                     Password not displayed for security
                   </div>
                   <Button
@@ -105,7 +106,7 @@
                 >
                   <template #option="slotProps">
                     <div>
-                      <div :class="['font-medium', textColor.primary]">{{ slotProps.option.name }}</div>
+                      <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ slotProps.option.name }}</div>
                     </div>
                   </template>
                 </Dropdown>
@@ -132,8 +133,7 @@
                   />
                   <label 
                     for="active" 
-                    class="cursor-pointer"
-                    :class="textColor.primary"
+                    class="cursor-pointer text-content-primary dark:text-content-primary-dark"
                   >
                     {{ client.active ? 'Active' : 'Inactive' }}
                   </label>
@@ -141,8 +141,8 @@
               </FormField>
             </div>
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Reset Password Dialog -->
       <Dialog 
@@ -153,17 +153,13 @@
         :closable="!resetPasswordDialog.loading"
       >
         <div class="p-4">
-          <p :class="['mb-4', textColor.primary]">Are you sure you want to reset the password for <strong>{{ client.username }}</strong>?</p>
-          <p :class="['text-sm mb-4', textColor.secondary]">A new secure password will be generated. You will only see this password once, so make sure to copy it.</p>
+          <p class="mb-4 text-content-primary dark:text-content-primary-dark">Are you sure you want to reset the password for <strong>{{ client.username }}</strong>?</p>
+          <p class="text-sm mb-4 text-content-secondary dark:text-content-secondary-dark">A new secure password will be generated. You will only see this password once, so make sure to copy it.</p>
           
           <div v-if="resetPasswordDialog.newPassword" class="my-4">
-            <div :class="['field-label', textColor.secondary]">New Password</div>
+            <div class="field-label text-content-secondary dark:text-content-secondary-dark">New Password</div>
             <div class="flex items-center">
-              <code :class="[
-                'p-2 rounded text-sm flex-1 font-mono',
-                backgroundColor.tertiary,
-                textColor.primary
-              ]">
+              <code class="p-2 rounded text-sm flex-1 font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                 {{ resetPasswordDialog.newPassword }}
               </code>
               <Button 
@@ -215,7 +211,6 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
 import { useClient } from '../../../composables/useClient'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
-import { useTheme } from '../../../composables/useTheme'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
@@ -227,13 +222,9 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
-import Card from 'primevue/card'
 
 const route = useRoute()
 const toast = useToast()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the client composable
 const { 
@@ -355,33 +346,6 @@ const handleResetPassword = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 /* Form input styling */
 .form-input {
   transition: all 0.2s ease;
@@ -392,26 +356,7 @@ const handleResetPassword = async () => {
   margin-bottom: 0.25rem;
 }
 
-/* Error container styling */
-.p-error-container {
-  background-color: var(--surface-card);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
-}
-
-/* Fix input styling in dark mode */
+/* Fix PrimeVue components styling in dark mode */
 :deep(.dark .p-inputtext),
 :deep(.dark .p-dropdown),
 :deep(.dark .p-inputnumber),

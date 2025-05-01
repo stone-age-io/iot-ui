@@ -10,8 +10,8 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
         <DataTable
           :items="types"
           :columns="columns"
@@ -26,20 +26,19 @@
           
           <!-- Code column with custom formatting -->
           <template #code-body="{ data }">
-            <div :class="['font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.code }}</div>
+            <div class="font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
           </template>
           
           <!-- Type name column -->
           <template #type-body="{ data }">
-            <div :class="['font-medium', textColor.primary]">{{ data.type }}</div>
+            <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ data.type }}</div>
           </template>
           
           <!-- Description column with truncation -->
           <template #description-body="{ data }">
             <div 
-              class="truncate max-w-md" 
+              class="truncate max-w-md text-content-secondary dark:text-content-secondary-dark" 
               :title="data.description"
-              :class="textColor.secondary"
             >
               {{ data.description || 'No description' }}
             </div>
@@ -47,7 +46,7 @@
           
           <!-- Created date column -->
           <template #created-body="{ data }">
-            <div :class="['text-sm', textColor.secondary]">
+            <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
               {{ formatDate(data.created) }}
             </div>
           </template>
@@ -79,8 +78,8 @@
             </div>
           </template>
         </DataTable>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
@@ -105,19 +104,14 @@ import { onMounted } from 'vue'
 import { useEdgeType } from '../../../composables/useEdgeType'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
-import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
 // Get the types store
 const typesStore = useTypesStore()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Edge type functionality from composable
 const { 
@@ -191,44 +185,10 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Basic DataTable styling */
 :deep(.p-datatable-tbody > tr:hover) {
   background-color: var(--surface-hover);
   cursor: pointer;
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
 }
 
 /* Fix button styling */

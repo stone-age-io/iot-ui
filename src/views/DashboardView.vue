@@ -22,11 +22,11 @@
     
     <!-- Recent Activity from Audit Logs -->
     <DashboardCard title="Recent Activity">
-      <div v-if="loading" class="empty-state text-theme-secondary">
+      <div v-if="loading" class="empty-state text-content-secondary dark:text-content-secondary-dark">
         <ProgressSpinner style="width: 24px; height: 24px" />
       </div>
       
-      <div v-else-if="activityItems.length === 0" class="empty-state text-theme-secondary">
+      <div v-else-if="activityItems.length === 0" class="empty-state text-content-secondary dark:text-content-secondary-dark">
         No recent activity found.
       </div>
       
@@ -79,8 +79,8 @@
           <i class="pi pi-chart-line"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-base font-medium text-theme-primary">Analytics & Dashboards</div>
-          <div class="text-sm text-theme-secondary hidden sm:block mt-1">View metrics in Grafana</div>
+          <div class="text-base font-medium text-content-primary dark:text-content-primary-dark">Analytics & Dashboards</div>
+          <div class="text-sm text-content-secondary dark:text-content-secondary-dark hidden sm:block mt-1">View metrics in Grafana</div>
         </div>
         <Button
           label="Open"
@@ -109,8 +109,8 @@ import Button from 'primevue/button'
 // Use Vue Router
 const router = useRouter()
 
-// Use theme composable
-const { themeValue } = useTheme()
+// We only need isDarkMode from the theme composable for this component
+const { isDarkMode } = useTheme()
 
 // Use the dashboard composable
 const { 
@@ -228,7 +228,7 @@ onMounted(async () => {
 
 .empty-state {
   @apply flex justify-center items-center py-8 text-sm;
-  transition: color var(--theme-transition-duration, 0.2s) var(--theme-transition-timing, ease);
+  transition: color 0.2s ease;
 }
 
 .activity-feed {

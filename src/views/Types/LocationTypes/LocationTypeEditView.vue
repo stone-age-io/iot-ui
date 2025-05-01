@@ -4,17 +4,17 @@
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" :class="['p-6 text-center', backgroundColor.surface, borderColor.default, shadowStyle.md]">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load location type
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -34,11 +34,11 @@
         </template>
       </PageHeader>
       
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">Location Type Information</h2>
-        </template>
-        <template #content>
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Type Information</h2>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
@@ -112,14 +112,9 @@
             </div>
             
             <!-- Edit notes -->
-            <div :class="[
-              'mt-6 p-4 rounded-md text-sm',
-              backgroundColor.secondary,
-              borderColor.light,
-              textColor.secondary
-            ]">
+            <div class="mt-6 p-4 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark text-content-secondary dark:text-content-secondary-dark">
               <div class="flex items-start">
-                <i :class="['pi pi-info-circle mt-0.5 mr-2', themeValue.class('text-blue-500', 'text-blue-400')]"></i>
+                <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
                 <div>
                   <p><strong>Note:</strong> The location type code cannot be changed after creation as it may be used by existing locations.</p>
                   <p class="mt-1">If you need to use a different code, please create a new location type and update your locations accordingly.</p>
@@ -127,8 +122,8 @@
               </div>
             </div>
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Toast for success/error messages -->
       <Toast />
@@ -141,12 +136,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocationType } from '../../../composables/useLocationType'
 import { useTypeForm } from '../../../composables/useTypeForm'
-import { useTheme } from '../../../composables/useTheme'
 import { locationTypeService } from '../../../services'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
@@ -154,9 +147,6 @@ import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Route names for navigation
 const routeNames = {
@@ -205,29 +195,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Form input styling */
 .disabled-field {
   opacity: 0.7;
@@ -245,13 +212,6 @@ onMounted(async () => {
 :deep(.p-textarea:enabled:focus) {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 0.2rem var(--primary-color-transparent);
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
 }
 
 /* Fix disabled input styling in dark mode */

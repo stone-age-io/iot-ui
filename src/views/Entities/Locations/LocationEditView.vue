@@ -5,17 +5,17 @@
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="p-error-container p-6 text-center">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-error-container p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load location
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -35,11 +35,11 @@
         </template>
       </PageHeader>
       
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">Location Information</h2>
-        </template>
-        <template #content>
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Information</h2>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
@@ -84,7 +84,7 @@
                     <div v-if="slotProps.value" class="flex align-items-center">
                       <div>
                         {{ getEdgeName(slotProps.value) }}
-                        <span :class="['text-xs ml-2', textColor.secondary]">{{ getEdgeCode(slotProps.value) }}</span>
+                        <span class="text-xs ml-2 text-content-secondary dark:text-content-secondary-dark">{{ getEdgeCode(slotProps.value) }}</span>
                       </div>
                     </div>
                     <span v-else>Select Edge</span>
@@ -113,8 +113,8 @@
                   <template #option="slotProps">
                     <div class="flex align-items-center">
                       <div>
-                        <div :class="textColor.primary">{{ slotProps.option.name }}</div>
-                        <div :class="['text-xs', textColor.secondary]">{{ slotProps.option.code }}</div>
+                        <div class="text-content-primary dark:text-content-primary-dark">{{ slotProps.option.name }}</div>
+                        <div class="text-xs text-content-secondary dark:text-content-secondary-dark">{{ slotProps.option.code }}</div>
                       </div>
                     </div>
                   </template>
@@ -122,7 +122,7 @@
                     <div v-if="slotProps.value" class="flex align-items-center">
                       <div>
                         {{ getParentDisplay(slotProps.value).name }}
-                        <span :class="['text-xs ml-2', textColor.secondary]">{{ getParentDisplay(slotProps.value).code }}</span>
+                        <span class="text-xs ml-2 text-content-secondary dark:text-content-secondary-dark">{{ getParentDisplay(slotProps.value).code }}</span>
                       </div>
                     </div>
                     <span v-else>No Parent (Root Location)</span>
@@ -201,18 +201,18 @@
             </div>
             
             <!-- Edit notes -->
-            <div class="mt-6 info-panel">
+            <div class="mt-6 p-4 rounded-lg border border-border-light dark:border-border-light-dark bg-surface-secondary dark:bg-surface-secondary-dark theme-transition">
               <div class="flex items-start">
-                <i :class="['pi pi-info-circle mt-0.5 mr-2', themeValue.class('text-blue-500', 'text-blue-400')]"></i>
+                <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
                 <div>
-                  <p><strong>Note:</strong> The location code, level, zone, identifier, and edge cannot be changed after creation.</p>
-                  <p class="mt-1">If you need to change these values, please create a new location and delete this one.</p>
+                  <p class="text-content-primary dark:text-content-primary-dark"><strong>Note:</strong> The location code, level, zone, identifier, and edge cannot be changed after creation.</p>
+                  <p class="mt-1 text-content-secondary dark:text-content-secondary-dark">If you need to change these values, please create a new location and delete this one.</p>
                 </div>
               </div>
             </div>
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Toast for success/error messages -->
       <Toast />
@@ -225,12 +225,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocation } from '../../../composables/useLocation'
 import { useLocationForm } from '../../../composables/useLocationForm'
-import { useTheme } from '../../../composables/useTheme'
 import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Textarea from 'primevue/textarea'
@@ -241,9 +239,6 @@ import ProgressSpinner from 'primevue/progressspinner'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Get location functionality from location composable
 const { fetchLocation } = useLocation()
@@ -319,34 +314,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 /* Form input styling */
 .form-input {
   transition: all 0.2s ease;
@@ -355,30 +322,6 @@ onMounted(async () => {
 .disabled-field {
   opacity: 0.7;
   cursor: not-allowed;
-}
-
-/* Info panel styling */
-.info-panel {
-  background-color: var(--surface-hover);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  border: 1px solid var(--surface-border);
-  padding: 1rem;
-}
-
-/* Error container styling */
-.p-error-container {
-  background-color: var(--surface-card);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
 }
 
 /* Fix disabled input styling in dark mode */
@@ -414,13 +357,5 @@ onMounted(async () => {
 :deep(.dark .p-dropdown-item:hover) {
   background-color: var(--primary-400);
   color: var(--primary-color-text);
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  :deep(.p-card .p-card-title),
-  :deep(.p-card .p-card-content) {
-    padding: 1rem;
-  }
 }
 </style>

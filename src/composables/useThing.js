@@ -87,17 +87,17 @@ export function useThing() {
    */
   const getTypeClass = (type) => {
     switch (type) {
-      case 'reader': return 'bg-blue-100 text-blue-800'
-      case 'controller': return 'bg-purple-100 text-purple-800'
-      case 'lock': return 'bg-amber-100 text-amber-800'
-      case 'temperature-sensor': return 'bg-green-100 text-green-800'
-      case 'humidity-sensor': return 'bg-cyan-100 text-cyan-800'
-      case 'hvac': return 'bg-teal-100 text-teal-800'
-      case 'lighting': return 'bg-yellow-100 text-yellow-800'
-      case 'camera': return 'bg-red-100 text-red-800'
-      case 'motion-sensor': return 'bg-indigo-100 text-indigo-800'
-      case 'occupancy-sensor': return 'bg-orange-100 text-orange-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'reader': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+      case 'controller': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+      case 'lock': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+      case 'temperature-sensor': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+      case 'humidity-sensor': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+      case 'hvac': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+      case 'lighting': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+      case 'camera': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+      case 'motion-sensor': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
+      case 'occupancy-sensor': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
     }
   }
   
@@ -258,10 +258,59 @@ export function useThing() {
     window.open(dashboardUrl, '_blank')
   }
   
+  /**
+   * Update a thing's position in the floor plan
+   * @param {string} thingId - Thing ID
+   * @param {Object} coordinates - x,y coordinates
+   */
+  const updateThingPosition = async (thingId, coordinates) => {
+    if (!thingId) {
+      error.value = 'Invalid thing ID'
+      return false
+    }
+    
+    try {
+      loading.value = true
+      error.value = null
+      
+      // First, get the current thing data
+      const thingData = await thingService.getById(thingId)
+      if (!thingData || !thingData.data) {
+        throw new Error('Failed to get thing data')
+      }
+      
+      const thing = thingData.data
+      
+      // Update or create the metadata.coordinates property
+      const updatedMetadata = {
+        ...thing.metadata || {},
+        coordinates: {
+          x: coordinates.x,
+          y: coordinates.y
+        }
+      }
+      
+      // Update the thing with new metadata
+      const result = await thingService.update(thingId, {
+        ...thing,
+        metadata: updatedMetadata
+      })
+      
+      return true
+    } catch (err) {
+      console.error('Error updating thing position:', err)
+      error.value = 'Failed to update thing position'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+  
   // Navigation methods
   const navigateToThingList = (query = {}) => router.push({ name: 'things', query })
   const navigateToThingDetail = (id) => router.push({ name: 'thing-detail', params: { id } })
-  const navigateToThingEdit = (id) => router.push({ name: 'thing-edit', params: { id } })
+  // Fix: Changed route name from 'thing-edit' to 'edit-thing' to match router configuration
+  const navigateToThingEdit = (id) => router.push({ name: 'edit-thing', params: { id } })
   const navigateToThingCreate = (query = {}) => router.push({ name: 'create-thing', query })
   const navigateToLocationDetail = (id) => router.push({ name: 'location-detail', params: { id } })
   const navigateToEdgeDetail = (id) => router.push({ name: 'edge-detail', params: { id } })
@@ -290,6 +339,7 @@ export function useThing() {
     fetchThing,
     deleteThing,
     openInGrafana,
+    updateThingPosition,
     
     // Navigation
     navigateToThingList,

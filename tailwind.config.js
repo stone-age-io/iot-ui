@@ -7,6 +7,34 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        'sans': [
+          'ui-sans-serif', 
+          'system-ui', 
+          '-apple-system', 
+          'BlinkMacSystemFont', 
+          '"Segoe UI"', 
+          'Roboto', 
+          '"Helvetica Neue"', 
+          'Arial', 
+          '"Noto Sans"', 
+          'sans-serif', 
+          '"Apple Color Emoji"', 
+          '"Segoe UI Emoji"', 
+          '"Segoe UI Symbol"', 
+          '"Noto Color Emoji"'
+        ],
+        'mono': [
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          '"Liberation Mono"',
+          '"Courier New"',
+          'monospace'
+        ],
+      },
       colors: {
         'primary': {
           '50': '#f0f9ff',
@@ -21,13 +49,34 @@ export default {
           '900': '#0c4a6e',
           '950': '#082f49',
         },
-        'theme': {
-          'background': 'rgb(var(--color-bg))',
-          'surface': 'rgb(var(--color-surface))',
-          'border': 'rgb(var(--color-border))',
-          'text': 'rgb(var(--color-text))',
-          'text-secondary': 'rgb(var(--color-text-secondary))',
+        'surface': {
+          'primary': '#ffffff',
+          'primary-dark': '#1f2937',
+          'hover': '#f3f3f6',
+          'hover-dark': '#374151',
+          'secondary': '#f9fafb',
+          'secondary-dark': '#111827',
+          'tertiary': '#f3f4f6',
+          'tertiary-dark': '#374151'
+        },
+        'content': {
+          'primary': '#111827',
+          'primary-dark': '#f9fafb',
+          'secondary': '#4b5563',
+          'secondary-dark': '#9ca3af'
+        },
+        'border': {
+          'primary': '#e5e7eb',
+          'primary-dark': '#4b5563',
+          'secondary': '#f3f4f6',
+          'secondary-dark': '#374151'
         }
+      },
+      boxShadow: {
+        'theme-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'theme-md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        'theme-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'theme-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
       }
     },
   },

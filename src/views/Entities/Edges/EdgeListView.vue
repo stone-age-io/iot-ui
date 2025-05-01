@@ -10,86 +10,86 @@
       </template>
     </PageHeader>
     
-    <Card>
-    <template #content>
-      <DataTable
-        :items="edges"
-        :columns="columns"
-        :loading="loading"
-        :searchable="true"
-        :searchFields="['code', 'name', 'description', 'type', 'region']"
-        empty-message="No edges found"
-        @row-click="(data) => navigateToEdgeDetail(data.id)"
-        :paginated="true"
-        :rows="10"
-        :rowsPerPageOptions="[5, 10, 25, 50]"
-      >
-        <!-- Code column with custom formatting -->
-        <template #code-body="{ data }">
-          <div class="font-medium text-primary-700 dark:text-primary-400 font-mono">{{ data.code }}</div>
-        </template>
-        
-        <!-- Type column with badge -->
-        <template #type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-            :class="getTypeClass(data.type)"
-          >
-            {{ getTypeName(data.type) }}
-          </span>
-        </template>
-        
-        <!-- Region column with badge -->
-        <template #region-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-            :class="getRegionClass(data.region)"
-          >
-            {{ getRegionName(data.region) }}
-          </span>
-        </template>
-        
-        <!-- Status column with badge -->
-        <template #active-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-            :class="data.active ? 
-              'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-          >
-            {{ data.active ? 'Active' : 'Inactive' }}
-          </span>
-        </template>
-        
-        <!-- Row actions -->
-        <template #row-actions="{ data }">
-          <div class="flex gap-1 justify-center">
-            <Button 
-              icon="pi pi-eye" 
-              class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdgeDetail(data.id)"
-              tooltip="View"
-              tooltipOptions="{ position: 'top' }"
-            />
-            <Button 
-              icon="pi pi-pencil" 
-              class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToEdgeEdit(data.id)"
-              tooltip="Edit"
-              tooltipOptions="{ position: 'top' }"
-            />
-            <Button 
-              icon="pi pi-trash" 
-              class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-              @click.stop="handleDeleteClick(data)"
-              tooltip="Delete"
-              tooltipOptions="{ position: 'top' }"
-            />
-          </div>
-        </template>
-      </DataTable>
-    </template>
-    </Card>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
+        <DataTable
+          :items="edges"
+          :columns="columns"
+          :loading="loading"
+          :searchable="true"
+          :searchFields="['code', 'name', 'description', 'type', 'region']"
+          empty-message="No edges found"
+          @row-click="(data) => navigateToEdgeDetail(data.id)"
+          :paginated="true"
+          :rows="10"
+          :rowsPerPageOptions="[5, 10, 25, 50]"
+        >
+          <!-- Code column with custom formatting -->
+          <template #code-body="{ data }">
+            <div class="font-medium text-primary-700 dark:text-primary-400 font-mono">{{ data.code }}</div>
+          </template>
+          
+          <!-- Type column with badge -->
+          <template #type-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+              :class="getTypeClass(data.type)"
+            >
+              {{ getTypeName(data.type) }}
+            </span>
+          </template>
+          
+          <!-- Region column with badge -->
+          <template #region-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+              :class="getRegionClass(data.region)"
+            >
+              {{ getRegionName(data.region) }}
+            </span>
+          </template>
+          
+          <!-- Status column with badge -->
+          <template #active-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+              :class="data.active ? 
+                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+            >
+              {{ data.active ? 'Active' : 'Inactive' }}
+            </span>
+          </template>
+          
+          <!-- Row actions -->
+          <template #row-actions="{ data }">
+            <div class="flex gap-1 justify-center">
+              <Button 
+                icon="pi pi-eye" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToEdgeDetail(data.id)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }"
+              />
+              <Button 
+                icon="pi pi-pencil" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToEdgeEdit(data.id)"
+                tooltip="Edit"
+                tooltipOptions="{ position: 'top' }"
+              />
+              <Button 
+                icon="pi pi-trash" 
+                class="p-button-rounded p-button-text p-button-sm p-button-danger" 
+                @click.stop="handleDeleteClick(data)"
+                tooltip="Delete"
+                tooltipOptions="{ position: 'top' }"
+              />
+            </div>
+          </template>
+        </DataTable>
+      </div>
+    </div>
     
     <!-- Filter Dialog -->
     <Dialog
@@ -97,13 +97,13 @@
       header="Filter Edges"
       :style="{ width: '30rem' }"
       :modal="true"
-      class="p-fluid"
+      class="theme-transition"
     >
       <div class="grid grid-cols-1 gap-4 mt-2">
         <div class="field">
           <label 
             for="filter-type" 
-            class="font-medium mb-2 block"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Edge Type</label>
           <Dropdown
             id="filter-type"
@@ -120,7 +120,7 @@
         <div class="field">
           <label 
             for="filter-region" 
-            class="font-medium mb-2 block"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Region</label>
           <Dropdown
             id="filter-region"
@@ -137,7 +137,7 @@
         <div class="field">
           <label 
             for="filter-status" 
-            class="font-medium mb-2 block"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Status</label>
           <Dropdown
             id="filter-status"
@@ -183,11 +183,9 @@ import { useRouter } from 'vue-router'
 import { useEdge } from '../../../composables/useEdge'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
-import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
@@ -195,9 +193,6 @@ import Toast from 'primevue/toast'
 
 const router = useRouter()
 const typesStore = useTypesStore()
-
-// Theme composable for theme-aware styling
-const { themeValue } = useTheme()
 
 // Get edge functionality from composable
 const { 
@@ -322,44 +317,51 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
+/* Fix Dialog styling in dark mode */
+:deep(.p-dialog) {
   background-color: var(--surface-card);
   color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
 }
 
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
+:deep(.p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom-color: var(--surface-border);
+}
+
+:deep(.p-dialog-content) {
+  background-color: var(--surface-card);
   color: var(--text-color);
 }
 
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
+:deep(.p-dialog-footer) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-top-color: var(--surface-border);
 }
 
-/* Minimal styling, letting the component handle mobile view */
-/* Badge styling for consistency */
-:deep(.badge) {
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Basic DataTable styling */
-:deep(.p-datatable-tbody > tr:hover) {
+/* Fix dropdown styling in dark mode */
+:deep(.dark .p-dropdown) {
   background-color: var(--surface-hover);
-  cursor: pointer;
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-dropdown-panel) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-dropdown-items-wrapper) {
+  background-color: var(--surface-hover);
+}
+
+:deep(.dark .p-dropdown-item) {
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dropdown-item:hover) {
+  background-color: var(--primary-900/20);
 }
 </style>

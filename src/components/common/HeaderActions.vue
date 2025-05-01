@@ -1,3 +1,4 @@
+<!-- src/components/common/HeaderActions.vue -->
 <template>
   <div class="header-actions-wrapper relative">
     <!-- Single action button on mobile, multiple buttons on desktop -->
@@ -26,37 +27,37 @@
     <!-- Consolidated dropdown menu -->
     <div
       v-show="isMenuOpen"
-      class="actions-menu-dropdown"
+      class="actions-menu-dropdown bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-md shadow-theme-md theme-transition"
       ref="actionsMenuDropdown"
     >
       <div class="py-1" role="menu">
         <!-- Theme toggle option -->
         <button
-          class="action-menu-item w-full text-left"
+          class="action-menu-item w-full text-left text-content-primary dark:text-content-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark"
           role="menuitem"
           @click="toggleThemeFromMenu"
         >
-          <i :class="['action-menu-icon', currentThemeIcon]"></i>
+          <i :class="['action-menu-icon text-content-secondary dark:text-content-secondary-dark', currentThemeIcon]"></i>
           <span>{{ themeLabel }}</span>
         </button>
         
         <!-- Clear page cache option -->
         <button
-          class="action-menu-item w-full text-left"
+          class="action-menu-item w-full text-left text-content-primary dark:text-content-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark"
           role="menuitem"
           @click="clearPageCache"
         >
-          <i class="pi pi-sync action-menu-icon"></i>
+          <i class="pi pi-sync action-menu-icon text-content-secondary dark:text-content-secondary-dark"></i>
           <span>Clear Page Cache</span>
         </button>
         
         <!-- Clear all cache option -->
         <button
-          class="action-menu-item w-full text-left"
+          class="action-menu-item w-full text-left text-content-primary dark:text-content-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark"
           role="menuitem"
           @click="clearAllCacheHandler"
         >
-          <i class="pi pi-trash action-menu-icon"></i>
+          <i class="pi pi-trash action-menu-icon text-content-secondary dark:text-content-secondary-dark"></i>
           <span>Clear All Cache</span>
         </button>
       </div>
@@ -262,18 +263,8 @@ onBeforeUnmount(() => {
   right: 0;
   top: calc(100% + 0.5rem);
   width: 200px;
-  background-color: rgb(var(--color-surface));
-  border: 1px solid rgb(var(--color-border));
-  border-radius: 0.375rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 50;
   animation: dropdown-in 0.15s ease-out;
-}
-
-.dark .actions-menu-dropdown {
-  background-color: #1f2937;
-  border-color: #4b5563;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes dropdown-in {
@@ -291,41 +282,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  color: rgb(var(--color-text));
   text-decoration: none;
   transition: background-color 0.2s ease;
   cursor: pointer;
 }
 
-.action-menu-item:hover {
-  background-color: rgba(var(--color-text), 0.04);
-}
-
-.dark .action-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
 .action-menu-icon {
   margin-right: 0.75rem;
-  color: rgb(var(--color-text-secondary));
-}
-
-/* Different icon colors based on theme */
-.pi-sun {
-  color: #ff9800 !important;
-}
-
-.pi-moon {
-  color: #5c6bc0 !important;
-}
-
-.pi-desktop {
-  color: var(--primary-color, #3b82f6) !important;
-}
-
-.dark .pi-sun,
-.dark .pi-moon,
-.dark .pi-desktop {
-  color: #e0e0e0 !important;
 }
 </style>

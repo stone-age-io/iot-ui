@@ -19,8 +19,8 @@
       </div>
       
       <div>
-        <p class="text-theme-primary dark:text-gray-200 mb-2">{{ message }}</p>
-        <p v-if="details" class="text-theme-secondary dark:text-gray-400 text-sm">{{ details }}</p>
+        <p class="text-content-primary dark:text-content-primary-dark mb-2">{{ message }}</p>
+        <p v-if="details" class="text-content-secondary dark:text-content-secondary-dark text-sm">{{ details }}</p>
       </div>
     </div>
 
@@ -92,25 +92,18 @@ const props = defineProps({
 const emit = defineEmits(['confirm', 'update:visible'])
 
 // Access theme system
-const { isDarkMode, themeValue } = useTheme()
+const { isDarkMode } = useTheme()
 
 // Get the appropriate classes and colors based on type and theme
 const iconBackgroundClass = computed(() => {
-  // Use the themeValue helper to get theme-specific values
-  return themeValue.class(
-    // Light theme classes
-    {
-      danger: 'bg-red-100',
-      warning: 'bg-amber-100',
-      info: 'bg-blue-100'
-    }[props.type] || 'bg-gray-100',
-    // Dark theme classes
-    {
-      danger: 'bg-red-900/30',
-      warning: 'bg-amber-900/30',
-      info: 'bg-blue-900/30'
-    }[props.type] || 'bg-gray-700'
-  )
+  // Use static classes for light and dark variants
+  const classMap = {
+    danger: 'bg-red-100 dark:bg-red-900/30',
+    warning: 'bg-amber-100 dark:bg-amber-900/30',
+    info: 'bg-blue-100 dark:bg-blue-900/30'
+  };
+  
+  return classMap[props.type] || 'bg-gray-100 dark:bg-gray-700';
 })
 
 const iconColor = computed(() => {

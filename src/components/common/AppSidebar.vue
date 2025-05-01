@@ -3,7 +3,7 @@
   <aside
     :class="[
       'transition-all duration-300 ease-in-out flex flex-col h-full',
-      'bg-theme-surface border-r border-theme border-r-theme-border theme-transition',
+      'bg-surface-primary dark:bg-surface-primary-dark border-r border-border-primary dark:border-border-primary-dark theme-transition',
       open ? 'w-64' : 'w-64 -translate-x-full lg:translate-x-0',
       collapsed && !isMobileView ? 'lg:w-16' : 'lg:w-64'
     ]"
@@ -35,7 +35,7 @@
       <div v-for="(section, index) in menuSections" :key="index" class="mb-6">
         <h3
           v-if="(!collapsed || isMobileView) && section.title"
-          class="text-xs uppercase tracking-wider font-semibold mb-2 px-3 text-theme-secondary dark:text-gray-400"
+          class="text-xs uppercase tracking-wider font-semibold mb-2 px-3 text-content-secondary dark:text-gray-400"
         >
           {{ section.title }}
         </h3>
@@ -54,8 +54,8 @@
               class="flex items-center px-3 py-2 rounded-md transition-colors"
               :class="[
                 isRouteActive(item.to, isActive, isExactActive)
-                  ? activeItemClass
-                  : inactiveItemClass
+                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               ]"
             >
               <i 
@@ -80,12 +80,11 @@
     </div>
   
     <!-- Bottom section with Grafana link - now properly aligned at bottom -->
-    <div class="mt-auto border-t border-theme-border dark:border-gray-700">
+    <div class="mt-auto border-t border-border-primary dark:border-gray-700">
       <a 
         :href="grafanaUrl" 
         target="_blank"
-        class="flex items-center px-3 py-4 transition-colors"
-        :class="externalLinkClass"
+        class="flex items-center px-3 py-4 transition-colors text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
       >
         <i class="pi pi-chart-line text-lg text-gray-500 dark:text-gray-400"></i>
         <span v-if="!collapsed || isMobileView" class="ml-3">Grafana</span>
@@ -97,7 +96,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Button from 'primevue/button'
-import { useTheme } from '../../composables/useTheme'
 import { useRoute } from 'vue-router'
 
 const props = defineProps({
@@ -113,10 +111,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'toggle-collapse'])
 
-// Access the theme system
-const { isDarkMode, themeValue } = useTheme()
 // Get current route for active state determination
 const route = useRoute()
+
+// Responsive state
+const windowWidth = ref(window.innerWidth)
+const isMobileView = computed(() => windowWidth.value < 1024)
 
 // Custom function to determine if a route is active
 const isRouteActive = (to, isActive, isExactActive) => {
@@ -138,29 +138,6 @@ const handleNavigation = (event, navigate) => {
     emit('close');
   }
 }
-
-// Theme-specific classes
-const activeItemClass = computed(() => 
-  isDarkMode.value 
-    ? 'bg-primary-900/20 text-primary-300' 
-    : 'bg-primary-50 text-primary-700'
-)
-
-const inactiveItemClass = computed(() => 
-  isDarkMode.value 
-    ? 'text-gray-300 hover:bg-gray-700' 
-    : 'text-gray-700 hover:bg-gray-100'
-)
-
-const externalLinkClass = computed(() => 
-  isDarkMode.value 
-    ? 'text-gray-300 hover:bg-gray-700' 
-    : 'text-gray-700 hover:bg-gray-100'
-)
-
-// Responsive state
-const windowWidth = ref(window.innerWidth)
-const isMobileView = computed(() => windowWidth.value < 1024)
 
 // Update window width on resize
 const handleResize = () => {
@@ -260,7 +237,7 @@ const menuSections = [
 ]
 </script>
 
-<style>
+<style scoped>
 /* Custom scrollbar styling for better appearance */
 .overflow-y-auto {
   scrollbar-width: thin;
@@ -295,14 +272,6 @@ a.dark\:bg-primary-900\/20::after {
   height: 100%;
   width: 3px;
   background-color: var(--primary-color, #3B82F6);
-}
-
-/* Theme transition */
-.theme-transition,
-.theme-transition * {
-  transition-property: background-color, border-color, color, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
 }
 
 /* Mobile optimizations */

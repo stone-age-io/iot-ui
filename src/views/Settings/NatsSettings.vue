@@ -1,8 +1,9 @@
+<!-- src/views/Settings/NatsSettings.vue -->
 <template>
-  <div class="nats-settings">
+  <div class="nats-settings theme-transition">
     <!-- Connection Status -->
     <div 
-      class="mb-6 p-4 rounded-lg border flex items-start"
+      class="mb-6 p-4 rounded-lg border flex items-start theme-transition"
       :class="[statusBackgroundClass, statusBorderClass]"
     >
       <i :class="['pi text-lg mr-3 mt-0.5', statusIconClass]"></i>
@@ -47,7 +48,7 @@
         
         <!-- Authentication Section -->
         <div class="md:col-span-2 mt-2">
-          <h3 :class="['text-lg font-medium mb-3 pb-2 border-b', borderColor.default, textColor.primary]">
+          <h3 class="text-lg font-medium mb-3 pb-2 border-b border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
             Authentication
           </h3>
         </div>
@@ -113,7 +114,7 @@
         
         <!-- Options Section -->
         <div class="md:col-span-2 mt-2">
-          <h3 :class="['text-lg font-medium mb-3 pb-2 border-b', borderColor.default, textColor.primary]">
+          <h3 class="text-lg font-medium mb-3 pb-2 border-b border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
             Options
           </h3>
         </div>
@@ -132,8 +133,7 @@
             />
             <label 
               for="autoConnect"
-              class="cursor-pointer"
-              :class="textColor.primary"
+              class="cursor-pointer text-content-primary dark:text-content-primary-dark"
             >
               Automatically connect on application startup
             </label>
@@ -142,21 +142,17 @@
 
         <!-- TOPICS SECTION -->
         <div class="md:col-span-2 mt-2">
-          <h3 :class="['text-lg font-medium mb-3 pb-2 border-b', borderColor.default, textColor.primary]">
+          <h3 class="text-lg font-medium mb-3 pb-2 border-b border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
             Subscription Topics
           </h3>
         </div>
         
         <!-- Topic List -->
-        <div 
-          class="md:col-span-2 p-4 rounded-lg"
-          :class="[borderColor.default, backgroundColor.secondary]"
-        >
+        <div class="md:col-span-2 p-4 rounded-lg border-border-primary dark:border-border-primary-dark bg-surface-secondary dark:bg-surface-secondary-dark theme-transition">
           <!-- Empty State -->
           <div 
             v-if="!config.subjects || config.subjects.length === 0" 
-            class="text-center py-6 empty-state"
-            :class="textColor.secondary"
+            class="text-center py-6 empty-state text-content-secondary dark:text-content-secondary-dark"
           >
             <i class="pi pi-th-large text-2xl mb-2 block"></i>
             <p>No subscription topics configured</p>
@@ -168,12 +164,11 @@
             <li 
               v-for="(topic, index) in config.subjects" 
               :key="index" 
-              class="flex justify-between items-center p-2 rounded-md"
-              :class="backgroundColor.hover"
+              class="flex justify-between items-center p-2 rounded-md bg-surface-hover dark:bg-surface-hover-dark theme-transition"
             >
               <div class="flex items-center">
                 <i class="pi pi-hashtag mr-2 text-blue-500 dark:text-blue-400"></i>
-                <span class="font-mono text-sm" :class="textColor.primary">{{ topic }}</span>
+                <span class="font-mono text-sm text-content-primary dark:text-content-primary-dark">{{ topic }}</span>
               </div>
               <Button 
                 icon="pi pi-times" 
@@ -199,7 +194,7 @@
                 v-if="topicError" 
                 class="p-error block mt-1"
               >{{ topicError }}</small>
-              <small v-else :class="['mt-1 block', textColor.secondary]">
+              <small v-else class="mt-1 block text-content-secondary dark:text-content-secondary-dark">
                 Topic patterns like "sensors.*" or "building.>" are supported
               </small>
             </div>
@@ -240,7 +235,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { useTheme } from '../../composables/useTheme';
 import EntityForm from '../../components/common/EntityForm.vue';
 import FormField from '../../components/common/FormField.vue';
 import InputText from 'primevue/inputtext';
@@ -255,9 +249,6 @@ import natsService from '../../services/nats/natsService';
 
 // Import topic validator
 import { validateTopic } from '../../services/topic-permission/topicPermissionService';
-
-// Theme composable for theme-aware styling
-const { themeValue, textColor, backgroundColor, borderColor } = useTheme();
 
 // Get toast functionality for notifications
 const toast = useToast();
@@ -332,7 +323,7 @@ const statusTextClass = computed(() => {
   if (isConnected.value) return 'text-green-700 dark:text-green-300';
   if (isConnecting.value) return 'text-blue-700 dark:text-blue-300';
   if (hasError.value) return 'text-red-700 dark:text-red-300';
-  return textColor.primary;
+  return 'text-content-primary dark:text-content-primary-dark';
 });
 
 const statusTitle = computed(() => {

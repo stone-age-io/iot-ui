@@ -1,8 +1,9 @@
+<!-- src/components/common/CacheControl.vue -->
 <template>
   <div class="cache-control-wrapper">
     <button
       type="button"
-      class="p-button p-button-text p-button-rounded cache-refresh-button"
+      class="p-button p-button-text p-button-rounded cache-refresh-button theme-transition"
       @click="refreshCache"
       :title="refreshing ? 'Refreshing data...' : 'Refresh data'"
       :disabled="refreshing"
@@ -16,7 +17,7 @@
     <!-- Menu trigger button -->
     <button
       type="button"
-      class="p-button p-button-text p-button-rounded cache-menu-button"
+      class="p-button p-button-text p-button-rounded cache-menu-button theme-transition"
       @click="toggleMenu"
       title="Cache options"
       aria-label="Cache options"
@@ -31,25 +32,25 @@
     <!-- Cache options dropdown menu -->
     <div
       v-show="isMenuOpen"
-      class="cache-menu-dropdown"
+      class="cache-menu-dropdown bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition"
       ref="cacheMenuDropdown"
     >
       <div class="py-1" role="menu">
         <button
-          class="cache-menu-item w-full text-left"
+          class="cache-menu-item w-full text-left text-content-primary dark:text-content-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark"
           role="menuitem"
           @click="clearPageCache"
         >
-          <i class="pi pi-refresh cache-menu-icon"></i>
+          <i class="pi pi-refresh cache-menu-icon text-content-secondary dark:text-content-secondary-dark"></i>
           <span>Clear Page Cache</span>
         </button>
         
         <button
-          class="cache-menu-item w-full text-left"
+          class="cache-menu-item w-full text-left text-content-primary dark:text-content-primary-dark hover:bg-surface-hover dark:hover:bg-surface-hover-dark"
           role="menuitem"
           @click="clearAllCacheHandler"
         >
-          <i class="pi pi-trash cache-menu-icon"></i>
+          <i class="pi pi-trash cache-menu-icon text-content-secondary dark:text-content-secondary-dark"></i>
           <span>Clear All Cache</span>
         </button>
       </div>
@@ -259,24 +260,15 @@ onBeforeUnmount(() => {
   to { transform: rotate(360deg); }
 }
 
-/* Cache menu dropdown styling (matches user menu style) */
+/* Cache menu dropdown styling */
 .cache-menu-dropdown {
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
   width: 200px;
-  background-color: rgb(var(--color-surface));
-  border: 1px solid rgb(var(--color-border));
   border-radius: 0.375rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 50;
   animation: dropdown-in 0.15s ease-out;
-}
-
-.dark .cache-menu-dropdown {
-  background-color: #1f2937;
-  border-color: #4b5563;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes dropdown-in {
@@ -294,22 +286,25 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  color: rgb(var(--color-text));
   text-decoration: none;
   transition: background-color 0.2s ease;
   cursor: pointer;
 }
 
-.cache-menu-item:hover {
-  background-color: rgba(var(--color-text), 0.04);
-}
-
-.dark .cache-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
 .cache-menu-icon {
   margin-right: 0.75rem;
-  color: rgb(var(--color-text-secondary));
+}
+
+/* For screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 </style>

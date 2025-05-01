@@ -4,17 +4,17 @@
     <div v-if="loading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" class="p-error-container p-6 text-center">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-error-container p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load thing details
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -23,10 +23,10 @@
       <!-- Header Section with Thing title and actions -->
       <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div :class="['text-sm mb-1', textColor.secondary]">Thing</div>
-          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ thing.name }}</h1>
+          <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Thing</div>
+          <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ thing.name }}</h1>
           <div class="flex flex-wrap items-center gap-2">
-            <span :class="['font-mono', themeValue.class('text-primary-600', 'text-primary-400')]">{{ thing.code }}</span>
+            <span class="font-mono text-primary-600 dark:text-primary-400">{{ thing.code }}</span>
             <span 
               class="badge"
               :class="getTypeClass(thing.type)"
@@ -56,27 +56,27 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Thing Details</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Thing Details</h2>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Code -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Code</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ thing.code }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ thing.code }}</div>
                 </div>
                 
                 <!-- Name -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Name</div>
-                  <div :class="['text-lg', textColor.primary]">{{ thing.name }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ thing.name }}</div>
                 </div>
                 
                 <!-- Type -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Type</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
                   <div class="flex items-center">
                     <span 
                       class="badge"
@@ -89,13 +89,13 @@
                 
                 <!-- Status -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Status</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Status</div>
                   <div class="flex items-center">
                     <span 
                       class="badge"
                       :class="thing.active ? 
-                        themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
-                        themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
                     >
                       {{ thing.active ? 'Active' : 'Inactive' }}
                     </span>
@@ -104,10 +104,10 @@
                 
                 <!-- Location -->
                 <div v-if="location" class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Location</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Location</div>
                   <div class="flex items-center gap-2">
-                    <span :class="['font-mono text-xs', textColor.secondary]">{{ location.code }}</span>
-                    <span :class="textColor.primary">{{ location.name }}</span>
+                    <span class="font-mono text-xs text-content-secondary dark:text-content-secondary-dark">{{ location.code }}</span>
+                    <span class="text-content-primary dark:text-content-primary-dark">{{ location.name }}</span>
                     <Button
                       icon="pi pi-external-link"
                       class="p-button-text p-button-rounded p-button-sm"
@@ -119,10 +119,10 @@
                 
                 <!-- Edge -->
                 <div v-if="edge" class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Edge</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Edge</div>
                   <div class="flex items-center gap-2">
-                    <span :class="['font-mono text-xs', textColor.secondary]">{{ edge.code }}</span>
-                    <span :class="textColor.primary">{{ edge.name }}</span>
+                    <span class="font-mono text-xs text-content-secondary dark:text-content-secondary-dark">{{ edge.code }}</span>
+                    <span class="text-content-primary dark:text-content-primary-dark">{{ edge.name }}</span>
                     <Button
                       icon="pi pi-external-link"
                       class="p-button-text p-button-rounded p-button-sm"
@@ -134,59 +134,54 @@
                 
                 <!-- Description -->
                 <div class="md:col-span-2" v-if="thing.description">
-                  <div :class="['field-label', textColor.secondary]">Description</div>
-                  <div :class="textColor.primary">{{ thing.description }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+                  <div class="text-content-primary dark:text-content-primary-dark">{{ thing.description }}</div>
                 </div>
                 
                 <!-- Metadata (if any) -->
                 <div v-if="hasMetadata(thing)" class="md:col-span-2">
-                  <div :class="['field-label', textColor.secondary]">Metadata</div>
-                  <div :class="[
-                    'p-3 rounded border font-mono text-sm overflow-x-auto', 
-                    backgroundColor.secondary,
-                    borderColor.default,
-                    textColor.primary
-                  ]">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metadata</div>
+                  <div class="p-3 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
                     <pre>{{ JSON.stringify(thing.metadata, null, 2) }}</pre>
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Stats/Quick Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Overview</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Overview</h2>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Status Info -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Device Status</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Device Status</div>
                   <div class="flex items-center">
                     <span 
                       class="w-3 h-3 rounded-full mr-2" 
                       :class="deviceStatus.online ? 'bg-green-500' : 'bg-red-500'"
                     ></span>
-                    <div :class="['font-semibold', textColor.primary]">
+                    <div class="font-semibold text-content-primary dark:text-content-primary-dark">
                       {{ deviceStatus.online ? 'Online' : 'Offline' }}
                     </div>
                   </div>
-                  <div :class="['text-xs mt-1', textColor.secondary]">
+                  <div class="text-xs mt-1 text-content-secondary dark:text-content-secondary-dark">
                     Last updated: {{ formatTime(deviceStatus.lastUpdated) }}
                   </div>
                 </div>
                 
                 <!-- Metrics -->
                 <div v-if="deviceStatus.metrics" class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Metrics</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metrics</div>
                   <div class="space-y-2">
                     <div v-for="(value, key) in deviceStatus.metrics" :key="key" class="flex justify-between">
-                      <span :class="textColor.secondary">{{ formatMetricName(key) }}:</span>
-                      <span :class="['font-medium', textColor.primary]">{{ formatMetricValue(key, value) }}</span>
+                      <span class="text-content-secondary dark:text-content-secondary-dark">{{ formatMetricName(key) }}:</span>
+                      <span class="font-medium text-content-primary dark:text-content-primary-dark">{{ formatMetricValue(key, value) }}</span>
                     </div>
                   </div>
                 </div>
@@ -203,48 +198,43 @@
                 
                 <!-- Created Date -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Created</div>
-                  <div :class="textColor.secondary">{{ formatDate(thing.created) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(thing.created) }}</div>
                 </div>
                 
                 <!-- Last Updated -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
-                  <div :class="textColor.secondary">{{ formatDate(thing.updated) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(thing.updated) }}</div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Current State Card (if available) -->
       <div class="mt-6" v-if="thing.current_state && Object.keys(thing.current_state).length > 0">
-        <Card>
-          <template #title>
-            <h2 :class="['text-xl font-semibold', textColor.primary]">Current State</h2>
-          </template>
-          <template #content>
-            <div :class="[
-              'p-4 rounded border font-mono text-sm overflow-x-auto', 
-              backgroundColor.secondary,
-              borderColor.default,
-              textColor.primary
-            ]">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Current State</h2>
+          </div>
+          <div class="p-6">
+            <div class="p-4 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
               <pre>{{ JSON.stringify(thing.current_state, null, 2) }}</pre>
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Graph Link Card -->
       <div class="mt-6">
-        <Card>
-          <template #content>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4">
               <div class="flex-1">
-                <h2 :class="['text-xl font-semibold mb-1', textColor.primary]">Analytics & Monitoring</h2>
-                <p :class="textColor.secondary">View detailed metrics and logs for this thing in Grafana.</p>
+                <h2 class="text-xl font-semibold mb-1 text-content-primary dark:text-content-primary-dark">Analytics & Monitoring</h2>
+                <p class="text-content-secondary dark:text-content-secondary-dark">View detailed metrics and logs for this thing in Grafana.</p>
               </div>
               <Button
                 label="Open in Grafana"
@@ -252,8 +242,8 @@
                 @click="openInGrafana(thing.id)"
               />
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -263,11 +253,12 @@
       header="Device Activity"
       :modal="true"
       :style="{ width: '90%', maxWidth: '900px' }"
+      class="thing-activity-dialog"
     >
       <div v-if="messagesLoading" class="flex justify-center items-center p-4">
         <ProgressSpinner 
           strokeWidth="4" 
-          :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+          class="text-primary-500 dark:text-primary-400" 
         />
       </div>
       <div v-else>
@@ -277,10 +268,10 @@
               class="w-3 h-3 rounded-full mr-2" 
               :class="deviceStatus.online ? 'bg-green-500' : 'bg-red-500'"
             ></span>
-            <div :class="['font-semibold', textColor.primary]">
+            <div class="font-semibold text-content-primary dark:text-content-primary-dark">
               {{ deviceStatus.online ? 'Online' : 'Offline' }}
             </div>
-            <div :class="['text-xs ml-2', textColor.secondary]">
+            <div class="text-xs ml-2 text-content-secondary dark:text-content-secondary-dark">
               Last updated: {{ formatTime(deviceStatus.lastUpdated) }}
             </div>
           </div>
@@ -321,20 +312,20 @@
                   class="mr-2"
                   :class="getMessageTypeIcon(data.type)"
                 ></i>
-                <span :class="textColor.primary">{{ getMessageTypeLabel(data.type) }}</span>
+                <span class="text-content-primary dark:text-content-primary-dark">{{ getMessageTypeLabel(data.type) }}</span>
               </div>
             </template>
             
             <!-- Timestamp column -->
             <template #timestamp-body="{ data }">
-              <div :class="['text-sm', textColor.secondary]">
+              <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
                 {{ formatTime(data.timestamp) }}
               </div>
             </template>
             
             <!-- Summary column -->
             <template #summary-body="{ data }">
-              <div :class="textColor.primary">{{ data.summary }}</div>
+              <div class="text-content-primary dark:text-content-primary-dark">{{ data.summary }}</div>
             </template>
             
             <!-- Details column with expand/collapse -->
@@ -345,12 +336,7 @@
                   class="p-button-text p-button-sm p-button-rounded"
                   @click="toggleMessageDetails(rowIndex)"
                 />
-                <div v-if="data.expanded" :class="[
-                  'mt-2 p-2 rounded border font-mono text-xs overflow-x-auto',
-                  backgroundColor.secondary,
-                  borderColor.default,
-                  textColor.primary
-                ]">
+                <div v-if="data.expanded" class="mt-2 p-2 rounded border font-mono text-xs overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
                   <pre>{{ JSON.stringify(data.payload, null, 2) }}</pre>
                 </div>
               </div>
@@ -396,10 +382,8 @@ import { useThing } from '../../../composables/useThing'
 import { useMessages } from '../../../composables/useMessages'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
-import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -408,9 +392,6 @@ import ProgressSpinner from 'primevue/progressspinner'
 const route = useRoute()
 const router = useRouter()
 const typesStore = useTypesStore()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Ensure thing types are loaded
 typesStore.loadThingTypes()
@@ -467,6 +448,8 @@ const messageColumns = [
   { field: 'summary', header: 'Description', sortable: false },
   { field: 'details', header: 'Details', sortable: false }
 ]
+
+// We now use the composable's navigateToThingEdit method which has the correct route name
 
 // Fetch thing data on component mount
 onMounted(async () => {
@@ -538,17 +521,17 @@ const clearMessages = () => {
 // Get icon for message type
 const getMessageTypeIcon = (type) => {
   switch (type) {
-    case 'device.status.online': return 'pi pi-power-off text-green-500'
-    case 'device.status.offline': return 'pi pi-power-off text-red-500'
-    case 'device.status.heartbeat': return 'pi pi-heart text-blue-500'
-    case 'access.entry.granted': return 'pi pi-check-circle text-green-500'
-    case 'access.entry.denied': return 'pi pi-times-circle text-red-500'
-    case 'environment.temperature': return 'pi pi-chart-line text-orange-500'
-    case 'environment.humidity': return 'pi pi-cloud text-blue-500'
-    case 'error': return 'pi pi-exclamation-triangle text-red-500'
-    case 'warning': return 'pi pi-exclamation-circle text-amber-500'
-    case 'info': return 'pi pi-info-circle text-blue-500'
-    default: return 'pi pi-circle-fill text-gray-500'
+    case 'device.status.online': return 'pi pi-power-off text-green-500';
+    case 'device.status.offline': return 'pi pi-power-off text-red-500';
+    case 'device.status.heartbeat': return 'pi pi-heart text-blue-500';
+    case 'access.entry.granted': return 'pi pi-check-circle text-green-500';
+    case 'access.entry.denied': return 'pi pi-times-circle text-red-500';
+    case 'environment.temperature': return 'pi pi-chart-line text-orange-500';
+    case 'environment.humidity': return 'pi pi-cloud text-blue-500';
+    case 'error': return 'pi pi-exclamation-triangle text-red-500';
+    case 'warning': return 'pi pi-exclamation-circle text-amber-500';
+    case 'info': return 'pi pi-info-circle text-blue-500';
+    default: return 'pi pi-circle-fill text-gray-500';
   }
 }
 
@@ -586,32 +569,6 @@ const handleDeleteConfirm = async () => {
   margin-bottom: 2rem;
 }
 
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 .field-label {
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
@@ -632,57 +589,42 @@ const handleDeleteConfirm = async () => {
   flex-direction: column;
 }
 
-/* Error container styling */
-.p-error-container {
-  background-color: var(--surface-card);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-}
-
-/* Fix PrimeVue Card styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
+/* Fix dialog styling for dark mode */
+:deep(.p-dialog) {
   background-color: var(--surface-card);
   color: var(--text-color);
 }
 
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
-}
-
-/* Fix dialog styling in dark mode */
-:deep(.dark .p-dialog) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.dark .p-dialog-header) {
+:deep(.p-dialog-header) {
   background-color: var(--surface-card);
   color: var(--text-color);
   border-bottom-color: var(--surface-border);
 }
 
-:deep(.dark .p-dialog-content) {
+:deep(.p-dialog-content) {
   background-color: var(--surface-card);
   color: var(--text-color);
 }
 
-/* Fix button styling */
-:deep(.p-button-text) {
-  color: var(--primary-color);
+:deep(.p-dialog-footer) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-top-color: var(--surface-border);
 }
 
-:deep(.p-button-text:hover) {
-  background: rgba(var(--primary-color-rgb), 0.04);
-  color: var(--primary-color);
+:deep(.thing-activity-dialog .p-datatable) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }
 
-:deep(.dark .p-button-text) {
-  color: var(--primary-200);
+:deep(.thing-activity-dialog .p-datatable-tbody > tr) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }
 
-:deep(.dark .p-button-text:hover) {
-  background: rgba(var(--primary-200-rgb), 0.16);
+:deep(.thing-activity-dialog .p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
 }
 </style>

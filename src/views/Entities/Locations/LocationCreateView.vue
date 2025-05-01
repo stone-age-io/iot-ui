@@ -1,4 +1,3 @@
-<!-- src/views/Entities/Locations/LocationCreateView.vue -->
 <template>
   <div class="location-create-container">
     <PageHeader 
@@ -15,11 +14,11 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #title>
-        <h2 :class="['text-xl font-semibold', textColor.primary]">Location Information</h2>
-      </template>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+        <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Information</h2>
+      </div>
+      <div class="p-6">
         <EntityForm
           :loading="loading"
           submit-label="Create Location"
@@ -49,8 +48,8 @@
                 <template #option="slotProps">
                   <div class="flex align-items-center">
                     <div>
-                      <div :class="textColor.primary">{{ slotProps.option.name }}</div>
-                      <div :class="textColor.secondary + ' text-xs'">{{ slotProps.option.code }}</div>
+                      <div class="text-content-primary dark:text-content-primary-dark">{{ slotProps.option.name }}</div>
+                      <div class="text-xs text-content-secondary dark:text-content-secondary-dark">{{ slotProps.option.code }}</div>
                     </div>
                   </div>
                 </template>
@@ -58,10 +57,10 @@
                   <div v-if="slotProps.value" class="flex align-items-center">
                     <div>
                       {{ getEdgeName(slotProps.value) }}
-                      <span :class="textColor.secondary + ' text-xs ml-2'">{{ getEdgeCode(slotProps.value) }}</span>
+                      <span class="text-xs ml-2 text-content-secondary dark:text-content-secondary-dark">{{ getEdgeCode(slotProps.value) }}</span>
                     </div>
                   </div>
-                  <span v-else>Select Edge</span>
+                  <span v-else class="text-content-secondary dark:text-content-secondary-dark">Select Edge</span>
                 </template>
               </Dropdown>
             </FormField>
@@ -87,8 +86,8 @@
                 <template #option="slotProps">
                   <div class="flex align-items-center">
                     <div>
-                      <div :class="textColor.primary">{{ slotProps.option.name }}</div>
-                      <div :class="textColor.secondary + ' text-xs'">{{ slotProps.option.code }}</div>
+                      <div class="text-content-primary dark:text-content-primary-dark">{{ slotProps.option.name }}</div>
+                      <div class="text-xs text-content-secondary dark:text-content-secondary-dark">{{ slotProps.option.code }}</div>
                     </div>
                   </div>
                 </template>
@@ -96,10 +95,10 @@
                   <div v-if="slotProps.value" class="flex align-items-center">
                     <div>
                       {{ getParentDisplay(slotProps.value).name }}
-                      <span :class="textColor.secondary + ' text-xs ml-2'">{{ getParentDisplay(slotProps.value).code }}</span>
+                      <span class="text-xs ml-2 text-content-secondary dark:text-content-secondary-dark">{{ getParentDisplay(slotProps.value).code }}</span>
                     </div>
                   </div>
-                  <span v-else>No Parent (Root Location)</span>
+                  <span v-else class="text-content-secondary dark:text-content-secondary-dark">No Parent (Root Location)</span>
                 </template>
               </Dropdown>
             </FormField>
@@ -250,8 +249,8 @@
             </FormField>
           </div>
         </EntityForm>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -262,12 +261,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocationForm } from '../../../composables/useLocationForm'
-import { useTheme } from '../../../composables/useTheme'
 import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Textarea from 'primevue/textarea'
@@ -276,9 +273,6 @@ import Toast from 'primevue/toast'
 
 const route = useRoute()
 const toast = useToast()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the location form composable in create mode
 const { 
@@ -336,34 +330,6 @@ onMounted(async () => {
   margin-bottom: 2rem;
 }
 
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
-/* Form input styling */
 .form-input {
   transition: all 0.2s ease;
 }
@@ -373,12 +339,6 @@ onMounted(async () => {
 }
 
 /* Fix PrimeVue components styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
 :deep(.dark .p-inputtext),
 :deep(.dark .p-dropdown),
 :deep(.dark .p-inputnumber),

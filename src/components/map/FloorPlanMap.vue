@@ -1,17 +1,17 @@
-<!-- src/components/map/FloorPlanMap.vue (Updated with theme support) -->
+<!-- src/components/map/FloorPlanMap.vue -->
 <template>
   <div class="floor-plan-map theme-transition">
     <!-- Loading state -->
-    <div v-if="loading" class="loading-overlay" :class="themeValue.class('bg-white bg-opacity-80', 'bg-gray-900 bg-opacity-80')">
+    <div v-if="loading" class="loading-overlay bg-white bg-opacity-80 dark:bg-gray-900 dark:bg-opacity-80 absolute inset-0 flex items-center justify-center z-50">
       <ProgressSpinner strokeWidth="4" />
     </div>
     
     <!-- Floor plan uploader if no plan exists -->
-    <div v-else-if="!hasFloorPlan && showUpload" class="upload-container" :class="backgroundColor.secondary">
-      <div class="upload-prompt">
-        <i class="pi pi-image text-4xl mb-3" :class="textColor.secondary"></i>
-        <h3 class="text-lg font-medium mb-2" :class="textColor.primary">No Floor Plan Available</h3>
-        <p class="mb-4" :class="textColor.secondary">Upload a floor plan image to visualize indoor positioning</p>
+    <div v-else-if="!hasFloorPlan && showUpload" class="upload-container h-[500px] flex justify-center items-center border-2 border-dashed border-border-primary dark:border-border-primary-dark bg-surface-secondary dark:bg-surface-secondary-dark rounded-md">
+      <div class="upload-prompt text-center p-8">
+        <i class="pi pi-image text-4xl mb-3 text-content-secondary dark:text-content-secondary-dark"></i>
+        <h3 class="text-lg font-medium mb-2 text-content-primary dark:text-content-primary-dark">No Floor Plan Available</h3>
+        <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">Upload a floor plan image to visualize indoor positioning</p>
         <FileUpload
           mode="basic"
           :maxFileSize="5000000"
@@ -36,14 +36,11 @@
       <!-- Legend panel -->
       <div 
         v-if="showLegend && mapInitialized" 
-        class="legend-panel rounded-md shadow-md p-3 theme-transition"
-        :class="[
-          legendPosition === 'left' ? 'legend-left' : 'legend-right',
-          backgroundColor.primary
-        ]"
+        class="legend-panel rounded-md shadow-md p-3 theme-transition bg-surface-primary dark:bg-surface-primary-dark absolute z-10 max-w-[250px] max-h-[60%] overflow-y-auto"
+        :class="legendPosition === 'left' ? 'legend-left' : 'legend-right'"
       >
         <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-semibold" :class="textColor.primary">Legend</h3>
+          <h3 class="text-sm font-semibold text-content-primary dark:text-content-primary-dark">Legend</h3>
           <Button
             icon="pi pi-times"
             class="p-button-rounded p-button-text p-button-sm"
@@ -57,7 +54,7 @@
               class="h-3 w-3 rounded-full mr-2"
               :style="{ backgroundColor: getMarkerColor(typeObj.type, isDarkMode) }"
             ></span>
-            <span class="text-xs" :class="textColor.primary">{{ typeObj.label }} ({{ typeObj.count }})</span>
+            <span class="text-xs text-content-primary dark:text-content-primary-dark">{{ typeObj.label }} ({{ typeObj.count }})</span>
           </div>
         </div>
       </div>
@@ -65,14 +62,13 @@
       <!-- Fallback message when floor plan load fails but hasFloorPlan is true -->
       <div 
         v-if="hasFloorPlan && initAttempted && !mapInitialized && !loading" 
-        class="floor-plan-error p-4 rounded-md" 
-        :class="themeValue.class('bg-red-50 border border-red-200', 'bg-red-900/30 border border-red-700')"
+        class="floor-plan-error p-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700" 
       >
         <div class="flex items-start">
-          <i class="pi pi-exclamation-circle mt-0.5 mr-2" :class="textColor.error"></i>
+          <i class="pi pi-exclamation-circle mt-0.5 mr-2 text-red-600 dark:text-red-400"></i>
           <div>
-            <p class="font-medium" :class="themeValue.class('text-red-700', 'text-red-400')">Failed to load floor plan</p>
-            <p class="text-sm mt-1" :class="themeValue.class('text-red-600', 'text-red-300')">There was an error loading the floor plan image. Please try again later or upload a new image.</p>
+            <p class="font-medium text-red-700 dark:text-red-400">Failed to load floor plan</p>
+            <p class="text-sm mt-1 text-red-600 dark:text-red-300">There was an error loading the floor plan image. Please try again later or upload a new image.</p>
             <div class="mt-3">
               <FileUpload
                 v-if="showUpload"
@@ -92,11 +88,9 @@
     </div>
     
     <!-- Edit mode panel -->
-    <div v-if="editMode && mapInitialized" class="edit-panel p-3 border-t theme-transition"
-      :class="[backgroundColor.secondary, borderColor.default]"
-    >
-      <h3 class="text-sm font-medium mb-2" :class="textColor.primary">Edit Mode: Place things on the map</h3>
-      <p class="text-xs mb-3" :class="textColor.secondary">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
+    <div v-if="editMode && mapInitialized" class="edit-panel p-3 border-t theme-transition bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark rounded-b-md">
+      <h3 class="text-sm font-medium mb-2 text-content-primary dark:text-content-primary-dark">Edit Mode: Place things on the map</h3>
+      <p class="text-xs mb-3 text-content-secondary dark:text-content-secondary-dark">Drag and drop markers to position them on the floor plan. Changes are saved automatically.</p>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="thing in things" :key="thing.id" class="flex items-center">
@@ -104,7 +98,7 @@
             class="h-3 w-3 rounded-full mr-2"
             :style="{ backgroundColor: getMarkerColor(thing.type, isDarkMode) }"
           ></span>
-          <span class="text-sm truncate flex-1" :class="textColor.primary">{{ thing.name }}</span>
+          <span class="text-sm truncate flex-1 text-content-primary dark:text-content-primary-dark">{{ thing.name }}</span>
           <Button
             icon="pi pi-search"
             class="p-button-rounded p-button-text p-button-sm"
@@ -122,9 +116,9 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import ProgressSpinner from 'primevue/progressspinner'
-import { useTheme } from '../../composables/useTheme' // Import theme composable
+import { useTheme } from '../../composables/useTheme'
 
-// Import from new service layer
+// Import from service layer
 import { locationService, thingService } from '../../services'
 
 // Import Leaflet using ES Module syntax - but don't initialize it yet
@@ -167,13 +161,7 @@ const props = defineProps({
 const emit = defineEmits(['update-thing-position', 'upload-floor-plan', 'thing-click'])
 
 // Get theme information
-const { 
-  isDarkMode, 
-  themeValue, 
-  backgroundColor, 
-  textColor, 
-  borderColor 
-} = useTheme()
+const { isDarkMode } = useTheme()
 
 // State
 const map = ref(null)
@@ -968,47 +956,6 @@ const getThingTypeName = (type) => {
   border-radius: 6px;
   overflow: hidden;
   position: relative;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.upload-container {
-  height: 500px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: 2px dashed;
-  border-color: rgb(var(--color-border));
-  border-radius: 6px;
-}
-
-.upload-prompt {
-  text-align: center;
-  padding: 2rem;
-}
-
-.edit-panel {
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-}
-
-/* Legend positioning */
-.legend-panel {
-  position: absolute;
-  max-width: 250px;
-  max-height: 60%; 
-  overflow-y: auto;
-  z-index: 1000;
 }
 
 .legend-left {

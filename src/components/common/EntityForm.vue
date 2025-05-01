@@ -1,9 +1,10 @@
+<!-- src/components/common/EntityForm.vue -->
 <template>
   <div class="entity-form-wrapper">
     <form @submit.prevent="submitForm">
-      <div class="card bg-theme-surface dark:bg-gray-800">
+      <div class="card bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-sm theme-transition p-5">
         <!-- Form Title -->
-        <h2 v-if="title" class="text-xl font-semibold mb-4 text-theme-primary dark:text-gray-200">{{ title }}</h2>
+        <h2 v-if="title" class="text-xl font-semibold mb-4 text-content-primary dark:text-content-primary-dark">{{ title }}</h2>
         
         <!-- Form Fields -->
         <div class="space-y-4">
@@ -35,7 +36,7 @@
 <script setup>
 import { computed } from 'vue';
 import Button from 'primevue/button';
-import { useThemeStore } from '../../stores/theme';
+import { useTheme } from '../../composables/useTheme';
 
 const props = defineProps({
   title: {
@@ -54,13 +55,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel']);
 
-const themeStore = useThemeStore();
-
-// Computed property to determine if we're in dark mode
-const isDarkMode = computed(() => {
-  return themeStore.theme === 'dark' || 
-    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-});
+const { isDarkMode } = useTheme();
 
 const submitForm = () => {
   emit('submit');
@@ -68,7 +63,6 @@ const submitForm = () => {
 </script>
 
 <style>
-/* The card class is already themed in the global CSS */
 /* Entity form specific theming for PrimeVue components */
 :deep(.p-inputtext),
 :deep(.p-dropdown),
@@ -78,48 +72,37 @@ const submitForm = () => {
 :deep(.p-chips),
 :deep(.p-textarea) {
   @apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200;
-  background-color: var(--surface-overlay, #ffffff);
-  color: var(--text-color, #374151);
-  border-color: var(--surface-border, #e5e7eb);
 }
 
 :deep(.p-dropdown-panel),
 :deep(.p-multiselect-panel),
 :deep(.p-calendar-panel) {
   @apply dark:bg-gray-700 dark:border-gray-600;
-  background-color: var(--surface-overlay, #ffffff);
-  border-color: var(--surface-border, #e5e7eb);
 }
 
 :deep(.p-dropdown-items),
 :deep(.p-multiselect-items),
 :deep(.p-calendar-header) {
   @apply dark:bg-gray-700;
-  background-color: var(--surface-overlay, #ffffff);
 }
 
 :deep(.p-dropdown-item),
 :deep(.p-multiselect-item),
 :deep(.p-calendar-today-button) {
   @apply dark:text-gray-300 dark:hover:bg-gray-600;
-  color: var(--text-color, #374151);
 }
 
 :deep(.p-dropdown-item.p-highlight),
 :deep(.p-multiselect-item.p-highlight) {
   @apply dark:bg-primary-700 dark:text-white;
-  background-color: var(--primary-color, #3b82f6);
-  color: var(--primary-color-text, #ffffff);
 }
 
 :deep(.p-inputswitch.p-inputswitch-checked .p-inputswitch-slider) {
   @apply dark:bg-primary-600;
-  background: var(--primary-color, #3b82f6);
 }
 
 :deep(.p-invalid) {
   @apply dark:border-red-500;
-  border-color: var(--red-500, #ef4444);
 }
 
 /* Use CSS variables to ensure transitions between themes are smooth */

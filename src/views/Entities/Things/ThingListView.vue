@@ -10,8 +10,8 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
         <DataTable
           :items="things"
           :columns="columns"
@@ -26,7 +26,7 @@
         >
           <!-- Code column with custom formatting -->
           <template #code-body="{ data }">
-            <div :class="['font-medium font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.code }}</div>
+            <div class="font-medium font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
           </template>
           
           <!-- Type column with badge -->
@@ -44,12 +44,12 @@
             <router-link 
               v-if="data.expand && data.expand.location_id"
               :to="{ name: 'location-detail', params: { id: data.location_id } }"
-              :class="['hover:underline flex items-center', themeValue.class('text-primary-600', 'text-primary-400')]"
+              class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
               @click.stop
             >
               {{ data.expand.location_id.code }}
             </router-link>
-            <span v-else :class="textColor.secondary">Unknown Location</span>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Location</span>
           </template>
           
           <!-- Edge column with code -->
@@ -57,12 +57,12 @@
             <router-link 
               v-if="data.expand && data.expand.edge_id"
               :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
-              :class="['hover:underline flex items-center', themeValue.class('text-primary-600', 'text-primary-400')]"
+              class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
               @click.stop
             >
               {{ data.expand.edge_id.code }}
             </router-link>
-            <span v-else :class="textColor.secondary">Unknown Edge</span>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Edge</span>
           </template>
           
           <!-- Status column with badge -->
@@ -70,8 +70,8 @@
             <span 
               class="px-2 py-1 text-xs rounded-full font-medium inline-block"
               :class="data.active ? 
-                themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
-                themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
             >
               {{ data.active ? 'Active' : 'Inactive' }}
             </span>
@@ -104,8 +104,8 @@
             </div>
           </template>
         </DataTable>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Filter Dialog -->
     <Dialog
@@ -113,13 +113,13 @@
       header="Filter Things"
       :style="{ width: '30rem' }"
       :modal="true"
-      class="p-fluid"
+      class="theme-transition"
     >
       <div class="grid grid-cols-1 gap-4 mt-2">
         <div class="field">
           <label 
             for="filter-type" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Thing Type</label>
           <Dropdown
             id="filter-type"
@@ -136,7 +136,7 @@
         <div class="field">
           <label 
             for="filter-location" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Location</label>
           <Dropdown
             id="filter-location"
@@ -154,7 +154,7 @@
         <div class="field">
           <label 
             for="filter-status" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Status</label>
           <Dropdown
             id="filter-status"
@@ -196,28 +196,25 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useThing } from '../../../composables/useThing'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
-import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
 import Toast from 'primevue/toast'
 
 const route = useRoute()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
+const router = useRouter()
 
 // Get thing functionality from composable
 const { 
   things,
   loading,
+  thingTypes,
   fetchThings,
   formatDate,
   getTypeName,
@@ -228,6 +225,8 @@ const {
   navigateToThingEdit
 } = useThing()
 
+// We now use the composable's navigateToThingEdit method which has the correct route name
+
 // Get delete confirmation functionality
 const { 
   deleteDialog,
@@ -236,7 +235,7 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition - updated to use correct field names
+// Table columns definition
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
@@ -316,16 +315,6 @@ const fetchFilterLocations = async () => {
   }
 }
 
-// Refresh data with current filters
-const refreshData = async () => {
-  await fetchThings(isFilterActive.value ? filters.value : routeQuery.value)
-}
-
-// Handle create button click
-const handleCreateClick = () => {
-  navigateToThingCreate(routeQuery.value)
-}
-
 // Handle filter button click
 const handleFilterClick = () => {
   toggleFilters()
@@ -366,60 +355,27 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-/* Dialog styling for dark mode */
-:deep(.dark .p-dialog) {
+/* Fix Dialog styling in dark mode */
+:deep(.p-dialog) {
   background-color: var(--surface-card);
   color: var(--text-color);
 }
 
-:deep(.dark .p-dialog-header) {
+:deep(.p-dialog-header) {
   background-color: var(--surface-card);
   color: var(--text-color);
   border-bottom-color: var(--surface-border);
 }
 
-:deep(.dark .p-dialog-content) {
+:deep(.p-dialog-content) {
   background-color: var(--surface-card);
   color: var(--text-color);
 }
 
-:deep(.dark .p-dialog-footer) {
+:deep(.p-dialog-footer) {
   background-color: var(--surface-card);
   color: var(--text-color);
   border-top-color: var(--surface-border);
-}
-
-/* Basic DataTable styling */
-:deep(.p-datatable-tbody > tr:hover) {
-  background-color: var(--surface-hover);
-  cursor: pointer;
-}
-
-:deep(.dark .p-datatable-tbody > tr:hover) {
-  background-color: var(--surface-hover);
 }
 
 /* Fix dropdown styling in dark mode */
@@ -445,5 +401,11 @@ onMounted(async () => {
 
 :deep(.dark .p-dropdown-item:hover) {
   background-color: var(--primary-900/20);
+}
+
+/* Basic DataTable styling */
+:deep(.p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
+  cursor: pointer;
 }
 </style>
