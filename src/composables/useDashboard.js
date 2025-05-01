@@ -57,9 +57,8 @@ export function useDashboard() {
       // Copy the audit logs to our activity ref
       // This ensures we have a clean reactive reference
       activity.value = [...auditLogs.value]
-      console.log('Dashboard activity updated, count:', activity.value.length)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
+      // Error handling without logging
     } finally {
       loading.value = false
     }
@@ -73,7 +72,6 @@ export function useDashboard() {
       const { data } = await edgeService.getList({ rows: 1 })
       edgesCount.value = data.totalItems || 0
     } catch (error) {
-      console.error('Error fetching edges count:', error)
       // Keep existing value on error
     }
   }
@@ -86,7 +84,6 @@ export function useDashboard() {
       const { data } = await locationService.getList({ rows: 1 })
       locationsCount.value = data.totalItems || 0
     } catch (error) {
-      console.error('Error fetching locations count:', error)
       // Keep existing value on error
     }
   }
@@ -99,7 +96,6 @@ export function useDashboard() {
       const { data } = await thingService.getList({ rows: 1 })
       thingsCount.value = data.totalItems || 0
     } catch (error) {
-      console.error('Error fetching things count:', error)
       // Keep existing value on error
     }
   }
@@ -112,7 +108,6 @@ export function useDashboard() {
       const { data } = await clientService.getList({ rows: 1 })
       clientsCount.value = data.totalItems || 0
     } catch (error) {
-      console.error('Error fetching clients count:', error)
       // Keep existing value on error
     }
   }
@@ -123,8 +118,6 @@ export function useDashboard() {
    */
   const fetchRecentActivity = async () => {
     try {
-      console.log('Fetching recent activity for dashboard')
-      
       // Use skipFiltering option to get more inclusive results
       // This will show all activity types, not just "_request" ones
       const logs = await loadRecentLogs({ 
@@ -132,12 +125,9 @@ export function useDashboard() {
         skipFiltering: true 
       })
       
-      console.log('Activity logs fetched:', logs?.length || 0)
-      
       // The activity value will be updated in fetchDashboardData
       return logs
     } catch (error) {
-      console.error('Error fetching recent activity:', error)
       return []
     }
   }

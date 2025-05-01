@@ -50,18 +50,13 @@ class AuditLogService extends BaseService {
     }
 
     try {
-      console.log('Fetching audit logs with params:', params)
-      
       const response = await this.getList(params)
       
       // Handle both possible response formats
       const items = response.data?.items || response?.items || []
       
-      console.log(`Retrieved ${items.length} audit logs from API`)
-      
       return items
     } catch (error) {
-      console.error('Error fetching audit logs:', error)
       return []
     }
   }
@@ -73,7 +68,6 @@ class AuditLogService extends BaseService {
    */
   formatLogForDisplay(log) {
     if (!log) {
-      console.warn('Received empty log to format')
       return {
         id: 'unknown-' + Date.now(),
         type: 'info',
@@ -83,9 +77,6 @@ class AuditLogService extends BaseService {
         details: null
       }
     }
-    
-    // Log for debugging
-    console.log('Formatting log:', log.id, log.event_type)
     
     // Map event type to UI display type
     const typeMap = {
@@ -110,7 +101,7 @@ class AuditLogService extends BaseService {
         }).format(date)
       }
     } catch (e) {
-      console.warn('Error formatting timestamp:', e)
+      // Silent error handling
     }
 
     // Determine the user information
@@ -127,7 +118,7 @@ class AuditLogService extends BaseService {
         // Capitalize first letter of each word
         .replace(/\b\w/g, char => char.toUpperCase())
     } catch (e) {
-      console.warn('Error formatting collection name:', e)
+      // Silent error handling
     }
 
     // Construct a title based on the event type and collection

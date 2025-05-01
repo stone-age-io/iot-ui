@@ -29,8 +29,6 @@ export function useAuditLogs() {
   const loadRecentLogs = async (options = {}) => {
     return performOperation(
       async () => {
-        console.log('Loading audit logs with options:', options)
-        
         // Get raw logs from service
         const rawLogs = await auditLogService.getRecentActivity({
           limit: options.limit || 10,
@@ -38,44 +36,33 @@ export function useAuditLogs() {
           sortDirection: 'desc'
         })
         
-        console.log('Raw audit logs fetched:', rawLogs?.length || 0, 'items')
-        
         // Start with all logs
         let filteredLogs = rawLogs || []
         
         // Filter logs based on options
         if (options.eventTypes && options.eventTypes.length > 0) {
           // Use provided event types filter if specified
-          console.log('Filtering by specified event types:', options.eventTypes)
           filteredLogs = filteredLogs.filter(log => 
             options.eventTypes.includes(log.event_type)
           )
         } else if (!options.skipFiltering) {
           // Default filter for *_request event types, but allow skipping
-          console.log('Applying default event type filter for *_request')
           filteredLogs = filteredLogs.filter(log => 
             log.event_type && log.event_type.endsWith('_request')
           )
-        } else {
-          console.log('Skipping event type filtering')
         }
         
         // Filter by collection if specified
         if (options.collection) {
-          console.log('Filtering by collection:', options.collection)
           filteredLogs = filteredLogs.filter(log => 
             log.collection_name === options.collection
           )
         }
         
-        console.log('Filtered logs count:', filteredLogs.length)
-        
         // Format logs for display
         const formattedLogs = filteredLogs.map(log => 
           auditLogService.formatLogForDisplay(log)
         )
-        
-        console.log('Formatted logs for display:', formattedLogs.length, 'items')
         
         // Update the auditLogs ref
         auditLogs.value = formattedLogs
