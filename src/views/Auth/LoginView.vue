@@ -1,12 +1,12 @@
 <!-- src/views/Auth/LoginView.vue -->
 <template>
   <div class="p-4 sm:p-6">
-    <h2 :class="['text-xl font-semibold text-center mb-6', textColor.primary]">Login to your account</h2>
+    <h2 class="text-xl font-semibold text-center mb-6 text-content-primary dark:text-content-primary-dark">Login to your account</h2>
     
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <!-- Email Input -->
       <div class="space-y-2">
-        <label for="identity" :class="['block text-sm font-medium', textColor.primary]">Email</label>
+        <label for="identity" class="block text-sm font-medium text-content-primary dark:text-content-primary-dark">Email</label>
         <InputText
           id="identity"
           v-model="identity"
@@ -18,10 +18,7 @@
         />
         <small
           id="identity-error"
-          :class="[
-            'block px-2 py-1 rounded text-xs',
-            isDarkMode ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
-          ]"
+          class="block px-2 py-1 rounded text-xs bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
           v-if="v$.identity.$error"
         >
           {{ v$.identity.$errors[0].$message }}
@@ -30,7 +27,7 @@
       
       <!-- Password Input -->
       <div class="space-y-2">
-        <label for="password" :class="['block text-sm font-medium', textColor.primary]">Password</label>
+        <label for="password" class="block text-sm font-medium text-content-primary dark:text-content-primary-dark">Password</label>
         <Password
           id="password"
           v-model="password"
@@ -42,10 +39,7 @@
         />
         <small
           id="password-error"
-          :class="[
-            'block px-2 py-1 rounded text-xs',
-            isDarkMode ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
-          ]"
+          class="block px-2 py-1 rounded text-xs bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
           v-if="v$.password.$error"
         >
           {{ v$.password.$errors[0].$message }}
@@ -55,10 +49,7 @@
       <!-- Error Message -->
       <div 
         v-if="authStore.error"
-        :class="[
-          'p-3 rounded-md text-sm border',
-          isDarkMode ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-200 text-red-700'
-        ]"
+        class="p-3 rounded-md text-sm border bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
       >
         {{ authStore.error }}
       </div>
@@ -67,15 +58,13 @@
       <div class="pt-2">
         <button
           type="submit"
-          :class="[
-            'w-full rounded-md font-medium transition-all duration-200 transform py-3 text-white',
-            'flex items-center justify-center',
-            'shadow-md hover:shadow-lg active:shadow focus:outline-none focus:ring-2 focus:ring-offset-2',
-            isDarkMode 
-              ? 'bg-primary-500 hover:bg-primary-600 focus:ring-primary-400 focus:ring-offset-gray-800'
-              : 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500',
-            authStore.loading ? 'opacity-80 cursor-wait' : ''
-          ]"
+          class="w-full rounded-md font-medium transition-all duration-200 transform py-3 text-white
+                flex items-center justify-center
+                shadow-md hover:shadow-lg active:shadow focus:outline-none focus:ring-2 focus:ring-offset-2
+                bg-primary-600 hover:bg-primary-700 focus:ring-primary-500
+                dark:bg-primary-500 dark:hover:bg-primary-600 dark:focus:ring-primary-400 dark:focus:ring-offset-gray-800
+                theme-transition"
+          :class="{ 'opacity-80 cursor-wait': authStore.loading }"
           :disabled="authStore.loading"
         >
           <span v-if="authStore.loading" class="flex items-center">
@@ -92,10 +81,8 @@
       <div class="text-center text-sm">
         <router-link 
           to="/auth/forgot-password" 
-          :class="[
-            'hover:underline',
-            isDarkMode ? 'text-primary-400 hover:text-primary-300' : 'text-primary-600 hover:text-primary-700'
-          ]"
+          class="text-primary-600 hover:text-primary-700 hover:underline
+                dark:text-primary-400 dark:hover:text-primary-300"
         >
           Forgot your password?
         </router-link>
@@ -103,13 +90,11 @@
       
       <!-- Registration Link -->
       <div class="text-center text-sm">
-        <span :class="textColor.secondary">Don't have an account?</span>
+        <span class="text-content-secondary dark:text-content-secondary-dark">Don't have an account?</span>
         <router-link 
           to="/auth/register"
-          :class="[
-            'ml-1 hover:underline',
-            isDarkMode ? 'text-primary-400 hover:text-primary-300' : 'text-primary-600 hover:text-primary-700'
-          ]"
+          class="ml-1 text-primary-600 hover:text-primary-700 hover:underline
+                 dark:text-primary-400 dark:hover:text-primary-300"
         >
           Create one now
         </router-link>
@@ -127,8 +112,8 @@ import { useTheme } from '../../composables/useTheme'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 
-// Theme composable for theme-aware styling
-const { isDarkMode, textColor, backgroundColor, borderColor } = useTheme()
+// Get only what we need from the theme composable
+const { isDarkMode } = useTheme()
 
 // Form state
 const identity = ref('')
