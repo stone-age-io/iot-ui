@@ -1,16 +1,14 @@
 <!-- src/layouts/AuthLayout.vue -->
 <template>
-  <div :class="[
-    'min-h-screen flex flex-col items-center justify-center px-4 py-8 overflow-hidden',
-    backgroundColor.primary
-  ]">
+  <div class="min-h-screen flex flex-col items-center justify-center px-4 py-8 overflow-hidden
+              bg-surface-primary dark:bg-surface-primary-dark theme-transition">
     <div class="w-full max-w-md">
       <!-- Company Branding -->
       <div class="mb-8">
         <!-- Logo and Company Name -->
         <div class="flex justify-center mb-2">
           <div class="flex items-center">
-            <div :class="['w-12 h-12 flex items-center justify-center mr-3', isDarkMode ? 'text-primary-400' : 'text-primary-600']">
+            <div class="w-12 h-12 flex items-center justify-center mr-3 text-primary-600 dark:text-primary-400">
               <!-- Custom SVG Logo -->
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -27,21 +25,18 @@
               </svg>
             </div>
             <div>
-              <h1 :class="['text-2xl sm:text-3xl font-bold whitespace-nowrap', isDarkMode ? 'text-primary-300' : 'text-primary-700']">Stone-Age.io</h1>
+              <h1 class="text-2xl sm:text-3xl font-bold whitespace-nowrap text-primary-700 dark:text-primary-300">Stone-Age.io</h1>
             </div>
           </div>
         </div>
         <!-- Tagline -->
-        <p :class="['text-center', textColor.secondary]">Physical Access Control & Building Automation</p>
+        <p class="text-center text-content-secondary dark:text-content-secondary-dark">Physical Access Control & Building Automation</p>
       </div>
       
       <!-- Auth Content Container -->
-      <div :class="[
-        'rounded-lg overflow-hidden',
-        backgroundColor.surface,
-        borderColor.default,
-        shadowStyle.lg
-      ]">
+      <div class="rounded-lg overflow-hidden bg-surface-primary dark:bg-surface-primary-dark
+                  border border-border-primary dark:border-border-primary-dark
+                  shadow-theme-lg theme-transition">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
@@ -49,7 +44,7 @@
         </router-view>
         
         <!-- Theme Toggle - Now inside the card footer -->
-        <div class="flex justify-center py-3 border-t" :class="borderColor.default">
+        <div class="flex justify-center py-3 border-t border-border-primary dark:border-border-primary-dark">
           <Button
             :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
             :label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -61,7 +56,7 @@
       </div>
       
       <!-- Footer -->
-      <div class="text-center mt-6 text-sm" :class="textColor.secondary">
+      <div class="text-center mt-6 text-sm text-content-secondary dark:text-content-secondary-dark">
         &copy; {{ currentYear }} Stone-Age.io. All rights reserved.
       </div>
     </div>
@@ -72,20 +67,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 
-// Theme composable for theme-aware styling
-const { 
-  isDarkMode, 
-  toggleTheme,
-  backgroundColor, 
-  textColor,
-  borderColor,
-  shadowStyle 
-} = useTheme()
+// Use only the necessary theme composable functions
+const { isDarkMode, toggleTheme } = useTheme()
 
 // Dynamic year for copyright
 const currentYear = computed(() => new Date().getFullYear())

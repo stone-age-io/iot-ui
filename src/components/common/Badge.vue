@@ -2,7 +2,7 @@
 <template>
   <span
     :class="[
-      'badge inline-flex items-center rounded-full font-medium',
+      'badge inline-flex items-center rounded-full font-medium theme-transition',
       sizeClasses,
       variantClasses
     ]"
@@ -13,7 +13,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useThemeStore } from '../../stores/theme';
 
 const props = defineProps({
   variant: {
@@ -32,86 +31,29 @@ const props = defineProps({
   }
 });
 
-// Access the theme store
-const themeStore = useThemeStore();
-
-// Determine if we're in dark mode
-const isDarkMode = computed(() => {
-  return themeStore.theme === 'dark' || 
-    (themeStore.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-});
-
 // Map variant to Tailwind classes with dark mode support
 const variantClasses = computed(() => {
-  // Base variant map
+  // Base variant map with direct Tailwind classes including dark mode
   const variantMap = {
-    default: {
-      light: 'bg-gray-100 text-gray-800',
-      dark: 'bg-gray-700 text-gray-300'
-    },
-    primary: {
-      light: 'bg-blue-100 text-blue-800',
-      dark: 'bg-blue-900/30 text-blue-300'
-    },
-    success: {
-      light: 'bg-green-100 text-green-800',
-      dark: 'bg-green-900/30 text-green-300'
-    },
-    warning: {
-      light: 'bg-amber-100 text-amber-800',
-      dark: 'bg-amber-900/30 text-amber-300'
-    },
-    danger: {
-      light: 'bg-red-100 text-red-800',
-      dark: 'bg-red-900/30 text-red-300'
-    },
-    info: {
-      light: 'bg-blue-100 text-blue-800',
-      dark: 'bg-blue-900/30 text-blue-300'
-    },
-    purple: {
-      light: 'bg-purple-100 text-purple-800',
-      dark: 'bg-purple-900/30 text-purple-300'
-    },
-    amber: {
-      light: 'bg-amber-100 text-amber-800',
-      dark: 'bg-amber-900/30 text-amber-300'
-    },
-    cyan: {
-      light: 'bg-cyan-100 text-cyan-800',
-      dark: 'bg-cyan-900/30 text-cyan-300'
-    },
-    indigo: {
-      light: 'bg-indigo-100 text-indigo-800',
-      dark: 'bg-indigo-900/30 text-indigo-300'
-    },
-    teal: {
-      light: 'bg-teal-100 text-teal-800',
-      dark: 'bg-teal-900/30 text-teal-300'
-    },
-    orange: {
-      light: 'bg-orange-100 text-orange-800',
-      dark: 'bg-orange-900/30 text-orange-300'
-    },
-    red: {
-      light: 'bg-red-100 text-red-800',
-      dark: 'bg-red-900/30 text-red-300'
-    },
-    gray: {
-      light: 'bg-gray-100 text-gray-800',
-      dark: 'bg-gray-700 text-gray-300'
-    },
-    blue: {
-      light: 'bg-blue-100 text-blue-800',
-      dark: 'bg-blue-900/30 text-blue-300'
-    }
+    default: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    primary: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    danger: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    cyan: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+    indigo: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+    teal: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+    orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    gray: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
   };
 
   // Get the variant map (or default if not found)
-  const variant = variantMap[props.variant] || variantMap.default;
-  
-  // Return classes based on current theme
-  return isDarkMode.value ? variant.dark : variant.light;
+  return variantMap[props.variant] || variantMap.default;
 });
 
 // Map size to Tailwind classes
@@ -125,10 +67,3 @@ const sizeClasses = computed(() => {
   return sizeMap[props.size] || sizeMap.md;
 });
 </script>
-
-<style>
-/* Badge transitions */
-.badge {
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-</style>

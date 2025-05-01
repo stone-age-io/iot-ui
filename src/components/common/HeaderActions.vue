@@ -1,3 +1,4 @@
+<!-- src/components/common/HeaderActions.vue -->
 <template>
   <div class="header-actions-wrapper relative">
     <!-- Single action button on mobile, multiple buttons on desktop -->

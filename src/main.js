@@ -4,12 +4,9 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-// Import CSS in the correct order
-import './assets/styles/theme-variables.css'     // Theme variables first
-import './assets/styles/index.css'              // Main CSS
-import './assets/styles/primevue-components.css' // PrimeVue components styling
-import './assets/styles/dark-mode.css'          // Additional dark mode overrides
-import './assets/responsive-utilities.css'       // Responsive utilities
+// Import CSS - simplified to just one main import
+import './assets/styles/index.css' 
+import './assets/styles/primevue-theme.css'
 
 // PrimeVue core
 import PrimeVue from 'primevue/config'

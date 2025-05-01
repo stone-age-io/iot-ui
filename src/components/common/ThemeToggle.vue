@@ -1,3 +1,4 @@
+<!-- src/components/common/ThemeToggle.vue -->
 <template>
   <div class="theme-toggle-wrapper">
     <button

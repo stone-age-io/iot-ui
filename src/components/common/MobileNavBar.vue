@@ -1,8 +1,8 @@
 <!-- src/components/common/MobileNavBar.vue -->
 <template>
   <nav 
-    class="lg:hidden fixed bottom-0 left-0 right-0 border-t shadow-lg z-30 theme-transition"
-    :class="navClasses"
+    class="lg:hidden fixed bottom-0 left-0 right-0 border-t shadow-lg z-30 theme-transition
+           bg-surface-primary dark:bg-surface-primary-dark border-border-primary dark:border-border-primary-dark"
     v-if="showMobileNav"
   >
     <div class="flex w-full justify-between items-center py-2">
@@ -11,7 +11,7 @@
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center justify-center flex-1 touch-target"
-        :class="isActive(item.to) ? activeItemClass : inactiveItemClass"
+        :class="isActive(item.to) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
       >
         <i :class="[item.icon, 'text-lg']"></i>
         <span class="text-xs mt-1 text-center">{{ item.label }}</span>
@@ -23,31 +23,13 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useTheme } from '../../composables/useTheme'
 
 const route = useRoute()
-const { isDarkMode } = useTheme()
 
 // Only show mobile nav when not on dashboard (to avoid redundancy)
 const showMobileNav = computed(() => {
   return route.path !== '/' && route.name !== 'dashboard'
 })
-
-// Theme-specific classes
-const navClasses = computed(() => ({
-  'bg-white border-gray-200': !isDarkMode.value,
-  'dark:bg-gray-800 dark:border-gray-700': isDarkMode.value
-}))
-
-const activeItemClass = computed(() => ({
-  'text-primary-600': !isDarkMode.value,
-  'dark:text-primary-400': isDarkMode.value
-}))
-
-const inactiveItemClass = computed(() => ({
-  'text-gray-500': !isDarkMode.value,
-  'dark:text-gray-400': isDarkMode.value
-}))
 
 // Primary navigation items for mobile
 const navItems = [
@@ -69,12 +51,6 @@ const isActive = (path) => {
 </script>
 
 <style scoped>
-.theme-transition {
-  transition-property: background-color, border-color, color;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-}
-
 /* Ensure good touch target size */
 .touch-target {
   min-height: 44px;
