@@ -4,17 +4,17 @@
     <div v-if="loading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" :class="['p-6 text-center', backgroundColor.surface, borderColor.default, shadowStyle.md]">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load edge type details
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -23,14 +23,10 @@
       <!-- Header Section with Type title and actions -->
       <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div :class="['text-sm mb-1', textColor.secondary]">Edge Type</div>
-          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ typeData.type }}</h1>
-          <div :class="['font-mono', textColor.secondary]">
-            <span :class="[
-              'px-2 py-1 rounded', 
-              backgroundColor.secondary,
-              borderColor.light
-            ]">
+          <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Edge Type</div>
+          <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</h1>
+          <div class="font-mono text-content-secondary dark:text-content-secondary-dark">
+            <span class="px-2 py-1 rounded bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark">
               {{ typeData.code }}
             </span>
           </div>
@@ -55,67 +51,62 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Type Details</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Name -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Name</div>
-                  <div :class="['text-lg', textColor.primary]">{{ typeData.type }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
                 </div>
                 
                 <!-- Code -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Code</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ typeData.code }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
                 </div>
                 
                 <!-- Description -->
                 <div class="md:col-span-2">
-                  <div :class="['field-label', textColor.secondary]">Description</div>
-                  <div :class="[
-                    'p-3 rounded border', 
-                    backgroundColor.secondary,
-                    borderColor.default,
-                    textColor.primary
-                  ]">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+                  <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
                     {{ typeData.description || 'No description provided' }}
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Stats/Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Information</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Information</h2>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Created Date -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Created</div>
-                  <div :class="textColor.secondary">{{ formatDate(typeData.created) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
                 </div>
                 
                 <!-- Last Updated -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
-                  <div :class="textColor.secondary">{{ formatDate(typeData.updated) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.updated) }}</div>
                 </div>
                 
                 <!-- Edge Usage -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Used by Edges</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Used by Edges</div>
                   <div class="flex items-center">
-                    <i :class="['pi pi-server mr-2', themeValue.class('text-blue-600', 'text-blue-400')]"></i>
-                    <div :class="['text-2xl font-semibold', textColor.primary]">{{ usageStats?.count || 0 }}</div>
+                    <i class="pi pi-server mr-2 text-blue-600 dark:text-blue-400"></i>
+                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats?.count || 0 }}</div>
                   </div>
                   <Button
                     label="View Edges"
@@ -126,8 +117,8 @@
                   />
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -155,18 +146,13 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEdgeType } from '../../../composables/useEdgeType'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
-import { useTheme } from '../../../composables/useTheme'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Edge type functionality from composable
 const { 
@@ -282,33 +268,6 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 .field-label {
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
@@ -317,17 +276,6 @@ const handleDeleteConfirm = async () => {
 .detail-field, .stat-item {
   display: flex;
   flex-direction: column;
-}
-
-/* Fix PrimeVue components styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
 }
 
 /* Fix button styling */

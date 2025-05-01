@@ -14,11 +14,11 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #title>
-        <h2 :class="['text-xl font-semibold', textColor.primary]">Thing Type Information</h2>
-      </template>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+        <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Thing Type Information</h2>
+      </div>
+      <div class="p-6">
         <EntityForm
           :loading="loading"
           submit-label="Create Thing Type"
@@ -69,10 +69,7 @@
               help-text="Short code used in thing identifiers"
             >
               <div class="flex items-center">
-                <span :class="[
-                  'text-sm font-mono px-2 py-1 rounded',
-                  themeValue.class('bg-blue-50 text-blue-700', 'bg-blue-900/20 text-blue-300')
-                ]">
+                <span class="text-sm font-mono px-2 py-1 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                   {{ getTypeAbbreviation(type.code || '') }}
                 </span>
               </div>
@@ -112,14 +109,9 @@
           </div>
           
           <!-- Form guidance -->
-          <div :class="[
-            'mt-6 p-4 rounded-md text-sm',
-            backgroundColor.secondary,
-            borderColor.light,
-            textColor.secondary
-          ]">
+          <div class="mt-6 p-4 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark text-content-secondary dark:text-content-secondary-dark">
             <div class="flex items-start">
-              <i :class="['pi pi-info-circle mt-0.5 mr-2', themeValue.class('text-blue-500', 'text-blue-400')]"></i>
+              <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
               <div>
                 <p><strong>Note:</strong> The code should be a kebab-case identifier (lowercase with hyphens) that will be used in thing codes.</p>
                 <p class="mt-1">Example: 'temperature-sensor', 'motion-sensor', 'camera', etc.</p>
@@ -128,33 +120,29 @@
             </div>
           </div>
         </EntityForm>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Code Example -->
-    <Card class="mt-6">
-      <template #title>
-        <h2 :class="['text-xl font-semibold', textColor.primary]">Code Example</h2>
-      </template>
-      <template #content>
-        <p :class="['mb-3', textColor.secondary]">
+    <div class="mt-6 bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+        <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Code Example</h2>
+      </div>
+      <div class="p-6">
+        <p class="mb-3 text-content-secondary dark:text-content-secondary-dark">
           This is an example of how this thing type's code will be used to generate thing codes:
         </p>
         
-        <div :class="[
-          'p-4 rounded-md font-mono border',
-          backgroundColor.secondary,
-          borderColor.default
-        ]">
-          <div :class="textColor.secondary">// Example thing code structure</div>
+        <div class="p-4 rounded-md font-mono border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark">
+          <div class="text-content-secondary dark:text-content-secondary-dark">// Example thing code structure</div>
           <div class="mt-2">
-            <span :class="themeValue.class('text-blue-600', 'text-blue-400')">{{ getTypeAbbreviation(type.code || 'type') }}</span>
-            <span :class="textColor.secondary">-location_identifier-001</span>
+            <span class="text-blue-600 dark:text-blue-400">{{ getTypeAbbreviation(type.code || 'type') }}</span>
+            <span class="text-content-secondary dark:text-content-secondary-dark">-location_identifier-001</span>
           </div>
-          <div :class="['mt-2', textColor.secondary]">// e.g., {{ getTypeAbbreviation(type.code || 'type') }}-main-001</div>
+          <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ getTypeAbbreviation(type.code || 'type') }}-main-001</div>
         </div>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -165,19 +153,14 @@
 import { ref } from 'vue'
 import { useThingType } from '../../../composables/useThingType'
 import { useTypeForm } from '../../../composables/useTypeForm'
-import { useTheme } from '../../../composables/useTheme'
 import { thingTypeService } from '../../../services'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Get thing type validation function and style class helper
 const { validateCode, getTypeAbbreviation, getTypeClass } = useThingType()
@@ -213,29 +196,6 @@ const updateAbbreviation = () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Form input styling */
 :deep(.p-inputtext),
 :deep(.p-dropdown),
@@ -253,12 +213,6 @@ const updateAbbreviation = () => {
 }
 
 /* Fix PrimeVue components styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
 :deep(.dark .p-inputtext),
 :deep(.dark .p-dropdown),
 :deep(.dark .p-textarea) {

@@ -1,3 +1,4 @@
+<!-- src/views/Settings/UserSettingsView.vue -->
 <template>
   <div class="settings-container">
     <PageHeader 
@@ -8,30 +9,30 @@
     <!-- Settings Grid Layout -->
     <div class="grid grid-cols-1 gap-6">
       <!-- Theme Settings -->
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
             <i class="pi pi-palette mr-2"></i>
             Appearance
           </h2>
-        </template>
-        <template #content>
+        </div>
+        <div class="p-6">
           <ThemeSettings />
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- NATS Settings -->
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
             <i class="pi pi-server mr-2"></i>
             NATS Messaging
           </h2>
-        </template>
-        <template #content>
+        </div>
+        <div class="p-6">
           <NatsSettings />
-        </template>
-      </Card>
+        </div>
+      </div>
     </div>
     
   </div>
@@ -39,15 +40,10 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import { useTheme } from '../../composables/useTheme';
 import Toast from 'primevue/toast';
-import Card from 'primevue/card';
 import PageHeader from '../../components/common/PageHeader.vue';
 import NatsSettings from './NatsSettings.vue';
 import ThemeSettings from './ThemeSettings.vue';
-
-// Theme composable for theme-aware styling
-const { textColor, backgroundColor, borderColor } = useTheme();
 
 onMounted(() => {
   // Initialize any components or load user settings
@@ -60,30 +56,20 @@ onMounted(() => {
   margin-bottom: 2rem;
 }
 
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Fix for dark mode styling */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
+:deep(.p-inputtext),
+:deep(.p-dropdown),
+:deep(.p-inputnumber) {
   background-color: var(--surface-card);
   color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-inputtext),
+:deep(.dark .p-dropdown),
+:deep(.dark .p-inputnumber) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }
 </style>

@@ -4,17 +4,17 @@
     <div v-if="loading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" :class="['p-6 text-center', backgroundColor.surface, borderColor.default, shadowStyle.md]">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load thing type details
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -23,21 +23,13 @@
       <!-- Header Section with Type title and actions -->
       <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div>
-          <div :class="['text-sm mb-1', textColor.secondary]">Thing Type</div>
-          <h1 :class="['text-2xl font-bold mb-1', textColor.primary]">{{ typeData.type }}</h1>
-          <div :class="textColor.secondary" class="flex flex-wrap gap-2">
-            <span :class="[
-              'font-mono px-2 py-1 rounded', 
-              backgroundColor.secondary,
-              borderColor.light
-            ]">
+          <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Thing Type</div>
+          <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</h1>
+          <div class="text-content-secondary dark:text-content-secondary-dark flex flex-wrap gap-2">
+            <span class="font-mono px-2 py-1 rounded bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark">
               {{ typeData.code }}
             </span>
-            <span :class="[
-              'font-mono px-2 py-1 rounded',
-              themeValue.class('bg-blue-50 text-blue-700', 'bg-blue-900/20 text-blue-300'),
-              borderColor.light
-            ]">
+            <span class="font-mono px-2 py-1 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-border-secondary dark:border-border-secondary-dark">
               {{ getTypeAbbreviation(typeData.code) }}
             </span>
           </div>
@@ -62,34 +54,34 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Type Details</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Name -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Name</div>
-                  <div :class="['text-lg', textColor.primary]">{{ typeData.type }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
                 </div>
                 
                 <!-- Code -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Code</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ typeData.code }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
                 </div>
                 
                 <!-- Abbreviation -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Code Abbreviation</div>
-                  <div :class="['font-mono text-lg', textColor.primary]">{{ getTypeAbbreviation(typeData.code) }}</div>
-                  <div :class="['text-sm mt-1', textColor.secondary]">Used in thing codes</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code Abbreviation</div>
+                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ getTypeAbbreviation(typeData.code) }}</div>
+                  <div class="text-sm mt-1 text-content-secondary dark:text-content-secondary-dark">Used in thing codes</div>
                 </div>
                 
                 <!-- Style Preview -->
                 <div class="detail-field">
-                  <div :class="['field-label', textColor.secondary]">Style Preview</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Style Preview</div>
                   <div class="flex items-center mt-2">
                     <span 
                       :class="[getTypeClass(typeData.code), 'px-3 py-1 rounded-full text-sm']"
@@ -101,47 +93,42 @@
                 
                 <!-- Description -->
                 <div class="md:col-span-2">
-                  <div :class="['field-label', textColor.secondary]">Description</div>
-                  <div :class="[
-                    'p-3 rounded border', 
-                    backgroundColor.secondary,
-                    borderColor.default,
-                    textColor.primary
-                  ]">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+                  <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
                     {{ typeData.description || 'No description provided' }}
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Stats/Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
-              <h2 :class="['text-xl font-semibold', textColor.primary]">Information</h2>
-            </template>
-            <template #content>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Information</h2>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Created Date -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Created</div>
-                  <div :class="textColor.secondary">{{ formatDate(typeData.created) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
                 </div>
                 
                 <!-- Last Updated -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Last Updated</div>
-                  <div :class="textColor.secondary">{{ formatDate(typeData.updated) }}</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.updated) }}</div>
                 </div>
                 
                 <!-- Thing Usage -->
                 <div class="stat-item">
-                  <div :class="['field-label', textColor.secondary]">Used by Things</div>
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Used by Things</div>
                   <div class="flex items-center">
-                    <i :class="['pi pi-cog mr-2', themeValue.class('text-blue-600', 'text-blue-400')]"></i>
-                    <div :class="['text-2xl font-semibold', textColor.primary]">{{ usageStats?.count || 0 }}</div>
+                    <i class="pi pi-cog mr-2 text-blue-600 dark:text-blue-400"></i>
+                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats?.count || 0 }}</div>
                   </div>
                   <Button
                     label="View Things"
@@ -152,35 +139,31 @@
                   />
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Code Example Card -->
-      <Card class="mt-6">
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">Code Example</h2>
-        </template>
-        <template #content>
-          <p :class="['mb-3', textColor.secondary]">
+      <div class="mt-6 bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Code Example</h2>
+        </div>
+        <div class="p-6">
+          <p class="mb-3 text-content-secondary dark:text-content-secondary-dark">
             This is an example of how this thing type's code is used to generate thing codes:
           </p>
           
-          <div :class="[
-            'p-4 rounded-md font-mono border',
-            backgroundColor.secondary,
-            borderColor.default
-          ]">
-            <div :class="textColor.secondary">// Example thing code structure</div>
+          <div class="p-4 rounded-md font-mono border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark">
+            <div class="text-content-secondary dark:text-content-secondary-dark">// Example thing code structure</div>
             <div class="mt-2">
-              <span :class="themeValue.class('text-blue-600', 'text-blue-400')">{{ getTypeAbbreviation(typeData.code) }}</span>
-              <span :class="textColor.secondary">-location_identifier-001</span>
+              <span class="text-blue-600 dark:text-blue-400">{{ getTypeAbbreviation(typeData.code) }}</span>
+              <span class="text-content-secondary dark:text-content-secondary-dark">-location_identifier-001</span>
             </div>
-            <div :class="['mt-2', textColor.secondary]">// e.g., {{ getTypeAbbreviation(typeData.code) }}-main-001</div>
+            <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ getTypeAbbreviation(typeData.code) }}-main-001</div>
           </div>
-        </template>
-      </Card>
+        </div>
+      </div>
     </div>
     
     <!-- Delete Confirmation Dialog -->
@@ -206,18 +189,13 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThingType } from '../../../composables/useThingType'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
-import { useTheme } from '../../../composables/useTheme'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor, shadowStyle } = useTheme()
 
 // Thing type functionality from composable
 const { 
@@ -335,33 +313,6 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
-:deep(.p-card .p-card-footer) {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface-border);
-}
-
 .field-label {
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
@@ -370,17 +321,6 @@ const handleDeleteConfirm = async () => {
 .detail-field, .stat-item {
   display: flex;
   flex-direction: column;
-}
-
-/* Fix PrimeVue components styling in dark mode */
-:deep(.dark .p-card),
-:deep(.dark .p-card .p-card-content) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-title) {
-  color: var(--text-color);
 }
 
 /* Fix button styling */
