@@ -50,11 +50,11 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Edge Details</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Code -->
                 <div class="detail-field">
@@ -129,17 +129,17 @@
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Stats/Quick Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Overview</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Locations Count -->
                 <div class="stat-item">
@@ -171,15 +171,15 @@
                   />
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Recent Locations -->
       <div v-if="recentLocations.length > 0" class="mt-6">
-        <Card>
-          <template #title>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Recent Locations</h2>
               <Button
@@ -189,8 +189,8 @@
                 @click="navigateToLocations(edge.id)"
               />
             </div>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div 
                 v-for="location in recentLocations" 
@@ -211,14 +211,14 @@
                 <div class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ formatPath(location.path) }}</div>
               </div>
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Recent Things -->
       <div v-if="recentThings.length > 0" class="mt-6">
-        <Card>
-          <template #title>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Recent Things</h2>
               <Button
@@ -228,8 +228,8 @@
                 @click="navigateToThings(edge.id)"
               />
             </div>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div 
                 v-for="thing in recentThings" 
@@ -250,14 +250,14 @@
                 <div class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ getLocationName(thing.location_id) }}</div>
               </div>
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Analytics Link Card -->
       <div class="mt-6">
-        <Card>
-          <template #content>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4">
               <div class="flex-1">
                 <h2 class="text-xl font-semibold mb-1 text-content-primary dark:text-content-primary-dark">Analytics & Monitoring</h2>
@@ -269,8 +269,8 @@
                 @click="openInGrafana(edge.id)"
               />
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -300,7 +300,6 @@ import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
@@ -507,5 +506,28 @@ const getThingTypeClass = (typeCode) => {
 
 .location-card:hover, .thing-card:hover {
   transform: translateY(-2px);
+}
+
+/* Ensure dark mode styling for confirmation dialog */
+:deep(.p-dialog) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom-color: var(--surface-border);
+}
+
+:deep(.p-dialog-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-footer) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-top-color: var(--surface-border);
 }
 </style>

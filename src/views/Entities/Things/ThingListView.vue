@@ -11,98 +11,100 @@
     </PageHeader>
     
     <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-      <DataTable
-        :items="things"
-        :columns="columns"
-        :loading="loading"
-        :searchable="true"
-        :searchFields="['code', 'name', 'type', 'expand.location_id.code', 'expand.edge_id.code']"
-        empty-message="No things found"
-        @row-click="(data) => navigateToThingDetail(data.id)"
-        :paginated="true"
-        :rows="10"
-        :rowsPerPageOptions="[5, 10, 25, 50]"
-      >
-        <!-- Code column with custom formatting -->
-        <template #code-body="{ data }">
-          <div class="font-medium font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
-        </template>
-        
-        <!-- Type column with badge -->
-        <template #type-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-            :class="getTypeClass(data.type)"
-          >
-            {{ getTypeName(data.type) }}
-          </span>
-        </template>
-        
-        <!-- Location column with code -->
-        <template #location_id-body="{ data }">
-          <router-link 
-            v-if="data.expand && data.expand.location_id"
-            :to="{ name: 'location-detail', params: { id: data.location_id } }"
-            class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
-            @click.stop
-          >
-            {{ data.expand.location_id.code }}
-          </router-link>
-          <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Location</span>
-        </template>
-        
-        <!-- Edge column with code -->
-        <template #edge_id-body="{ data }">
-          <router-link 
-            v-if="data.expand && data.expand.edge_id"
-            :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
-            class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
-            @click.stop
-          >
-            {{ data.expand.edge_id.code }}
-          </router-link>
-          <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Edge</span>
-        </template>
-        
-        <!-- Status column with badge -->
-        <template #active-body="{ data }">
-          <span 
-            class="px-2 py-1 text-xs rounded-full font-medium inline-block"
-            :class="data.active ? 
-              'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-          >
-            {{ data.active ? 'Active' : 'Inactive' }}
-          </span>
-        </template>
-        
-        <!-- Row actions -->
-        <template #row-actions="{ data }">
-          <div class="flex gap-1 justify-center">
-            <Button 
-              icon="pi pi-eye" 
-              class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToThingDetail(data.id)"
-              tooltip="View"
-              tooltipOptions="{ position: 'top' }"
-            />
-            <Button 
-              icon="pi pi-pencil" 
-              class="p-button-rounded p-button-text p-button-sm" 
-              @click.stop="navigateToThingEdit(data.id)"
-              tooltip="Edit"
-              tooltipOptions="{ position: 'top' }"
-            />
-            <Button 
-              icon="pi pi-trash" 
-              class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-              @click.stop="handleDeleteClick(data)"
-              tooltip="Delete"
-              tooltipOptions="{ position: 'top' }"
-            />
-          </div>
-        </template>
-      </DataTable>
+      <div class="p-6">
+        <DataTable
+          :items="things"
+          :columns="columns"
+          :loading="loading"
+          :searchable="true"
+          :searchFields="['code', 'name', 'type', 'expand.location_id.code', 'expand.edge_id.code']"
+          empty-message="No things found"
+          @row-click="(data) => navigateToThingDetail(data.id)"
+          :paginated="true"
+          :rows="10"
+          :rowsPerPageOptions="[5, 10, 25, 50]"
+        >
+          <!-- Code column with custom formatting -->
+          <template #code-body="{ data }">
+            <div class="font-medium font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
+          </template>
+          
+          <!-- Type column with badge -->
+          <template #type-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+              :class="getTypeClass(data.type)"
+            >
+              {{ getTypeName(data.type) }}
+            </span>
+          </template>
+          
+          <!-- Location column with code -->
+          <template #location_id-body="{ data }">
+            <router-link 
+              v-if="data.expand && data.expand.location_id"
+              :to="{ name: 'location-detail', params: { id: data.location_id } }"
+              class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
+              @click.stop
+            >
+              {{ data.expand.location_id.code }}
+            </router-link>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Location</span>
+          </template>
+          
+          <!-- Edge column with code -->
+          <template #edge_id-body="{ data }">
+            <router-link 
+              v-if="data.expand && data.expand.edge_id"
+              :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
+              class="hover:underline flex items-center text-primary-600 dark:text-primary-400"
+              @click.stop
+            >
+              {{ data.expand.edge_id.code }}
+            </router-link>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Edge</span>
+          </template>
+          
+          <!-- Status column with badge -->
+          <template #active-body="{ data }">
+            <span 
+              class="px-2 py-1 text-xs rounded-full font-medium inline-block"
+              :class="data.active ? 
+                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+            >
+              {{ data.active ? 'Active' : 'Inactive' }}
+            </span>
+          </template>
+          
+          <!-- Row actions -->
+          <template #row-actions="{ data }">
+            <div class="flex gap-1 justify-center">
+              <Button 
+                icon="pi pi-eye" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToThingDetail(data.id)"
+                tooltip="View"
+                tooltipOptions="{ position: 'top' }"
+              />
+              <Button 
+                icon="pi pi-pencil" 
+                class="p-button-rounded p-button-text p-button-sm" 
+                @click.stop="navigateToThingEdit(data.id)"
+                tooltip="Edit"
+                tooltipOptions="{ position: 'top' }"
+              />
+              <Button 
+                icon="pi pi-trash" 
+                class="p-button-rounded p-button-text p-button-sm p-button-danger" 
+                @click.stop="handleDeleteClick(data)"
+                tooltip="Delete"
+                tooltipOptions="{ position: 'top' }"
+              />
+            </div>
+          </template>
+        </DataTable>
+      </div>
     </div>
     
     <!-- Filter Dialog -->
@@ -194,7 +196,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useThing } from '../../../composables/useThing'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import DataTable from '../../../components/common/DataTable.vue'
@@ -206,11 +208,13 @@ import Dropdown from 'primevue/dropdown'
 import Toast from 'primevue/toast'
 
 const route = useRoute()
+const router = useRouter()
 
 // Get thing functionality from composable
 const { 
   things,
   loading,
+  thingTypes,
   fetchThings,
   formatDate,
   getTypeName,
@@ -221,6 +225,8 @@ const {
   navigateToThingEdit
 } = useThing()
 
+// We now use the composable's navigateToThingEdit method which has the correct route name
+
 // Get delete confirmation functionality
 const { 
   deleteDialog,
@@ -229,7 +235,7 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition - updated to use correct field names
+// Table columns definition
 const columns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
@@ -307,11 +313,6 @@ const fetchFilterLocations = async () => {
   } finally {
     locationsLoading.value = false
   }
-}
-
-// Refresh data with current filters
-const refreshData = async () => {
-  await fetchThings(isFilterActive.value ? filters.value : routeQuery.value)
 }
 
 // Handle filter button click

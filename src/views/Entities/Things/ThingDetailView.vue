@@ -56,11 +56,11 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Thing Details</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Code -->
                 <div class="detail-field">
@@ -146,17 +146,17 @@
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Stats/Quick Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Overview</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Status Info -->
                 <div class="stat-item">
@@ -208,29 +208,29 @@
                   <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(thing.updated) }}</div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Current State Card (if available) -->
       <div class="mt-6" v-if="thing.current_state && Object.keys(thing.current_state).length > 0">
-        <Card>
-          <template #title>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Current State</h2>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <div class="p-4 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
               <pre>{{ JSON.stringify(thing.current_state, null, 2) }}</pre>
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Graph Link Card -->
       <div class="mt-6">
-        <Card>
-          <template #content>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4">
               <div class="flex-1">
                 <h2 class="text-xl font-semibold mb-1 text-content-primary dark:text-content-primary-dark">Analytics & Monitoring</h2>
@@ -242,8 +242,8 @@
                 @click="openInGrafana(thing.id)"
               />
             </div>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -253,6 +253,7 @@
       header="Device Activity"
       :modal="true"
       :style="{ width: '90%', maxWidth: '900px' }"
+      class="thing-activity-dialog"
     >
       <div v-if="messagesLoading" class="flex justify-center items-center p-4">
         <ProgressSpinner 
@@ -383,7 +384,6 @@ import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -448,6 +448,8 @@ const messageColumns = [
   { field: 'summary', header: 'Description', sortable: false },
   { field: 'details', header: 'Details', sortable: false }
 ]
+
+// We now use the composable's navigateToThingEdit method which has the correct route name
 
 // Fetch thing data on component mount
 onMounted(async () => {
@@ -585,5 +587,44 @@ const handleDeleteConfirm = async () => {
 .detail-field, .stat-item {
   display: flex;
   flex-direction: column;
+}
+
+/* Fix dialog styling for dark mode */
+:deep(.p-dialog) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom-color: var(--surface-border);
+}
+
+:deep(.p-dialog-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-footer) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-top-color: var(--surface-border);
+}
+
+:deep(.thing-activity-dialog .p-datatable) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.thing-activity-dialog .p-datatable-tbody > tr) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.thing-activity-dialog .p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
 }
 </style>

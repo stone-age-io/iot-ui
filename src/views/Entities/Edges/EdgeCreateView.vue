@@ -14,11 +14,11 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #title>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
         <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Edge Information</h2>
-      </template>
-      <template #content>
+      </div>
+      <div class="p-6">
         <EntityForm
           :loading="loading"
           submit-label="Create Edge"
@@ -180,8 +180,8 @@
             </FormField>
           </div>
         </EntityForm>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -195,7 +195,6 @@ import { useEdgeForm } from '../../../composables/useEdgeForm'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Dropdown from 'primevue/dropdown'
@@ -300,5 +299,39 @@ onMounted(() => {
 
 .code-field {
   font-family: monospace;
+}
+
+/* Fix PrimeVue components styling in dark mode */
+:deep(.dark .p-inputtext),
+:deep(.dark .p-dropdown),
+:deep(.dark .p-inputnumber),
+:deep(.dark .p-textarea) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-dropdown-panel),
+:deep(.dark .p-dropdown-items-wrapper) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dropdown-item) {
+  color: var(--text-color);
+}
+
+:deep(.dark .p-dropdown-item:hover) {
+  background-color: var(--primary-400);
+  color: var(--primary-color-text);
+}
+
+:deep(.dark .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider) {
+  background-color: var(--primary-color);
+}
+
+:deep(.dark .p-inputnumber-input) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
 }
 </style>

@@ -7,6 +7,34 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        'sans': [
+          'ui-sans-serif', 
+          'system-ui', 
+          '-apple-system', 
+          'BlinkMacSystemFont', 
+          '"Segoe UI"', 
+          'Roboto', 
+          '"Helvetica Neue"', 
+          'Arial', 
+          '"Noto Sans"', 
+          'sans-serif', 
+          '"Apple Color Emoji"', 
+          '"Segoe UI Emoji"', 
+          '"Segoe UI Symbol"', 
+          '"Noto Color Emoji"'
+        ],
+        'mono': [
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          '"Liberation Mono"',
+          '"Courier New"',
+          'monospace'
+        ],
+      },
       colors: {
         'primary': {
           '50': '#f0f9ff',
@@ -25,8 +53,8 @@ export default {
           'primary': '#ffffff',
           'primary-dark': '#1f2937',
           'hover': '#f3f3f6',
-	  'hover-dark': '#374151',
-	  'secondary': '#f9fafb',
+          'hover-dark': '#374151',
+          'secondary': '#f9fafb',
           'secondary-dark': '#111827',
           'tertiary': '#f3f4f6',
           'tertiary-dark': '#374151'

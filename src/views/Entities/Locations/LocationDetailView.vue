@@ -1,4 +1,3 @@
-<!-- src/views/Entities/Locations/LocationDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -64,11 +63,11 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Details Card -->
         <div class="lg:col-span-2">
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Details</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <!-- Code -->
                 <div class="detail-field">
@@ -148,17 +147,17 @@
                   </div>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
         
         <!-- Things/Quick Info Card -->
         <div>
-          <Card class="h-full">
-            <template #title>
+          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
+            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Things</h2>
-            </template>
-            <template #content>
+            </div>
+            <div class="p-6">
               <div class="space-y-6">
                 <!-- Things Count -->
                 <div class="stat-item">
@@ -221,15 +220,15 @@
                   class="w-full"
                 />
               </div>
-            </template>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Child Locations Card -->
-      <div class="card mt-6" v-if="childLocations.length > 0">
-        <Card>
-          <template #title>
+      <div class="mt-6" v-if="childLocations.length > 0">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Child Locations</h2>
               <Button
@@ -239,8 +238,8 @@
                 @click="navigateToLocationCreate({ parent_id: location.id })"
               />
             </div>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <DataTable
               :items="childLocations"
               :columns="childLocationColumns"
@@ -277,17 +276,17 @@
                 </div>
               </template>
             </DataTable>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Floor Plan Map Card -->
       <div class="mt-6">
-        <Card>
-          <template #title>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Floor Plan</h2>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <FloorPlanMap
               :location="location"
               :things="things"
@@ -298,17 +297,17 @@
               @upload-floor-plan="handleUploadFloorPlan"
               @thing-click="navigateToThingDetail"
             />
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <!-- Connected Things -->
       <div class="mt-6" v-if="things.length > 0">
-        <Card>
-          <template #title>
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Connected Things</h2>
-          </template>
-          <template #content>
+          </div>
+          <div class="p-6">
             <DataTable
               :items="things"
               :columns="thingColumns"
@@ -356,8 +355,8 @@
                 </div>
               </template>
             </DataTable>
-          </template>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -388,7 +387,6 @@ import { useConfirmation } from '../../../composables/useConfirmation'
 import { useToast } from 'primevue/usetoast'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -655,6 +653,51 @@ const handleDeleteConfirm = async () => {
 .detail-field, .stat-item {
   display: flex;
   flex-direction: column;
+}
+
+/* Dark mode styling for DataTable */
+:deep(.dark .p-datatable) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.dark .p-datatable-thead > tr > th) {
+  background-color: var(--surface-hover);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-datatable-tbody > tr) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-hover);
+}
+
+/* Dark mode styling for dialogs */
+:deep(.p-dialog) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-header) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom-color: var(--surface-border);
+}
+
+:deep(.p-dialog-content) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+}
+
+:deep(.p-dialog-footer) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-top-color: var(--surface-border);
 }
 
 /* Responsive adjustments */
