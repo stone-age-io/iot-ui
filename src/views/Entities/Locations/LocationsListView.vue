@@ -11,8 +11,8 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
         <DataTable
           :items="locations"
           :columns="columns"
@@ -26,15 +26,15 @@
         >
           <!-- Code column with custom formatting -->
           <template #code-body="{ data }">
-            <div :class="['font-medium font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">{{ data.code }}</div>
+            <div class="font-medium font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
           </template>
           
           <!-- Path column with hierarchical display -->
           <template #path-body="{ data }">
             <div class="flex items-center">
               <span v-for="(segment, index) in parseLocationPath(data.path)" :key="index" class="flex items-center">
-                <span v-if="index > 0" :class="['mx-1', textColor.muted]">/</span>
-                <span :class="textColor.secondary">{{ segment }}</span>
+                <span v-if="index > 0" class="mx-1 text-content-tertiary dark:text-content-tertiary-dark">/</span>
+                <span class="text-content-secondary dark:text-content-secondary-dark">{{ segment }}</span>
               </span>
             </div>
           </template>
@@ -54,12 +54,12 @@
             <router-link 
               v-if="data.expand && data.expand.parent_id"
               :to="{ name: 'location-detail', params: { id: data.parent_id } }"
-              :class="themeValue.class('text-primary-600', 'text-primary-400') + ' hover:underline flex items-center'"
+              class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
               @click.stop
             >
               {{ data.expand.parent_id.code }}
             </router-link>
-            <span v-else :class="textColor.secondary">-</span>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">-</span>
           </template>
           
           <!-- Edge column with code -->
@@ -67,12 +67,12 @@
             <router-link 
               v-if="data.expand && data.expand.edge_id"
               :to="{ name: 'edge-detail', params: { id: data.edge_id } }"
-              :class="themeValue.class('text-primary-600', 'text-primary-400') + ' hover:underline flex items-center'"
+              class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
               @click.stop
             >
               {{ data.expand.edge_id.code }}
             </router-link>
-            <span v-else :class="textColor.secondary">Unknown Edge</span>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">Unknown Edge</span>
           </template>
           
           <!-- Row actions -->
@@ -102,8 +102,8 @@
             </div>
           </template>
         </DataTable>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Filter Dialog -->
     <Dialog
@@ -111,14 +111,13 @@
       header="Filter Locations"
       :style="{ width: '30rem' }"
       :modal="true"
-      :contentStyle="themeValue.value({}, { 'background-color': 'var(--surface-card)' })"
-      class="p-fluid"
+      class="theme-transition"
     >
       <div class="grid grid-cols-1 gap-4 mt-2">
         <div class="field">
           <label 
             for="filter-type" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Location Type</label>
           <Dropdown
             id="filter-type"
@@ -135,7 +134,7 @@
         <div class="field">
           <label 
             for="filter-edge" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Edge</label>
           <Dropdown
             id="filter-edge"
@@ -152,7 +151,7 @@
         <div class="field">
           <label 
             for="filter-parent" 
-            :class="['font-medium mb-2 block', textColor.primary]"
+            class="font-medium mb-2 block text-content-primary dark:text-content-primary-dark"
           >Parent</label>
           <Dropdown
             id="filter-parent"
@@ -198,12 +197,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocation } from '../../../composables/useLocation'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
-import { useTheme } from '../../../composables/useTheme'
 import { useTypesStore } from '../../../stores/types'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
@@ -211,9 +208,6 @@ import Toast from 'primevue/toast'
 
 const route = useRoute()
 const typesStore = useTypesStore()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Get location functionality from composable
 const { 
@@ -379,29 +373,6 @@ const handleDeleteConfirm = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Badge styling */
 .badge {
   padding: 0.25rem 0.75rem;
@@ -411,12 +382,6 @@ const handleDeleteConfirm = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Table row hover effect */
-:deep(.p-datatable-tbody > tr:hover) {
-  background-color: var(--surface-hover);
-  cursor: pointer;
 }
 
 /* Fix for dialog in dark mode */
@@ -469,8 +434,8 @@ const handleDeleteConfirm = async () => {
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  :deep(.p-card .p-card-content) {
-    padding: 1rem;
+  :deep(.p-datatable .p-datatable-tbody > tr > td) {
+    padding: 0.75rem 0.5rem;
   }
 }
 </style>

@@ -4,8 +4,8 @@
     <!-- Header with Filters -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2 sm:gap-0">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold" :class="textColor.primary">Locations Map</h1>
-        <p :class="textColor.secondary" class="mt-1">Geographic view of all edges and locations</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary-dark">Locations Map</h1>
+        <p class="text-content-secondary dark:text-content-secondary-dark mt-1">Geographic view of all edges and locations</p>
       </div>
       
       <div class="flex flex-wrap gap-2 items-center">
@@ -15,7 +15,7 @@
           :options="edgeOptions"
           optionLabel="label"
           placeholder="All Edges"
-          class="w-full sm:w-auto p-component-theme"
+          class="w-full sm:w-auto"
           :disabled="loading"
           @change="filterByEdge"
         />
@@ -26,7 +26,7 @@
           :options="locationTypeOptions"
           optionLabel="label"
           placeholder="All Types"
-          class="w-full sm:w-auto p-component-theme"
+          class="w-full sm:w-auto"
           :disabled="loading"
           @change="filterByType"
         />
@@ -34,11 +34,11 @@
     </div>
     
     <!-- Map Card -->
-    <DashboardCard class="mb-6" no-padding :class="shadowStyle.md">
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition mb-6">
       <div class="map-container relative" :style="{ height: '70vh' }">
         <!-- Loading Overlay -->
-        <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-10" :class="themeValue.class('bg-white bg-opacity-70', 'bg-gray-900 bg-opacity-70')">
-          <ProgressSpinner strokeWidth="4" />
+        <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-10 bg-surface-primary bg-opacity-70 dark:bg-surface-primary-dark dark:bg-opacity-70">
+          <ProgressSpinner strokeWidth="4" class="text-primary-500 dark:text-primary-400" />
         </div>
         
         <!-- Global Map Component -->
@@ -49,10 +49,10 @@
           @location-click="handleLocationClick"
         />
       </div>
-    </DashboardCard>
+    </div>
     
     <!-- Location List -->
-    <DashboardCard :class="shadowStyle.md">
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
       <DataTable
         title="Locations"
         :items="filteredLocations"
@@ -74,8 +74,8 @@
               :class="getIconColorClass(data.type)"
             ></i>
             <div>
-              <div class="font-medium text-sm" :class="textColor.primary">{{ data.name }}</div>
-              <div class="text-xs" :class="textColor.secondary">{{ data.code }}</div>
+              <div class="font-medium text-sm text-content-primary dark:text-content-primary-dark">{{ data.name }}</div>
+              <div class="text-xs text-content-secondary dark:text-content-secondary-dark">{{ data.code }}</div>
             </div>
           </div>
         </template>
@@ -93,23 +93,23 @@
         <!-- Edge Column Custom Template -->
         <template #edge-body="{ data }">
           <div v-if="data.expand && data.expand.edge_id">
-            <div class="text-sm" :class="textColor.primary">{{ data.expand.edge_id.name }}</div>
-            <div class="text-xs" :class="textColor.secondary">{{ data.expand.edge_id.code }}</div>
+            <div class="text-sm text-content-primary dark:text-content-primary-dark">{{ data.expand.edge_id.name }}</div>
+            <div class="text-xs text-content-secondary dark:text-content-secondary-dark">{{ data.expand.edge_id.code }}</div>
           </div>
-          <div v-else class="text-sm" :class="textColor.muted">No edge</div>
+          <div v-else class="text-sm text-content-tertiary dark:text-content-tertiary-dark">No edge</div>
         </template>
         
         <!-- Path Column Custom Template -->
         <template #path-body="{ data }">
-          <div class="text-sm" :class="textColor.primary">{{ formatPath(data.path) }}</div>
+          <div class="text-sm text-content-primary dark:text-content-primary-dark">{{ formatPath(data.path) }}</div>
         </template>
         
         <!-- Coordinates Column Custom Template -->
         <template #coordinates-body="{ data }">
-          <div v-if="hasCoordinates(data)" class="text-sm" :class="textColor.primary">
+          <div v-if="hasCoordinates(data)" class="text-sm text-content-primary dark:text-content-primary-dark">
             {{ formatCoordinates(data) }}
           </div>
-          <div v-else class="text-sm" :class="textColor.muted">No coordinates</div>
+          <div v-else class="text-sm text-content-tertiary dark:text-content-tertiary-dark">No coordinates</div>
         </template>
         
         <!-- Row Actions Template -->
@@ -139,7 +139,7 @@
           </div>
         </template>
       </DataTable>
-    </DashboardCard>
+    </div>
     
     <!-- Location Detail Dialog -->
     <Dialog
@@ -149,7 +149,7 @@
       :modal="true"
       :closable="true"
       :closeOnEscape="true"
-      class="p-component-theme"
+      class="theme-transition"
     >
       <div v-if="locationDialog.location" class="theme-transition">
         <div class="mb-4">
@@ -159,22 +159,22 @@
           >
             {{ getTypeName(locationDialog.location.type) }}
           </span>
-          <p class="text-sm mb-1" :class="textColor.secondary">{{ locationDialog.location.code }}</p>
-          <p class="text-sm mb-3" :class="textColor.secondary">{{ formatPath(locationDialog.location.path) }}</p>
+          <p class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">{{ locationDialog.location.code }}</p>
+          <p class="text-sm mb-3 text-content-secondary dark:text-content-secondary-dark">{{ formatPath(locationDialog.location.path) }}</p>
           
-          <div v-if="locationDialog.location.description" class="text-sm mt-2" :class="textColor.primary">
+          <div v-if="locationDialog.location.description" class="text-sm mt-2 text-content-primary dark:text-content-primary-dark">
             {{ locationDialog.location.description }}
           </div>
           
-          <div v-if="getEdgeName(locationDialog.location)" class="mt-4 p-3 rounded" :class="backgroundColor.secondary">
-            <p class="text-sm font-medium" :class="textColor.primary">Edge</p>
-            <p class="text-sm" :class="textColor.secondary">{{ getEdgeName(locationDialog.location) }}</p>
+          <div v-if="getEdgeName(locationDialog.location)" class="mt-4 p-3 rounded bg-surface-secondary dark:bg-surface-secondary-dark">
+            <p class="text-sm font-medium text-content-primary dark:text-content-primary-dark">Edge</p>
+            <p class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ getEdgeName(locationDialog.location) }}</p>
           </div>
         </div>
         
         <template v-if="hasCoordinates(locationDialog.location)">
-          <h3 class="font-medium mb-2 mt-4" :class="textColor.primary">Coordinates</h3>
-          <p class="text-sm" :class="textColor.secondary">{{ formatCoordinates(locationDialog.location) }}</p>
+          <h3 class="font-medium mb-2 mt-4 text-content-primary dark:text-content-primary-dark">Coordinates</h3>
+          <p class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ formatCoordinates(locationDialog.location) }}</p>
         </template>
         
         <div class="flex justify-end gap-2 mt-6">
@@ -206,10 +206,8 @@ import ProgressSpinner from 'primevue/progressspinner'
 // Import composables and store
 import { useLocation } from '../composables/useLocation'
 import { useTypesStore } from '../stores/types'
-import { useTheme } from '../composables/useTheme' // Import theme composable
 
 // Import components
-import DashboardCard from '../components/dashboard/DashboardCard.vue'
 import GlobalMap from '../components/map/GlobalMap.vue'
 import DataTable from '../components/common/DataTable.vue'
 
@@ -228,16 +226,6 @@ const {
   navigateToLocationDetail,
   navigateToLocationEdit
 } = useLocation()
-
-// Initialize theme composable
-const { 
-  isDarkMode, 
-  themeValue,
-  backgroundColor, 
-  textColor, 
-  borderColor,
-  shadowStyle
-} = useTheme()
 
 // Get types store for types management
 const typesStore = useTypesStore()
@@ -406,36 +394,21 @@ const formatCoordinates = (location) => {
 
 // Get theme-aware icon color
 const getIconColorClass = (type) => {
-  if (isDarkMode.value) {
-    const darkClasses = {
-      'entrance': 'text-blue-400',
-      'work-area': 'text-green-400',
-      'meeting-room': 'text-purple-400',
-      'break-area': 'text-amber-400',
-      'reception': 'text-indigo-400',
-      'security': 'text-red-400',
-      'server-room': 'text-cyan-400',
-      'utility-room': 'text-teal-400',
-      'storage': 'text-gray-400',
-      'entrance-hall': 'text-blue-400'
-    }
-    return darkClasses[type] || 'text-gray-400'
-  } else {
-    // Light mode classes (original)
-    const lightClasses = {
-      'entrance': 'text-blue-600',
-      'work-area': 'text-green-600',
-      'meeting-room': 'text-purple-600',
-      'break-area': 'text-amber-600',
-      'reception': 'text-indigo-600',
-      'security': 'text-red-600',
-      'server-room': 'text-cyan-600',
-      'utility-room': 'text-teal-600',
-      'storage': 'text-gray-600',
-      'entrance-hall': 'text-blue-600'
-    }
-    return lightClasses[type] || 'text-gray-600'
+  // Using the theming system
+  const typeColorMap = {
+    'entrance': 'text-blue-600 dark:text-blue-400',
+    'work-area': 'text-green-600 dark:text-green-400',
+    'meeting-room': 'text-purple-600 dark:text-purple-400',
+    'break-area': 'text-amber-600 dark:text-amber-400',
+    'reception': 'text-indigo-600 dark:text-indigo-400',
+    'security': 'text-red-600 dark:text-red-400',
+    'server-room': 'text-cyan-600 dark:text-cyan-400',
+    'utility-room': 'text-teal-600 dark:text-teal-400',
+    'storage': 'text-gray-600 dark:text-gray-400',
+    'entrance-hall': 'text-blue-600 dark:text-blue-400'
   }
+  
+  return typeColorMap[type] || 'text-gray-600 dark:text-gray-400'
 }
 
 const getEdgeName = (location) => {
@@ -473,13 +446,5 @@ const navigateToEdit = (id) => {
 :deep(.map-container) {
   overflow: hidden;
   border-radius: 0.5rem;
-}
-
-/* Add theme transition for smooth color changes */
-.theme-transition,
-.theme-transition * {
-  transition-property: background-color, border-color, color;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
 }
 </style>
