@@ -5,17 +5,17 @@
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
       <ProgressSpinner 
         strokeWidth="4" 
-        :class="themeValue.class('text-primary-500', 'text-primary-400')" 
+        class="text-primary-500 dark:text-primary-400" 
       />
     </div>
     
     <!-- Error Message -->
-    <div v-else-if="error" :class="['p-error-container p-6 text-center', backgroundColor.surface, borderColor.default]">
-      <div :class="['text-xl mb-4', textColor.error]">
+    <div v-else-if="error" class="p-6 text-center bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark rounded-lg shadow-theme-md">
+      <div class="text-xl mb-4 text-red-600 dark:text-red-400">
         <i class="pi pi-exclamation-circle mr-2"></i>
         Failed to load permission role
       </div>
-      <p :class="['mb-4', textColor.secondary]">{{ error }}</p>
+      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
       <Button label="Go Back" icon="pi pi-arrow-left" @click="$router.back()" />
     </div>
     
@@ -35,11 +35,11 @@
         </template>
       </PageHeader>
       
-      <Card>
-        <template #title>
-          <h2 :class="['text-xl font-semibold', textColor.primary]">Role Information</h2>
-        </template>
-        <template #content>
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Role Information</h2>
+        </div>
+        <div class="p-6">
           <EntityForm
             :loading="loading"
             submit-label="Save Changes"
@@ -65,163 +65,141 @@
             </FormField>
             
             <!-- Topic Permissions Tabs -->
-            <TabView>
-              <!-- Publish Topics Tab -->
-              <TabPanel header="Publish Permissions">
-                <div class="p-2">
-                  <p :class="['mb-4', textColor.secondary]">
-                    Define topics this role can publish to. Leave empty for no publish access.
-                  </p>
-                  
-                  <!-- Add Topic Form -->
-                  <div class="flex flex-col sm:flex-row gap-2 mb-4">
-                    <div class="flex-grow">
-                      <InputText
-                        v-model="newPublishTopic"
-                        placeholder="Enter a topic pattern (e.g., acme.device.*.status)"
-                        class="w-full"
-                        :class="{ 'p-invalid': !isValidTopic(newPublishTopic) && newPublishTopic !== '' }"
-                      />
-                      <small v-if="!isValidTopic(newPublishTopic) && newPublishTopic !== ''" :class="textColor.error">
-                        Invalid topic format
-                      </small>
-                    </div>
-                    <Button
-                      label="Add Topic"
-                      icon="pi pi-plus"
-                      @click="addPublishTopic"
-                      :disabled="!isValidTopic(newPublishTopic) || newPublishTopic === ''"
-                    />
-                  </div>
-                  
-                  <!-- Topics List -->
-                  <div v-if="permission.publish_permissions.length > 0" class="mt-4">
-                    <h3 :class="['text-lg font-medium mb-2', textColor.primary]">Publish Topics</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                      <li v-for="(topic, index) in permission.publish_permissions" :key="`pub-${index}`" class="flex items-center">
-                        <span :class="['font-mono flex-grow', textColor.primary]">{{ topic }}</span>
-                        <Button
-                          icon="pi pi-trash"
-                          class="p-button-text p-button-sm p-button-danger"
-                          @click="removePublishTopic(index)"
-                          tooltip="Remove"
+            <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg border border-border-primary dark:border-border-primary-dark overflow-hidden theme-transition">
+              <TabView>
+                <!-- Publish Topics Tab -->
+                <TabPanel header="Publish Permissions">
+                  <div class="p-4 bg-surface-secondary dark:bg-surface-secondary-dark theme-transition">
+                    <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">
+                      Define topics this role can publish to. Leave empty for no publish access.
+                    </p>
+                    
+                    <!-- Add Topic Form -->
+                    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                      <div class="flex-grow">
+                        <InputText
+                          v-model="newPublishTopic"
+                          placeholder="Enter a topic pattern (e.g., acme.device.*.status)"
+                          class="w-full bg-surface-primary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark border-border-primary dark:border-border-primary-dark"
+                          :class="{ 'p-invalid': !isValidTopic(newPublishTopic) && newPublishTopic !== '' }"
                         />
-                      </li>
-                    </ul>
-                  </div>
-                  
-                  <div v-else :class="[
-                    'p-4 rounded text-center mt-4',
-                    backgroundColor.secondary,
-                    textColor.secondary
-                  ]">
-                    No publish permissions defined
-                  </div>
-                </div>
-              </TabPanel>
-              
-              <!-- Subscribe Topics Tab -->
-              <TabPanel header="Subscribe Permissions">
-                <div class="p-2">
-                  <p :class="['mb-4', textColor.secondary]">
-                    Define topics this role can subscribe to. Leave empty for no subscribe access.
-                  </p>
-                  
-                  <!-- Add Topic Form -->
-                  <div class="flex flex-col sm:flex-row gap-2 mb-4">
-                    <div class="flex-grow">
-                      <InputText
-                        v-model="newSubscribeTopic"
-                        placeholder="Enter a topic pattern (e.g., acme.events.>)"
-                        class="w-full"
-                        :class="{ 'p-invalid': !isValidTopic(newSubscribeTopic) && newSubscribeTopic !== '' }"
+                        <small v-if="!isValidTopic(newPublishTopic) && newPublishTopic !== ''" class="text-red-500 dark:text-red-400">
+                          Invalid topic format
+                        </small>
+                      </div>
+                      <Button
+                        label="Add Topic"
+                        icon="pi pi-plus"
+                        @click="addPublishTopic"
+                        :disabled="!isValidTopic(newPublishTopic) || newPublishTopic === ''"
                       />
-                      <small v-if="!isValidTopic(newSubscribeTopic) && newSubscribeTopic !== ''" :class="textColor.error">
-                        Invalid topic format
-                      </small>
                     </div>
-                    <Button
-                      label="Add Topic"
-                      icon="pi pi-plus"
-                      @click="addSubscribeTopic"
-                      :disabled="!isValidTopic(newSubscribeTopic) || newSubscribeTopic === ''"
-                    />
+                    
+                    <!-- Topics List -->
+                    <div v-if="permission.publish_permissions.length > 0" class="mt-4 p-4 rounded-md bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark theme-transition">
+                      <h3 class="text-lg font-medium mb-2 text-content-primary dark:text-content-primary-dark">Publish Topics</h3>
+                      <ul class="list-disc pl-5 space-y-1">
+                        <li v-for="(topic, index) in permission.publish_permissions" :key="`pub-${index}`" class="flex items-center">
+                          <span class="font-mono flex-grow text-content-primary dark:text-content-primary-dark">{{ topic }}</span>
+                          <Button
+                            icon="pi pi-trash"
+                            class="p-button-text p-button-sm p-button-danger"
+                            @click="removePublishTopic(index)"
+                            tooltip="Remove"
+                          />
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div v-else class="p-4 rounded text-center mt-4 bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-secondary dark:text-content-secondary-dark theme-transition">
+                      No publish permissions defined
+                    </div>
                   </div>
-                  
-                  <!-- Topics List -->
-                  <div v-if="permission.subscribe_permissions.length > 0" class="mt-4">
-                    <h3 :class="['text-lg font-medium mb-2', textColor.primary]">Subscribe Topics</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                      <li v-for="(topic, index) in permission.subscribe_permissions" :key="`sub-${index}`" class="flex items-center">
-                        <span :class="['font-mono flex-grow', textColor.primary]">{{ topic }}</span>
-                        <Button
-                          icon="pi pi-trash"
-                          class="p-button-text p-button-sm p-button-danger"
-                          @click="removeSubscribeTopic(index)"
-                          tooltip="Remove"
+                </TabPanel>
+                
+                <!-- Subscribe Topics Tab -->
+                <TabPanel header="Subscribe Permissions">
+                  <div class="p-4 bg-surface-secondary dark:bg-surface-secondary-dark theme-transition">
+                    <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">
+                      Define topics this role can subscribe to. Leave empty for no subscribe access.
+                    </p>
+                    
+                    <!-- Add Topic Form -->
+                    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                      <div class="flex-grow">
+                        <InputText
+                          v-model="newSubscribeTopic"
+                          placeholder="Enter a topic pattern (e.g., acme.events.>)"
+                          class="w-full bg-surface-primary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark border-border-primary dark:border-border-primary-dark"
+                          :class="{ 'p-invalid': !isValidTopic(newSubscribeTopic) && newSubscribeTopic !== '' }"
                         />
-                      </li>
-                    </ul>
+                        <small v-if="!isValidTopic(newSubscribeTopic) && newSubscribeTopic !== ''" class="text-red-500 dark:text-red-400">
+                          Invalid topic format
+                        </small>
+                      </div>
+                      <Button
+                        label="Add Topic"
+                        icon="pi pi-plus"
+                        @click="addSubscribeTopic"
+                        :disabled="!isValidTopic(newSubscribeTopic) || newSubscribeTopic === ''"
+                      />
+                    </div>
+                    
+                    <!-- Topics List -->
+                    <div v-if="permission.subscribe_permissions.length > 0" class="mt-4 p-4 rounded-md bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark theme-transition">
+                      <h3 class="text-lg font-medium mb-2 text-content-primary dark:text-content-primary-dark">Subscribe Topics</h3>
+                      <ul class="list-disc pl-5 space-y-1">
+                        <li v-for="(topic, index) in permission.subscribe_permissions" :key="`sub-${index}`" class="flex items-center">
+                          <span class="font-mono flex-grow text-content-primary dark:text-content-primary-dark">{{ topic }}</span>
+                          <Button
+                            icon="pi pi-trash"
+                            class="p-button-text p-button-sm p-button-danger"
+                            @click="removeSubscribeTopic(index)"
+                            tooltip="Remove"
+                          />
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div v-else class="p-4 rounded text-center mt-4 bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-secondary dark:text-content-secondary-dark theme-transition">
+                      No subscribe permissions defined
+                    </div>
                   </div>
-                  
-                  <div v-else :class="[
-                    'p-4 rounded text-center mt-4',
-                    backgroundColor.secondary,
-                    textColor.secondary
-                  ]">
-                    No subscribe permissions defined
-                  </div>
-                </div>
-              </TabPanel>
-            </TabView>
+                </TabPanel>
+              </TabView>
+            </div>
             
             <!-- Topic Pattern Help -->
-            <div :class="[
-              'mt-8 p-4 rounded-md border',
-              backgroundColor.secondary,
-              borderColor.default
-            ]">
-              <h3 :class="['text-lg font-semibold mb-2', textColor.primary]">Topic Pattern Help</h3>
+            <div class="mt-8 p-4 rounded-md border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark theme-transition">
+              <h3 class="text-lg font-semibold mb-2 text-content-primary dark:text-content-primary-dark">Topic Pattern Help</h3>
               
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Exact Topics</h4>
-                  <p :class="['text-sm', textColor.secondary]">
+                  <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Exact Topics</h4>
+                  <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                     Use specific topic paths for exact matching.
                   </p>
-                  <div :class="[
-                    'mt-2 p-2 rounded text-xs font-mono',
-                    backgroundColor.tertiary,
-                    textColor.primary
-                  ]">
+                  <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                     acme.bld.na.001.reader.status
                   </div>
                 </div>
                 
                 <div>
-                  <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Single-Level Wildcard (*)</h4>
-                  <p :class="['text-sm', textColor.secondary]">
+                  <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Single-Level Wildcard (*)</h4>
+                  <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                     The * wildcard matches exactly one token in the topic path.
                   </p>
-                  <div :class="[
-                    'mt-2 p-2 rounded text-xs font-mono',
-                    backgroundColor.tertiary,
-                    textColor.primary
-                  ]">
+                  <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                     acme.*.reader.*.event
                   </div>
                 </div>
                 
                 <div>
-                  <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Multi-Level Wildcard (>)</h4>
-                  <p :class="['text-sm', textColor.secondary]">
+                  <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Multi-Level Wildcard (>)</h4>
+                  <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                     The > wildcard matches multiple tokens and must be at the end.
                   </p>
-                  <div :class="[
-                    'mt-2 p-2 rounded text-xs font-mono',
-                    backgroundColor.tertiary,
-                    textColor.primary
-                  ]">
+                  <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                     acme.bld.na.001.>
                   </div>
                 </div>
@@ -229,8 +207,8 @@
             </div>
             
           </EntityForm>
-        </template>
-      </Card>
+        </div>
+      </div>
       
       <!-- Toast for success/error messages -->
       <Toast />
@@ -244,12 +222,10 @@ import { useRoute } from 'vue-router'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
-import { useTheme } from '../../../composables/useTheme'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -258,9 +234,6 @@ import TabPanel from 'primevue/tabpanel'
 import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the topic permission composable
 const { 
@@ -387,32 +360,9 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Tab panel fixes */
 :deep(.p-tabview-panels) {
-  background-color: var(--surface-card);
+  background-color: transparent;
   color: var(--text-color);
 }
 
@@ -427,6 +377,24 @@ const handleSubmit = async () => {
 }
 
 :deep(.p-tabview-nav li .p-tabview-nav-link) {
+  color: var(--text-color-secondary);
+}
+
+:deep(.dark .p-tabview-panels) {
+  background-color: transparent;
+}
+
+:deep(.dark .p-tabview-nav) {
+  background-color: var(--surface-secondary-dark);
+  border-color: var(--surface-border);
+}
+
+:deep(.dark .p-tabview-nav li.p-highlight .p-tabview-nav-link) {
+  color: var(--primary-400);
+  border-color: var(--primary-400);
+}
+
+:deep(.dark .p-tabview-nav li .p-tabview-nav-link) {
   color: var(--text-color-secondary);
 }
 
@@ -457,12 +425,6 @@ const handleSubmit = async () => {
   box-shadow: 0 0 0 1px var(--primary-400);
 }
 
-/* Error container styling */
-.p-error-container {
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-}
-
 /* Button styling fixes */
 :deep(.p-button-text) {
   color: var(--primary-color);
@@ -474,14 +436,5 @@ const handleSubmit = async () => {
 
 :deep(.dark .p-button-text:hover) {
   background: rgba(var(--primary-400), 0.16);
-}
-
-/* Error message styling */
-:deep(.p-error) {
-  color: var(--red-500);
-}
-
-:deep(.dark .p-error) {
-  color: var(--red-400);
 }
 </style>

@@ -11,8 +11,8 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6">
         <DataTable
           :items="clients"
           :columns="columns"
@@ -27,7 +27,7 @@
         >
           <!-- Username column with custom formatting -->
           <template #username-body="{ data }">
-            <div :class="['font-medium font-mono', themeValue.class('text-primary-700', 'text-primary-400')]">
+            <div class="font-medium font-mono text-primary-700 dark:text-primary-400">
               {{ data.username }}
             </div>
           </template>
@@ -37,13 +37,13 @@
             <div v-if="data.expand && data.expand.role_id">
               <router-link 
                 :to="{ name: 'topic-permission-detail', params: { id: data.role_id } }"
-                :class="themeValue.class('text-primary-600 hover:text-primary-700', 'text-primary-400 hover:text-primary-300') + ' hover:underline'"
+                class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:underline"
                 @click.stop
               >
                 {{ data.expand.role_id.name }}
               </router-link>
             </div>
-            <span v-else :class="textColor.secondary">No role assigned</span>
+            <span v-else class="text-content-secondary dark:text-content-secondary-dark">No role assigned</span>
           </template>
           
           <!-- Status column with badge -->
@@ -51,8 +51,8 @@
             <span 
               class="px-2 py-1 text-xs rounded-full font-medium inline-block"
               :class="data.active ? 
-                themeValue.class('bg-green-100 text-green-800', 'bg-green-900/30 text-green-300') : 
-                themeValue.class('bg-gray-100 text-gray-800', 'bg-gray-700 text-gray-300')"
+                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
             >
               {{ data.active ? 'Active' : 'Inactive' }}
             </span>
@@ -85,8 +85,8 @@
             </div>
           </template>
         </DataTable>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Delete Confirmation Dialog -->
     <ConfirmationDialog
@@ -109,16 +109,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useClient } from '../../../composables/useClient'
-import { useTheme } from '../../../composables/useTheme'
 import DataTable from '../../../components/common/DataTable.vue'
 import PageHeader from '../../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
-import Card from 'primevue/card'
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the client composable
 const { 
@@ -182,29 +177,6 @@ const handleDeleteClient = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Basic DataTable styling */
 :deep(.p-datatable-tbody > tr:hover) {
   background-color: var(--surface-hover);

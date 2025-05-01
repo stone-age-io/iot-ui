@@ -15,11 +15,11 @@
       </template>
     </PageHeader>
     
-    <Card>
-      <template #title>
-        <h2 :class="['text-xl font-semibold', textColor.primary]">Role Information</h2>
-      </template>
-      <template #content>
+    <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+      <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+        <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Role Information</h2>
+      </div>
+      <div class="p-6">
         <EntityForm
           :loading="loading"
           submit-label="Create Role"
@@ -49,7 +49,7 @@
             <!-- Publish Topics Tab -->
             <TabPanel header="Publish Permissions">
               <div class="p-2">
-                <p :class="['mb-4', textColor.secondary]">
+                <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">
                   Define topics this role can publish to. Leave empty for no publish access.
                 </p>
                 
@@ -76,10 +76,10 @@
                 
                 <!-- Topics List -->
                 <div v-if="permission.publish_permissions.length > 0" class="mt-4">
-                  <h3 :class="['text-lg font-medium mb-2', textColor.primary]">Publish Topics</h3>
+                  <h3 class="text-lg font-medium mb-2 text-content-primary dark:text-content-primary-dark">Publish Topics</h3>
                   <ul class="list-disc pl-5 space-y-1">
                     <li v-for="(topic, index) in permission.publish_permissions" :key="`pub-${index}`" class="flex items-center">
-                      <span :class="['font-mono flex-grow', textColor.primary]">{{ topic }}</span>
+                      <span class="font-mono flex-grow text-content-primary dark:text-content-primary-dark">{{ topic }}</span>
                       <Button
                         icon="pi pi-trash"
                         class="p-button-text p-button-sm p-button-danger"
@@ -90,11 +90,7 @@
                   </ul>
                 </div>
                 
-                <div v-else :class="[
-                  'bg-gray-50 p-4 rounded text-center mt-4',
-                  backgroundColor.secondary,
-                  textColor.secondary
-                ]">
+                <div v-else class="bg-surface-secondary dark:bg-surface-secondary-dark p-4 rounded text-center mt-4 text-content-secondary dark:text-content-secondary-dark">
                   No publish permissions defined
                 </div>
               </div>
@@ -103,7 +99,7 @@
             <!-- Subscribe Topics Tab -->
             <TabPanel header="Subscribe Permissions">
               <div class="p-2">
-                <p :class="['mb-4', textColor.secondary]">
+                <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">
                   Define topics this role can subscribe to. Leave empty for no subscribe access.
                 </p>
                 
@@ -130,10 +126,10 @@
                 
                 <!-- Topics List -->
                 <div v-if="permission.subscribe_permissions.length > 0" class="mt-4">
-                  <h3 :class="['text-lg font-medium mb-2', textColor.primary]">Subscribe Topics</h3>
+                  <h3 class="text-lg font-medium mb-2 text-content-primary dark:text-content-primary-dark">Subscribe Topics</h3>
                   <ul class="list-disc pl-5 space-y-1">
                     <li v-for="(topic, index) in permission.subscribe_permissions" :key="`sub-${index}`" class="flex items-center">
-                      <span :class="['font-mono flex-grow', textColor.primary]">{{ topic }}</span>
+                      <span class="font-mono flex-grow text-content-primary dark:text-content-primary-dark">{{ topic }}</span>
                       <Button
                         icon="pi pi-trash"
                         class="p-button-text p-button-sm p-button-danger"
@@ -144,11 +140,7 @@
                   </ul>
                 </div>
                 
-                <div v-else :class="[
-                  'bg-gray-50 p-4 rounded text-center mt-4',
-                  backgroundColor.secondary,
-                  textColor.secondary
-                ]">
+                <div v-else class="bg-surface-secondary dark:bg-surface-secondary-dark p-4 rounded text-center mt-4 text-content-secondary dark:text-content-secondary-dark">
                   No subscribe permissions defined
                 </div>
               </div>
@@ -156,52 +148,36 @@
           </TabView>
           
           <!-- Topic Pattern Help -->
-          <div :class="[
-            'mt-8 p-4 rounded-md border',
-            backgroundColor.secondary,
-            borderColor.default
-          ]">
-            <h3 :class="['text-lg font-semibold mb-2', textColor.primary]">Topic Pattern Help</h3>
+          <div class="mt-8 p-4 rounded-md border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark theme-transition">
+            <h3 class="text-lg font-semibold mb-2 text-content-primary dark:text-content-primary-dark">Topic Pattern Help</h3>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Exact Topics</h4>
-                <p :class="['text-sm', textColor.secondary]">
+                <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Exact Topics</h4>
+                <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                   Use specific topic paths for exact matching.
                 </p>
-                <div :class="[
-                  'mt-2 p-2 rounded text-xs font-mono',
-                  backgroundColor.tertiary,
-                  textColor.primary
-                ]">
+                <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                   acme.bld.na.001.reader.status
                 </div>
               </div>
               
               <div>
-                <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Single-Level Wildcard (*)</h4>
-                <p :class="['text-sm', textColor.secondary]">
+                <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Single-Level Wildcard (*)</h4>
+                <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                   The * wildcard matches exactly one token in the topic path.
                 </p>
-                <div :class="[
-                  'mt-2 p-2 rounded text-xs font-mono',
-                  backgroundColor.tertiary,
-                  textColor.primary
-                ]">
+                <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                   acme.*.reader.*.event
                 </div>
               </div>
               
               <div>
-                <h4 :class="['font-medium text-sm mb-1', textColor.primary]">Multi-Level Wildcard (>)</h4>
-                <p :class="['text-sm', textColor.secondary]">
+                <h4 class="font-medium text-sm mb-1 text-content-primary dark:text-content-primary-dark">Multi-Level Wildcard (>)</h4>
+                <p class="text-sm text-content-secondary dark:text-content-secondary-dark">
                   The > wildcard matches multiple tokens and must be at the end.
                 </p>
-                <div :class="[
-                  'mt-2 p-2 rounded text-xs font-mono',
-                  backgroundColor.tertiary,
-                  textColor.primary
-                ]">
+                <div class="mt-2 p-2 rounded text-xs font-mono bg-surface-tertiary dark:bg-surface-tertiary-dark text-content-primary dark:text-content-primary-dark">
                   acme.bld.na.001.>
                 </div>
               </div>
@@ -209,8 +185,8 @@
           </div>
           
         </EntityForm>
-      </template>
-    </Card>
+      </div>
+    </div>
     
     <!-- Toast for success/error messages -->
     <Toast />
@@ -222,20 +198,15 @@ import { ref } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
 import { useTopicPermission } from '../../../composables/useTopicPermission'
-import { useTheme } from '../../../composables/useTheme'
 
 import PageHeader from '../../../components/common/PageHeader.vue'
 import EntityForm from '../../../components/common/EntityForm.vue'
 import FormField from '../../../components/common/FormField.vue'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
-
-// Theme composable for theme-aware styling
-const { themeValue, backgroundColor, textColor, borderColor } = useTheme()
 
 // Use the topic permission composable
 const { 
@@ -330,29 +301,6 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* Theme-aware styling */
-:deep(.p-card) {
-  background-color: var(--surface-card);
-  color: var(--text-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s ease;
-}
-
-:deep(.p-card .p-card-title) {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--surface-border);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-:deep(.p-card .p-card-content) {
-  padding: 1.5rem;
-}
-
 /* Tab panel fixes */
 :deep(.p-tabview-panels) {
   background-color: var(--surface-card);
