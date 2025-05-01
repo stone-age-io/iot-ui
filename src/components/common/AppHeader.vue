@@ -88,41 +88,47 @@
             <i class="pi pi-angle-down ml-1 hidden sm:block dark:text-gray-300"></i>
           </button>
           
-          <!-- User Menu Dropdown -->
+          <!-- User Menu Dropdown - Now with Tailwind-first approach -->
           <div 
             v-show="isUserMenuOpen"
-            class="user-menu-dropdown"
+            class="absolute right-0 top-[calc(100%+0.5rem)] w-[200px] rounded-md border z-50 shadow-theme-md
+                   bg-surface-primary dark:bg-surface-primary-dark 
+                   border-border-primary dark:border-border-primary-dark
+                   dropdown-animation"
             ref="userMenuDropdown"
           >
             <div class="py-1" role="menu">
               <router-link 
                 to="/profile" 
-                class="user-menu-item" 
+                class="flex items-center px-4 py-2 text-content-primary dark:text-content-primary-dark 
+                       hover:bg-surface-hover dark:hover:bg-surface-hover-dark transition-colors" 
                 role="menuitem"
                 @click="closeUserMenu"
               >
-                <i class="pi pi-user user-menu-icon"></i>
+                <i class="pi pi-user mr-3 text-content-secondary dark:text-content-secondary-dark"></i>
                 <span>Profile</span>
               </router-link>
               
               <router-link 
                 to="/settings" 
-                class="user-menu-item" 
+                class="flex items-center px-4 py-2 text-content-primary dark:text-content-primary-dark 
+                       hover:bg-surface-hover dark:hover:bg-surface-hover-dark transition-colors" 
                 role="menuitem"
                 @click="closeUserMenu"
               >
-                <i class="pi pi-cog user-menu-icon"></i>
+                <i class="pi pi-cog mr-3 text-content-secondary dark:text-content-secondary-dark"></i>
                 <span>Settings</span>
               </router-link>
               
-              <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+              <div class="border-t border-border-secondary dark:border-border-secondary-dark my-1"></div>
               
               <button 
-                class="user-menu-item w-full text-left"
+                class="flex w-full items-center px-4 py-2 text-left text-content-primary dark:text-content-primary-dark 
+                       hover:bg-surface-hover dark:hover:bg-surface-hover-dark transition-colors"
                 role="menuitem"
                 @click="handleLogout"
               >
-                <i class="pi pi-sign-out user-menu-icon"></i>
+                <i class="pi pi-sign-out mr-3 text-content-secondary dark:text-content-secondary-dark"></i>
                 <span>Logout</span>
               </button>
             </div>
@@ -296,24 +302,9 @@ a:focus-visible {
   @apply dark:ring-primary-400 dark:ring-offset-gray-800;
 }
 
-/* User menu dropdown styling */
-.user-menu-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.5rem);
-  width: 200px;
-  background-color: rgb(var(--color-surface));
-  border: 1px solid rgb(var(--color-border));
-  border-radius: 0.375rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 50;
+/* Animation for dropdown */
+.dropdown-animation {
   animation: dropdown-in 0.15s ease-out;
-}
-
-.dark .user-menu-dropdown {
-  background-color: #1f2937;
-  border-color: #4b5563;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes dropdown-in {
@@ -325,29 +316,6 @@ a:focus-visible {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.user-menu-item {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  color: rgb(var(--color-text));
-  text-decoration: none;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
-}
-
-.user-menu-item:hover {
-  background-color: rgba(var(--color-text), 0.04);
-}
-
-.dark .user-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.user-menu-icon {
-  margin-right: 0.75rem;
-  color: rgb(var(--color-text-secondary));
 }
 
 /* User button styling to prevent layout shifts */
