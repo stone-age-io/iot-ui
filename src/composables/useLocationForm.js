@@ -5,14 +5,15 @@ import { required, helpers } from '@vuelidate/validators'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   locationService, 
-  locationLevels, 
-  locationZones,
+  locationTypeOptions,
   generateLocationCode, 
-  validateLocationCode 
+  validateLocationCode,
+  computeLocationPath
 } from '../services'
 import { edgeService } from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
+import { useToast } from 'primevue/usetoast'
 
 /**
  * Composable for location form handling
@@ -24,6 +25,7 @@ import { useTypesStore } from '../stores/types'
 export function useLocationForm(mode = 'create') {
   const router = useRouter()
   const route = useRoute()
+  const toast = useToast()
   const { performOperation } = useApiOperation()
   const typesStore = useTypesStore()
   
@@ -35,16 +37,20 @@ export function useLocationForm(mode = 'create') {
     id: '',
     edge_id: route.query.edge_id || '',
     parent_id: route.query.parent_id || '', 
-    level: '',
-    zone: '',
-    identifier: '',
-    code: '',
+    type: '',    // Type like 'floor', 'room', etc.
+    number: '',  // Number identifier like '1', '101', etc.
+    code: '',    // Generated as {type}-{number}
     name: '',
-    type: '',
     path: '',
     description: '',
-    metadata: {}
+    metadata: {} // JSON metadata object
   })
+  
+  // Metadata as a string for the form input
+  const metadataString = ref('{}')
+  
+  // Metadata validation error
+  const metadataError = ref(null)
   
   // Location types from store
   const locationTypes = computed(() => typesStore.locationTypes)
@@ -66,23 +72,25 @@ export function useLocationForm(mode = 'create') {
     name: { 
       required: helpers.withMessage('Name is required', required)
     },
+    type: { 
+      required: helpers.withMessage('Type is required', required)
+    },
+    number: { 
+      required: helpers.withMessage('Number identifier is required', required)
+    },
     description: {}
   }
   
   // Add create-specific validation rules
   if (mode === 'create') {
     rules.edge_id = { required: helpers.withMessage('Edge is required', required) }
-    rules.level = { required: helpers.withMessage('Level is required', required) }
-    rules.zone = { required: helpers.withMessage('Zone is required', required) }
-    rules.identifier = { required: helpers.withMessage('Identifier is required', required) }
     rules.code = { 
       required: helpers.withMessage('Code is required', required),
       validFormat: helpers.withMessage(
-        'Code must follow format: [level]-[zone]-[identifier]', 
+        'Code must follow format: {type}-{number}', 
         validateLocationCode
       )
     }
-    rules.type = { required: helpers.withMessage('Type is required', required) }
     rules.path = { required: helpers.withMessage('Path is required', required) }
   }
   
@@ -126,7 +134,7 @@ export function useLocationForm(mode = 'create') {
   const fetchPotentialParents = async (currentId = null) => {
     return performOperation(
       () => locationService.getList({
-        sort: 'name',
+        sort: 'path',
         expand: 'parent_id'
       }),
       {
@@ -151,7 +159,6 @@ export function useLocationForm(mode = 'create') {
   
   /**
    * Check for circular references when selecting a parent
-   * @param {string} parentId - Potential parent ID
    */
   const checkParentValidity = async () => {
     const currentId = location.value.id
@@ -193,26 +200,73 @@ export function useLocationForm(mode = 'create') {
   }
   
   /**
+   * Validate metadata JSON
+   * @returns {boolean} - True if valid
+   */
+  const validateMetadata = () => {
+    metadataError.value = null
+    
+    // Empty string is considered valid (empty object)
+    if (!metadataString.value.trim()) {
+      location.value.metadata = {}
+      return true
+    }
+    
+    try {
+      const parsed = JSON.parse(metadataString.value)
+      
+      // Make sure it's an object (not an array or primitive)
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        metadataError.value = 'Metadata must be a valid JSON object'
+        return false
+      }
+      
+      // Store the parsed object
+      location.value.metadata = parsed
+      return true
+    } catch (error) {
+      metadataError.value = 'Invalid JSON format: ' + error.message
+      return false
+    }
+  }
+  
+  /**
+   * Update metadataString from location.metadata
+   */
+  const updateMetadataString = () => {
+    try {
+      metadataString.value = JSON.stringify(location.value.metadata || {}, null, 2)
+    } catch (error) {
+      console.error('Error stringifying metadata:', error)
+      metadataString.value = '{}'
+    }
+  }
+  
+  /**
    * Load location data for editing
    * @param {Object} locationData - Location data to load
    */
   const loadLocation = (locationData) => {
     if (!locationData) return
     
+    // Parse the location code into type and number
+    const codeParts = parseLocationCode(locationData.code)
+    
     location.value = {
       id: locationData.id || '',
       edge_id: locationData.edge_id || '',
       parent_id: locationData.parent_id || '',
-      level: locationData.level || '',
-      zone: locationData.zone || '',
-      identifier: locationData.identifier || '',
+      type: codeParts.type || '',
+      number: codeParts.number || '',
       code: locationData.code || '',
       name: locationData.name || '',
-      type: locationData.type || '',
       path: locationData.path || '',
       description: locationData.description || '',
       metadata: locationData.metadata || {}
     }
+    
+    // Update metadata string for the form
+    updateMetadataString()
     
     // If in edit mode, fetch potential parents
     if (mode === 'edit' && locationData.id) {
@@ -221,28 +275,54 @@ export function useLocationForm(mode = 'create') {
   }
   
   /**
-   * Generate location code when level, zone, or identifier changes
+   * Parse a location code into type and number parts
+   * @param {string} code - Location code like 'floor-1' or 'room-101'
+   * @returns {Object} - Object with type and number properties
    */
-  const updateCode = () => {
-    if (location.value.level && location.value.zone && location.value.identifier) {
-      location.value.code = generateLocationCode(
-        location.value.level,
-        location.value.zone,
-        location.value.identifier
-      )
-      
-      // Also update the path
-      updatePathFromLevelZone()
+  const parseLocationCode = (code) => {
+    if (!code) return { type: '', number: '' }
+    
+    // Find the last hyphen to split on
+    const lastHyphenIndex = code.lastIndexOf('-')
+    if (lastHyphenIndex === -1) return { type: code, number: '' }
+    
+    return {
+      type: code.substring(0, lastHyphenIndex),
+      number: code.substring(lastHyphenIndex + 1)
     }
   }
   
   /**
-   * Update path based on level, zone, and identifier
+   * Generate location code when type or number changes
    */
-  const updatePathFromLevelZone = () => {
-    if (location.value.level && location.value.zone && location.value.identifier) {
-      // Basic path structure: level/zone/identifier
-      location.value.path = `${location.value.level}/${location.value.zone}/${location.value.identifier}`
+  const updateCode = () => {
+    if (location.value.type && location.value.number) {
+      location.value.code = generateLocationCode(
+        location.value.type,
+        location.value.number
+      )
+      
+      // Also update the path
+      updatePath()
+    }
+  }
+  
+  /**
+   * Update path based on parent-child relationship
+   */
+  const updatePath = () => {
+    if (location.value.code) {
+      // If has parent, path should be parent.path/location.code
+      if (location.value.parent_id) {
+        const parent = potentialParents.value.find(p => p.id === location.value.parent_id)
+        if (parent) {
+          location.value.path = computeLocationPath(parent.path, location.value.code)
+          return
+        }
+      }
+      
+      // If no parent, path is just the code
+      location.value.path = location.value.code
     }
   }
   
@@ -286,6 +366,17 @@ export function useLocationForm(mode = 'create') {
    * @returns {Promise<boolean>} - Success status
    */
   const submitForm = async () => {
+    // First validate metadata
+    if (!validateMetadata()) {
+      toast.add({
+        severity: 'error',
+        summary: 'Invalid Metadata',
+        detail: metadataError.value,
+        life: 5000
+      })
+      return false
+    }
+    
     // Check for circular references
     if (mode === 'edit' && location.value.parent_id) {
       await checkParentValidity()
@@ -304,9 +395,16 @@ export function useLocationForm(mode = 'create') {
       parent_id: location.value.parent_id || '', // Include parent_id
       code: location.value.code,
       name: location.value.name,
-      type: location.value.type,
       path: location.value.path,
-      description: location.value.description
+      description: location.value.description,
+      metadata: location.value.metadata // Include metadata
+    }
+    
+    // Store type info in metadata
+    if (!locationData.metadata) locationData.metadata = {}
+    locationData.metadata.type_info = {
+      type: location.value.type,
+      number: location.value.number
     }
     
     return performOperation(
@@ -336,38 +434,46 @@ export function useLocationForm(mode = 'create') {
       id: '',
       edge_id: route.query.edge_id || '',
       parent_id: route.query.parent_id || '',
-      level: '',
-      zone: '',
-      identifier: '',
+      type: '',
+      number: '',
       code: '',
       name: '',
-      type: '',
       path: '',
       description: '',
       metadata: {}
     }
+    metadataString.value = '{}'
+    metadataError.value = null
     v$.value.$reset()
     circularReferenceError.value = false
   }
   
-  // Watch for changes to level, zone, or identifier to update code
+  // Watch for changes to type or number to update code
   watch([
-    () => location.value.level, 
-    () => location.value.zone, 
-    () => location.value.identifier
+    () => location.value.type, 
+    () => location.value.number
   ], () => {
     updateCode()
   })
   
-  // Watch for changes to parent_id to validate
+  // Watch for changes to parent_id to update path and validate
   watch(() => location.value.parent_id, () => {
+    updatePath()
+    
     if (mode === 'edit' && location.value.id) {
       checkParentValidity()
     }
   })
   
+  // Watch for metadataString changes to update location.metadata
+  watch(metadataString, () => {
+    validateMetadata()
+  }, { debounce: 500 })
+  
   return {
     location,
+    metadataString,
+    metadataError,
     v$,
     loading,
     edges,
@@ -376,17 +482,18 @@ export function useLocationForm(mode = 'create') {
     parentsLoading,
     circularReferenceError,
     locationTypes,
-    locationLevels,
-    locationZones,
     loadLocation,
     fetchEdges,
     fetchPotentialParents,
     updateCode,
-    updatePathFromLevelZone,
+    updatePath,
     getEdgeName,
     getEdgeCode,
     getParentDisplay,
+    validateMetadata,
+    updateMetadataString,
     submitForm,
-    resetForm
+    resetForm,
+    parseLocationCode
   }
 }

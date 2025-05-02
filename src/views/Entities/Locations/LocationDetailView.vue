@@ -34,8 +34,25 @@
             >
               {{ location.expand?.edge_id?.code || 'Unknown Edge' }}
             </router-link>
-            <i class="pi pi-angle-right mx-1 text-content-tertiary dark:text-content-tertiary-dark"></i>
-            Locations
+            <template v-if="location.path">
+              <i class="pi pi-angle-right mx-1 text-content-tertiary dark:text-content-tertiary-dark"></i>
+              <span v-for="(segment, index) in getPathSegments(location.path)" :key="index" class="inline-flex items-center">
+                <template v-if="index > 0">
+                  <i class="pi pi-angle-right mx-1 text-content-tertiary dark:text-content-tertiary-dark"></i>
+                </template>
+                <template v-if="segment.isLast">
+                  <span class="text-content-secondary dark:text-content-secondary-dark">{{ segment.name }}</span>
+                </template>
+                <template v-else>
+                  <router-link 
+                    :to="{ name: 'locations', query: { path: segment.path } }" 
+                    class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  >
+                    {{ segment.name }}
+                  </router-link>
+                </template>
+              </span>
+            </template>
           </div>
           <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ location.name }}</h1>
           <div class="font-mono text-content-secondary dark:text-content-secondary-dark">
@@ -81,19 +98,6 @@
                   <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ location.name }}</div>
                 </div>
                 
-                <!-- Path -->
-                <div class="detail-field md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Path</div>
-                  <div class="flex flex-wrap gap-1 items-center">
-                    <span v-for="(segment, index) in parseLocationPath(location.path)" :key="index" class="flex items-center">
-                      <span v-if="index > 0" class="mx-1 text-content-tertiary dark:text-content-tertiary-dark">/</span>
-                      <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
-                        {{ segment }}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-                
                 <!-- Type -->
                 <div class="detail-field">
                   <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
@@ -103,6 +107,32 @@
                       :class="getTypeClass(location.type)"
                     >
                       {{ getTypeName(location.type) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Code Components -->
+                <div class="detail-field">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code Components</div>
+                  <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                      Type: {{ codeComponents.type }}
+                    </span>
+                    <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                      Number: {{ codeComponents.number }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Path -->
+                <div class="detail-field md:col-span-2">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Path</div>
+                  <div class="flex flex-wrap gap-1 items-center">
+                    <span v-for="(segment, index) in parseLocationPath(location.path)" :key="index" class="flex items-center">
+                      <span v-if="index > 0" class="mx-1 text-content-tertiary dark:text-content-tertiary-dark">/</span>
+                      <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                        {{ segment }}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -406,6 +436,7 @@ const {
   getTypeName, 
   getTypeClass,
   parseLocationPath,
+  getPathSegments,
   hasMetadata,
   hasFloorPlan,
   hasParent,
@@ -413,6 +444,7 @@ const {
   fetchChildLocations,
   deleteLocation,
   uploadFloorPlan,
+  parseLocationCode,
   navigateToLocationEdit,
   navigateToLocationCreate,
   navigateToLocationDetail,
@@ -437,6 +469,14 @@ const { dialog: deleteDialog, updateDialog } = useConfirmation()
 const location = ref(null)
 const things = ref([])
 const thingsLoading = ref(false)
+
+// Extract type and number from location code for display
+const codeComponents = computed(() => {
+  if (!location.value || !location.value.code) {
+    return { type: '', number: '' }
+  }
+  return parseLocationCode(location.value.code)
+})
 
 // Get unique thing types
 const uniqueThingTypes = computed(() => {

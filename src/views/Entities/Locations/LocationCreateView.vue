@@ -103,60 +103,40 @@
               </Dropdown>
             </FormField>
             
-            <!-- Level -->
+            <!-- Location Type -->
             <FormField
-              id="level"
-              label="Level"
+              id="type"
+              label="Location Type"
               :required="true"
-              :error-message="v$.level.$errors[0]?.$message"
+              :error-message="v$.type.$errors[0]?.$message"
             >
               <Dropdown
-                id="level"
-                v-model="location.level"
-                :options="locationLevels"
+                id="type"
+                v-model="location.type"
+                :options="locationTypes"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Select Level"
+                placeholder="Select Type"
                 class="w-full form-input"
-                :class="{ 'p-invalid': v$.level.$error }"
+                :class="{ 'p-invalid': v$.type.$error }"
                 @change="updateCode"
               />
             </FormField>
             
-            <!-- Zone -->
+            <!-- Number Identifier -->
             <FormField
-              id="zone"
-              label="Zone"
+              id="number"
+              label="Number Identifier"
               :required="true"
-              :error-message="v$.zone.$errors[0]?.$message"
-            >
-              <Dropdown
-                id="zone"
-                v-model="location.zone"
-                :options="locationZones"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select Zone"
-                class="w-full form-input"
-                :class="{ 'p-invalid': v$.zone.$error }"
-                @change="updateCode"
-              />
-            </FormField>
-            
-            <!-- Identifier -->
-            <FormField
-              id="identifier"
-              label="Identifier"
-              :required="true"
-              :error-message="v$.identifier.$errors[0]?.$message"
-              help-text="Unique identifier within this level and zone"
+              :error-message="v$.number.$errors[0]?.$message"
+              help-text="Unique identifier for this location (e.g., 101, A5)"
             >
               <InputText
-                id="identifier"
-                v-model="location.identifier"
-                placeholder="reception"
+                id="number"
+                v-model="location.number"
+                placeholder="101"
                 class="w-full form-input"
-                :class="{ 'p-invalid': v$.identifier.$error }"
+                :class="{ 'p-invalid': v$.number.$error }"
                 @input="updateCode"
               />
             </FormField>
@@ -167,12 +147,12 @@
               label="Code"
               :required="true"
               :error-message="v$.code.$errors[0]?.$message"
-              hint="Auto-generated"
+              help-text="Auto-generated from type and number"
             >
               <InputText
                 id="code"
                 v-model="location.code"
-                placeholder="floor-1-north-reception"
+                placeholder="room-101"
                 class="w-full font-mono form-input code-field"
                 :class="{ 'p-invalid': v$.code.$error }"
                 readonly
@@ -195,39 +175,22 @@
               />
             </FormField>
             
-            <!-- Type -->
-            <FormField
-              id="type"
-              label="Type"
-              :required="true"
-              :error-message="v$.type.$errors[0]?.$message"
-            >
-              <Dropdown
-                id="type"
-                v-model="location.type"
-                :options="locationTypes"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select Type"
-                class="w-full form-input"
-                :class="{ 'p-invalid': v$.type.$error }"
-              />
-            </FormField>
-            
-            <!-- Path -->
+            <!-- Path (calculated field) -->
             <FormField
               id="path"
               label="Path"
               :required="true"
               :error-message="v$.path.$errors[0]?.$message"
               class="md:col-span-2"
+              help-text="Auto-generated based on parent location and code"
             >
               <InputText
                 id="path"
                 v-model="location.path"
-                placeholder="floor-1/north-wing/reception"
+                placeholder="floor-1/north-wing/room-101"
                 class="w-full form-input"
                 :class="{ 'p-invalid': v$.path.$error }"
+                readonly
               />
             </FormField>
             
@@ -247,6 +210,37 @@
                 :class="{ 'p-invalid': v$.description.$error }"
               />
             </FormField>
+            
+            <!-- Metadata -->
+            <FormField
+              id="metadata"
+              label="Metadata (JSON)"
+              :error-message="metadataError"
+              class="md:col-span-2"
+              help-text='Custom attributes as JSON object (e.g., {"capacity": 10, "area": "250sqm"})'
+            >
+              <Textarea
+                id="metadata"
+                v-model="metadataString"
+                rows="5"
+                placeholder="{}"
+                class="w-full form-input font-mono text-sm"
+                :class="{ 'p-invalid': metadataError }"
+              />
+            </FormField>
+          </div>
+          
+          <!-- Form guidance -->
+          <div class="mt-6 p-4 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark text-content-secondary dark:text-content-secondary-dark">
+            <div class="flex items-start">
+              <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
+              <div>
+                <p><strong>Note:</strong> Location codes follow the pattern {type}-{number} (e.g., room-101, floor-1).</p>
+                <p class="mt-1">The location path reflects the hierarchical structure. For a location without a parent, the path is the same as the code.</p>
+                <p class="mt-1">For a location with a parent, the path will be the parent's path followed by this location's code (e.g., floor-1/north-wing/room-101).</p>
+                <p class="mt-1">Metadata can be used to store additional custom attributes as a JSON object.</p>
+              </div>
+            </div>
           </div>
         </EntityForm>
       </div>
@@ -277,6 +271,8 @@ const toast = useToast()
 // Use the location form composable in create mode
 const { 
   location, 
+  metadataString,
+  metadataError,
   v$, 
   loading, 
   edges,
@@ -285,12 +281,10 @@ const {
   parentsLoading,
   circularReferenceError,
   locationTypes,
-  locationLevels,
-  locationZones,
   fetchEdges,
   fetchPotentialParents,
   updateCode,
-  updatePathFromLevelZone,
+  updatePath,
   getEdgeName,
   getEdgeCode,
   getParentDisplay,
@@ -317,10 +311,9 @@ onMounted(async () => {
   // Set parent_id if provided as a query param
   if (route.query.parent_id) {
     location.value.parent_id = route.query.parent_id
+    // Update path after parent is set
+    updatePath()
   }
-  
-  // Update the path when level, zone, and identifier are set
-  updatePathFromLevelZone()
 })
 </script>
 

@@ -52,7 +52,7 @@
                 id="code"
                 label="Code"
                 :required="true"
-                hint="Not editable"
+                hint="Not editable after creation"
               >
                 <InputText
                   id="code"
@@ -128,6 +128,24 @@
                     <span v-else>No Parent (Root Location)</span>
                   </template>
                 </Dropdown>
+                <small v-if="location.parent_id" class="text-content-secondary dark:text-content-secondary-dark mt-1 block">
+                  Note: Changing parent will update the location's path automatically.
+                </small>
+              </FormField>
+              
+              <!-- Type (readonly) -->
+              <FormField
+                id="type"
+                label="Location Type"
+                hint="Type components are not editable after creation"
+              >
+                <InputText
+                  id="type"
+                  v-model="typeDisplay"
+                  class="w-full form-input disabled-field"
+                  readonly
+                  disabled
+                />
               </FormField>
               
               <!-- Name -->
@@ -146,39 +164,22 @@
                 />
               </FormField>
               
-              <!-- Type -->
-              <FormField
-                id="type"
-                label="Type"
-                :required="true"
-                :error-message="validationErrors.type"
-              >
-                <Dropdown
-                  id="type"
-                  v-model="location.type"
-                  :options="locationTypes"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Select Type"
-                  class="w-full form-input"
-                  :class="{ 'p-invalid': validationErrors.type }"
-                />
-              </FormField>
-              
-              <!-- Path -->
+              <!-- Path (calculated field) -->
               <FormField
                 id="path"
                 label="Path"
                 :required="true"
                 :error-message="validationErrors.path"
                 class="md:col-span-2"
+                hint="Auto-updated when parent changes"
               >
                 <InputText
                   id="path"
                   v-model="location.path"
-                  placeholder="floor-1/north-wing/reception"
+                  placeholder="floor-1/north-wing/room-101"
                   class="w-full form-input"
                   :class="{ 'p-invalid': validationErrors.path }"
+                  readonly
                 />
               </FormField>
               
@@ -198,6 +199,24 @@
                   :class="{ 'p-invalid': validationErrors.description }"
                 />
               </FormField>
+              
+              <!-- Metadata -->
+              <FormField
+                id="metadata"
+                label="Metadata (JSON)"
+                :error-message="metadataError"
+                class="md:col-span-2"
+                help-text='Custom attributes as JSON object (e.g., {"capacity": 10, "area": "250sqm"})'
+              >
+                <Textarea
+                  id="metadata"
+                  v-model="metadataString"
+                  rows="5"
+                  placeholder="{}"
+                  class="w-full form-input font-mono text-sm"
+                  :class="{ 'p-invalid': metadataError }"
+                />
+              </FormField>
             </div>
             
             <!-- Edit notes -->
@@ -205,8 +224,9 @@
               <div class="flex items-start">
                 <i class="pi pi-info-circle mt-0.5 mr-2 text-blue-500 dark:text-blue-400"></i>
                 <div>
-                  <p class="text-content-primary dark:text-content-primary-dark"><strong>Note:</strong> The location code, level, zone, identifier, and edge cannot be changed after creation.</p>
-                  <p class="mt-1 text-content-secondary dark:text-content-secondary-dark">If you need to change these values, please create a new location and delete this one.</p>
+                  <p class="text-content-primary dark:text-content-primary-dark"><strong>Note:</strong> The location code, type, and edge cannot be changed after creation.</p>
+                  <p class="mt-1 text-content-secondary dark:text-content-secondary-dark">Changing the parent location will automatically update the path to maintain consistency with the location hierarchy.</p>
+                  <p class="mt-1 text-content-secondary dark:text-content-secondary-dark">Metadata must be a valid JSON object and can be used to store additional custom attributes.</p>
                 </div>
               </div>
             </div>
@@ -246,6 +266,8 @@ const { fetchLocation } = useLocation()
 // Use the location form composable in edit mode
 const { 
   location, 
+  metadataString,
+  metadataError,
   v$, 
   loading, 
   edges,
@@ -257,15 +279,34 @@ const {
   fetchEdges,
   fetchPotentialParents,
   loadLocation,
+  updatePath,
   getEdgeName,
   getEdgeCode,
   getParentDisplay,
-  submitForm
+  validateMetadata,
+  updateMetadataString,
+  submitForm,
+  parseLocationCode
 } = useLocationForm('edit')
 
 // Local state for initial loading and error handling
 const initialLoading = ref(true)
 const error = ref(null)
+
+// Display for the location type (combines type-number for readability)
+const typeDisplay = computed(() => {
+  if (!location.value || !location.value.code) {
+    return '';
+  }
+  // Get the parts from the code
+  const parts = parseLocationCode(location.value.code)
+  
+  // Find the display name for the type
+  const typeObj = locationTypes.value.find(t => t.value === parts.type)
+  const typeName = typeObj ? typeObj.label : parts.type
+  
+  return `${typeName} ${parts.number}`
+})
 
 // Computed property to safely extract validation errors
 const validationErrors = computed(() => {
@@ -273,7 +314,6 @@ const validationErrors = computed(() => {
   
   return {
     name: v$.value.name && v$.value.name.$errors.length ? v$.value.name.$errors[0].$message : '',
-    type: v$.value.type && v$.value.type.$errors.length ? v$.value.type.$errors[0].$message : '',
     path: v$.value.path && v$.value.path.$errors.length ? v$.value.path.$errors[0].$message : '',
     description: v$.value.description && v$.value.description.$errors.length ? v$.value.description.$errors[0].$message : ''
   }

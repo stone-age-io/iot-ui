@@ -8,8 +8,8 @@ import {
   parseLocationPath, 
   validateLocationCode, 
   generateLocationCode, 
-  locationLevels, 
-  locationZones 
+  computeLocationPath,
+  locationTypeOptions 
 } from '../services'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
@@ -36,7 +36,7 @@ export function useLocation() {
   const error = ref(null)
   
   // Location types from the store
-  const locationTypes = computed(() => typesStore.locationTypes)
+  const locationTypeOptions = computed(() => typesStore.locationTypes)
   
   // Set up reactive data from the cache store
   const locationsData = useReactiveData({
@@ -74,19 +74,7 @@ export function useLocation() {
    * @returns {string} - CSS class
    */
   const getTypeClass = (typeCode) => {
-    switch (typeCode) {
-      case 'entrance': return 'bg-blue-100 text-blue-800'
-      case 'work-area': return 'bg-green-100 text-green-800'
-      case 'meeting-room': return 'bg-purple-100 text-purple-800'
-      case 'break-area': return 'bg-amber-100 text-amber-800'
-      case 'reception': return 'bg-indigo-100 text-indigo-800'
-      case 'security': return 'bg-red-100 text-red-800'
-      case 'server-room': return 'bg-cyan-100 text-cyan-800'
-      case 'utility-room': return 'bg-teal-100 text-teal-800'
-      case 'storage': return 'bg-gray-100 text-gray-800'
-      case 'entrance-hall': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+    return typesStore.getLocationTypeClass(typeCode)
   }
   
   /**
@@ -97,6 +85,25 @@ export function useLocation() {
   const formatPath = (path) => {
     if (!path) return ''
     return path.split('/').join(' > ')
+  }
+  
+  /**
+   * Get path segments for display
+   * @param {string} path - Location path
+   * @returns {Array} - Path segments
+   */
+  const getPathSegments = (path) => {
+    if (!path) return []
+    
+    return parseLocationPath(path).map((segment, index, segments) => {
+      // Build path up to this segment
+      const segmentPath = segments.slice(0, index + 1).join('/')
+      return {
+        name: segment,
+        path: segmentPath,
+        isLast: index === segments.length - 1
+      }
+    })
   }
   
   /**
@@ -147,6 +154,24 @@ export function useLocation() {
       code: parent.code,
       name: parent.name,
       type: parent.type
+    }
+  }
+  
+  /**
+   * Parse a location code to extract type and number
+   * @param {string} code - Location code (e.g., 'room-101')
+   * @returns {Object} - { type, number }
+   */
+  const parseLocationCode = (code) => {
+    if (!code) return { type: '', number: '' }
+    
+    // Find the last hyphen to split on
+    const lastHyphenIndex = code.lastIndexOf('-')
+    if (lastHyphenIndex === -1) return { type: code, number: '' }
+    
+    return {
+      type: code.substring(0, lastHyphenIndex),
+      number: code.substring(lastHyphenIndex + 1)
     }
   }
   
@@ -241,8 +266,8 @@ export function useLocation() {
         errorMessage: 'Failed to load root locations',
         collection: 'locations', // Specify collection for cache updates
         onSuccess: (response) => {
-          locations.value = response.data.items || []
-          return locations.value
+          const rootLocations = response.data.items || [];
+          return rootLocations;
         }
       }
     )
@@ -379,6 +404,26 @@ export function useLocation() {
     )
   }
   
+  /**
+   * Update location path when parent changes
+   * @param {string} id - Location ID
+   * @param {string} parentId - New parent ID
+   * @returns {Promise<boolean>} - Success status
+   */
+  const updateLocationPath = async (id, parentId) => {
+    return performOperation(
+      () => locationService.updateLocationPath(id, parentId),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to update location path',
+        successMessage: 'Location path updated',
+        collection: 'locations',
+        onSuccess: () => true
+      }
+    )
+  }
+  
   // Navigation methods
   const navigateToLocationList = (query = {}) => router.push({ name: 'locations', query })
   const navigateToLocationDetail = (id) => router.push({ name: 'location-detail', params: { id } })
@@ -395,9 +440,7 @@ export function useLocation() {
     loading,
     childrenLoading,
     error,
-    locationTypes,
-    locationLevels,
-    locationZones,
+    locationTypeOptions,
     
     // Helpers
     formatDate,
@@ -405,13 +448,16 @@ export function useLocation() {
     getTypeClass,
     parseLocationPath,
     formatPath,
+    getPathSegments,
     hasMetadata,
     hasFloorPlan,
     hasParent,
     getParentInfo,
     generateLocationCode,
+    computeLocationPath,
     validateLocationCode,
     checkCircularReference,
+    parseLocationCode,
     
     // Operations
     fetchLocations,
@@ -422,6 +468,7 @@ export function useLocation() {
     uploadFloorPlan,
     getFloorPlanImageUrl,
     updateLocationCoordinates,
+    updateLocationPath,
     
     // Navigation
     navigateToLocationList,

@@ -3,7 +3,7 @@ import { apiHelpers } from './api';
 
 // Entity services
 import { edgeService, validateEdgeCode, generateEdgeCode } from './edge/edgeService';
-import { locationService, parseLocationPath, validateLocationCode, generateLocationCode, locationLevels, locationZones } from './location/locationService';
+import { locationService, parseLocationPath, validateLocationCode, generateLocationCode, computeLocationPath, locationTypes as locationTypeOptions } from './location/locationService';
 import { thingService, validateThingCode, generateThingCode, getThingTypeAbbreviation } from './thing/thingService';
 import { clientService, generateClientUsername, generateSecurePassword } from './client/clientService';
 import { topicPermissionService, validateTopic } from './topic-permission/topicPermissionService';
@@ -48,8 +48,8 @@ export {
   parseLocationPath,
   validateLocationCode,
   generateLocationCode,
-  locationLevels,
-  locationZones,
+  computeLocationPath,
+  locationTypeOptions,  // Export the imported locationTypes with a different name
   
   // Thing utilities
   validateThingCode,

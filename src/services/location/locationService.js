@@ -173,25 +173,71 @@ export class LocationService extends BaseService {
       return false
     }
   }
+  
+  /**
+   * Compute location path based on parent-child relationship
+   * @param {string} parentPath - Parent location path
+   * @param {string} locationCode - Location code
+   * @returns {string} - Computed path
+   */
+  computeLocationPath(parentPath, locationCode) {
+    if (!parentPath) return locationCode
+    return `${parentPath}/${locationCode}`
+  }
+  
+  /**
+   * Update location path based on parent change
+   * This ensures path is consistent with parent-child relationships
+   * @param {string} id - Location ID
+   * @param {string} parentId - New parent ID
+   * @returns {Promise} - Axios promise with updated location
+   */
+  async updateLocationPath(id, parentId) {
+    try {
+      // Get the current location
+      const locationResponse = await this.getById(id)
+      const location = locationResponse.data
+      
+      let newPath = location.code
+      
+      // If parent exists, get parent path and compute new path
+      if (parentId) {
+        const parentResponse = await this.getById(parentId)
+        const parent = parentResponse.data
+        newPath = this.computeLocationPath(parent.path, location.code)
+      }
+      
+      // Update location with new path
+      return this.update(id, { path: newPath })
+    } catch (error) {
+      console.error('Error updating location path:', error)
+      throw error
+    }
+  }
 }
 
 // Create instance
 export const locationService = new LocationService()
 
 /**
- * Location types for dropdown options
+ * Location types for dropdown options based on the documentation
  */
 export const locationTypes = [
-  { label: 'Entrance', value: 'entrance' },
-  { label: 'Work Area', value: 'work-area' },
+  { label: 'Zone', value: 'zone' },
+  { label: 'Room', value: 'room' },
+  { label: 'Station', value: 'station' },
+  { label: 'Area', value: 'area' },
+  { label: 'Section', value: 'section' },
+  { label: 'Floor', value: 'floor' },
+  { label: 'Wing', value: 'wing' },
+  { label: 'Virtual', value: 'virtual' },
+  // Additional specialized types
   { label: 'Meeting Room', value: 'meeting-room' },
-  { label: 'Break Area', value: 'break-area' },
-  { label: 'Reception', value: 'reception' },
-  { label: 'Security', value: 'security' },
   { label: 'Server Room', value: 'server-room' },
-  { label: 'Utility Room', value: 'utility-room' },
-  { label: 'Storage', value: 'storage' },
-  { label: 'Entrance Hall', value: 'entrance-hall' }
+  { label: 'Storage Room', value: 'storage-room' },
+  { label: 'Entrance', value: 'entrance' },
+  { label: 'Reception Area', value: 'reception-area' },
+  { label: 'Security Zone', value: 'security-zone' }
 ]
 
 /**
@@ -205,26 +251,50 @@ export const parseLocationPath = (path) => {
 }
 
 /**
- * Validate location code format: [level]-[zone]-[identifier]
+ * Validate location code format as per documentation {type}-{number}
  * @param {string} code - Location code to validate
  * @returns {boolean} - True if valid
  */
 export const validateLocationCode = (code) => {
   if (!code) return false
-  const pattern = /^[a-z]+-[a-z0-9]+-[a-z0-9-]+$/
+  // Match pattern {type}-{number} where type can contain hyphens
+  // For example: floor-1, room-101, meeting-room-5
+  const pattern = /^[a-z][-a-z]+-[0-9a-z]+$/
   return pattern.test(code)
 }
 
 /**
- * Generate a location code from level, zone, and identifier
- * @param {string} level - Level (e.g., floor-1)
- * @param {string} zone - Zone (e.g., north)
- * @param {string} identifier - Unique identifier
+ * Generate a location code from type and number
+ * Following the documented pattern {type}-{number}
+ * @param {string} type - Location type (e.g., floor, room, wing)
+ * @param {string|number} number - Identifying number/code
  * @returns {string} - Formatted location code
  */
-export const generateLocationCode = (level, zone, identifier) => {
-  if (!level || !zone || !identifier) return ''
-  return `${level}-${zone}-${identifier}`
+export const generateLocationCode = (type, number) => {
+  if (!type || !number) return ''
+  return `${type}-${number}`
+}
+
+/**
+ * Compute path from parent path and location code
+ * Ensures path is consistent with parent-child relationships
+ * @param {string} parentPath - Parent location path
+ * @param {string} locationCode - Location code
+ * @returns {string} - Computed path
+ */
+export const computeLocationPath = (parentPath, locationCode) => {
+  if (!parentPath) return locationCode
+  return `${parentPath}/${locationCode}`
+}
+
+/**
+ * Get location type value from label
+ * @param {string} typeLabel - Type label
+ * @returns {string} - Type code/value
+ */
+export const getLocationTypeValue = (typeLabel) => {
+  const type = locationTypes.find(t => t.label.toLowerCase() === typeLabel.toLowerCase())
+  return type ? type.value : typeLabel.toLowerCase().replace(/\s+/g, '-')
 }
 
 /**
