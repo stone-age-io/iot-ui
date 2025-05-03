@@ -46,142 +46,100 @@
         </div>
       </div>
       
-      <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Details Card -->
-        <div class="lg:col-span-2">
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Edge Details</h2>
+      <!-- Main Details Card - Now full width -->
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Edge Details</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+            <!-- Code -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+              <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ edge.code }}</div>
             </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                <!-- Code -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
-                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ edge.code }}</div>
-                </div>
-                
-                <!-- Name -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
-                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ edge.name }}</div>
-                </div>
-                
-                <!-- Type -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
-                  <div class="flex items-center">
-                    <span 
-                      class="badge"
-                      :class="getTypeClass(edge.type)"
-                    >
-                      {{ getTypeName(edge.type) }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Region -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Region</div>
-                  <div class="flex items-center">
-                    <span 
-                      class="badge"
-                      :class="getRegionClass(edge.region)"
-                    >
-                      {{ getRegionName(edge.region) }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Status -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Status</div>
-                  <div class="flex items-center">
-                    <span 
-                      class="badge"
-                      :class="edge.active ? 
-                        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-                    >
-                      {{ edge.active ? 'Active' : 'Inactive' }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Created Date -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(edge.created) }}</div>
-                </div>
-                
-                <!-- Last Updated -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(edge.updated) }}</div>
-                </div>
-                
-                <!-- Metadata (if any) -->
-                <div v-if="hasEdgeMetadata" class="md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metadata</div>
-                  <div class="p-3 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
-                    <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
-                  </div>
-                </div>
+            
+            <!-- Name -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+              <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ edge.name }}</div>
+            </div>
+            
+            <!-- Type -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
+              <div class="flex items-center">
+                <span 
+                  class="badge"
+                  :class="getTypeClass(edge.type)"
+                >
+                  {{ getTypeName(edge.type) }}
+                </span>
               </div>
             </div>
-          </div>
-        </div>
-        
-        <!-- Stats/Quick Info Card -->
-        <div>
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Overview</h2>
+            
+            <!-- Region -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Region</div>
+              <div class="flex items-center">
+                <span 
+                  class="badge"
+                  :class="getRegionClass(edge.region)"
+                >
+                  {{ getRegionName(edge.region) }}
+                </span>
+              </div>
             </div>
-            <div class="p-6">
-              <div class="space-y-6">
-                <!-- Locations Count -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Locations</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-map-marker mr-2 text-green-600 dark:text-green-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ stats.locationsCount }}</div>
-                  </div>
-                  <Button
-                    label="View Locations"
-                    icon="pi pi-arrow-right"
-                    class="p-button-text p-button-sm mt-2"
-                    @click="navigateToLocations(edge.id)"
-                  />
-                </div>
-                
-                <!-- Things Count -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Things</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-wifi mr-2 text-purple-600 dark:text-purple-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ stats.thingsCount }}</div>
-                  </div>
-                  <Button
-                    label="View Things"
-                    icon="pi pi-arrow-right"
-                    class="p-button-text p-button-sm mt-2"
-                    @click="navigateToThings(edge.id)"
-                  />
-                </div>
+            
+            <!-- Status -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Status</div>
+              <div class="flex items-center">
+                <span 
+                  class="badge"
+                  :class="edge.active ? 
+                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+                >
+                  {{ edge.active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Created Date -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(edge.created) }}</div>
+            </div>
+            
+            <!-- Last Updated -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(edge.updated) }}</div>
+            </div>
+            
+            <!-- Metadata (if any) -->
+            <div v-if="hasEdgeMetadata" class="md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metadata</div>
+              <div class="p-3 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
+                <pre>{{ JSON.stringify(edge.metadata, null, 2) }}</pre>
               </div>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- Recent Locations -->
-      <div v-if="recentLocations.length > 0" class="mt-6">
+      <!-- Recent Locations with count in title -->
+      <div class="mt-6" v-if="totalLocationsCount > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Recent Locations</h2>
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Locations 
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ totalLocationsCount }} total)
+                </span>
+              </h2>
               <Button
                 label="View All"
                 icon="pi pi-arrow-right"
@@ -215,12 +173,17 @@
         </div>
       </div>
       
-      <!-- Recent Things -->
-      <div v-if="recentThings.length > 0" class="mt-6">
+      <!-- Recent Things with count in title -->
+      <div class="mt-6" v-if="totalThingsCount > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Recent Things</h2>
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Things
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ totalThingsCount }} total)
+                </span>
+              </h2>
               <Button
                 label="View All"
                 icon="pi pi-arrow-right"
@@ -238,12 +201,12 @@
                 @click="navigateToThingDetail(thing.id)"
               >
                 <div class="flex justify-between items-start mb-2">
-                  <span class="text-primary-600 dark:text-primary-400 font-mono">{{ thing.thing_code }}</span>
+                  <span class="text-primary-600 dark:text-primary-400 font-mono">{{ thing.code }}</span>
                   <span 
                     class="badge"
-                    :class="getThingTypeClass(thing.thing_type)"
+                    :class="getThingTypeClass(thing.type)"
                   >
-                    {{ typesStore.getTypeName(thing.thing_type, 'thingTypes') }}
+                    {{ typesStore.getTypeName(thing.type, 'thingTypes') }}
                   </span>
                 </div>
                 <div class="font-semibold mb-1 text-content-primary dark:text-content-primary-dark">{{ thing.name }}</div>
@@ -324,7 +287,6 @@ const {
   openInGrafana,
   navigateToEdgeEdit,
   navigateToLocations,
-  navigateToThings
 } = useEdge()
 
 // Delete confirmation functionality
@@ -340,6 +302,8 @@ const edge = ref(null)
 const recentLocations = ref([])
 const recentThings = ref([])
 const allLocations = ref({}) // Map of location_id -> location for quick lookups
+const totalLocationsCount = ref(0)
+const totalThingsCount = ref(0)
 
 // Check if edge has metadata
 const hasEdgeMetadata = computed(() => {
@@ -348,12 +312,6 @@ const hasEdgeMetadata = computed(() => {
          typeof edge.value.metadata === 'object' && 
          Object.keys(edge.value.metadata).length > 0
 })
-
-// Stats based on real data
-const stats = computed(() => ({
-  locationsCount: recentLocations.value.length,
-  thingsCount: recentThings.value.length
-}))
 
 // Fetch edge data on component mount
 onMounted(async () => {
@@ -375,6 +333,8 @@ const loadEdgeDetail = async (id) => {
       
       // Now fetch associated locations and things
       await Promise.all([
+        fetchLocationsCount(),
+        fetchThingsCount(),
         fetchLocations(),
         fetchThings()
       ])
@@ -382,6 +342,40 @@ const loadEdgeDetail = async (id) => {
   } catch (err) {
     // Error handling is done in the composable
     console.error('Failed to load edge detail:', err)
+  }
+}
+
+// Fetch total locations count
+const fetchLocationsCount = async () => {
+  if (!edge.value) return
+  
+  try {
+    const { locationService } = await import('../../../services')
+    const response = await locationService.getList({
+      edge_id: edge.value.id,
+      rows: 1 // We only need the total count
+    })
+    
+    totalLocationsCount.value = response.data.totalItems || 0
+  } catch (err) {
+    console.error('Error fetching locations count:', err)
+  }
+}
+
+// Fetch total things count
+const fetchThingsCount = async () => {
+  if (!edge.value) return
+  
+  try {
+    const { thingService } = await import('../../../services')
+    const response = await thingService.getList({
+      edge_id: edge.value.id,
+      rows: 1 // We only need the total count
+    })
+    
+    totalThingsCount.value = response.data.totalItems || 0
+  } catch (err) {
+    console.error('Error fetching things count:', err)
   }
 }
 
@@ -394,7 +388,7 @@ const fetchLocations = async () => {
     const response = await locationService.getList({
       edge_id: edge.value.id,
       sort: '-created',
-      perPage: 6 // Limit to 6 recent locations
+      perPage: 3 // Limit to 3 recent locations
     })
     
     recentLocations.value = response.data.items || []
@@ -417,7 +411,7 @@ const fetchThings = async () => {
     const response = await thingService.getList({
       edge_id: edge.value.id,
       sort: '-created',
-      perPage: 6 // Limit to 6 recent things
+      perPage: 3 // Limit to 3 recent things
     })
     
     recentThings.value = response.data.items || []
@@ -433,6 +427,11 @@ const navigateToLocationDetail = (id) => {
 
 const navigateToThingDetail = (id) => {
   router.push({ name: 'thing-detail', params: { id } })
+}
+
+// Navigate to things filtered by edge
+const navigateToThings = (edgeId) => {
+  router.push({ name: 'things', query: { edge: edgeId } })
 }
 
 // Get location name for a thing

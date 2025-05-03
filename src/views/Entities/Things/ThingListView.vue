@@ -225,8 +225,6 @@ const {
   navigateToThingEdit
 } = useThing()
 
-// We now use the composable's navigateToThingEdit method which has the correct route name
-
 // Get delete confirmation functionality
 const { 
   deleteDialog,
@@ -313,11 +311,6 @@ const fetchFilterLocations = async () => {
   } finally {
     locationsLoading.value = false
   }
-}
-
-// Handle filter button click
-const handleFilterClick = () => {
-  toggleFilters()
 }
 
 // Handle delete button click

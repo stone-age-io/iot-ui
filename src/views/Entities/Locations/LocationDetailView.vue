@@ -76,191 +76,130 @@
         </div>
       </div>
       
-      <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Details Card -->
-        <div class="lg:col-span-2">
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Details</h2>
-            </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                <!-- Code -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
-                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ location.code }}</div>
-                </div>
-                
-                <!-- Name -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
-                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ location.name }}</div>
-                </div>
-                
-                <!-- Type -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
-                  <div class="flex items-center">
-                    <span 
-                      class="badge"
-                      :class="getTypeClass(location.type)"
-                    >
-                      {{ getTypeName(location.type) }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Code Components -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code Components</div>
-                  <div class="flex flex-wrap gap-2">
-                    <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
-                      Type: {{ codeComponents.type }}
-                    </span>
-                    <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
-                      Number: {{ codeComponents.number }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Path -->
-                <div class="detail-field md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Path</div>
-                  <div class="flex flex-wrap gap-1 items-center">
-                    <span v-for="(segment, index) in parseLocationPath(location.path)" :key="index" class="flex items-center">
-                      <span v-if="index > 0" class="mx-1 text-content-tertiary dark:text-content-tertiary-dark">/</span>
-                      <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
-                        {{ segment }}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Edge Reference -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Edge</div>
-                  <router-link 
-                    :to="{ name: 'edge-detail', params: { id: location.edge_id } }"
-                    class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                  >
-                    <span class="font-medium">{{ location.expand?.edge_id?.code || 'Unknown Edge' }}</span>
-                    <span class="ml-2 text-sm text-content-secondary dark:text-content-secondary-dark">{{ location.expand?.edge_id?.name || '' }}</span>
-                  </router-link>
-                </div>
-                
-                <!-- Parent Location -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Parent Location</div>
-                  <router-link 
-                    v-if="hasParent(location)"
-                    :to="{ name: 'location-detail', params: { id: location.parent_id } }"
-                    class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                  >
-                    <span class="font-medium">{{ location.expand?.parent_id?.code || '' }}</span>
-                    <span class="ml-2 text-sm text-content-secondary dark:text-content-secondary-dark">{{ location.expand?.parent_id?.name || '' }}</span>
-                  </router-link>
-                  <span v-else class="text-content-secondary dark:text-content-secondary-dark">No parent location</span>
-                </div>
-                
-                <!-- Description -->
-                <div class="detail-field md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
-                  <div class="text-content-primary dark:text-content-primary-dark">{{ location.description || 'No description provided' }}</div>
-                </div>
-                
-                <!-- Metadata (if any) -->
-                <div v-if="hasMetadata(location)" class="md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metadata</div>
-                  <div class="p-3 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
-                    <pre>{{ JSON.stringify(location.metadata, null, 2) }}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <!-- Main Details Card - Now full width -->
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Details</h2>
         </div>
-        
-        <!-- Things/Quick Info Card -->
-        <div>
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Things</h2>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+            <!-- Code -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+              <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ location.code }}</div>
             </div>
-            <div class="p-6">
-              <div class="space-y-6">
-                <!-- Things Count -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Connected Things</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-wifi mr-2 text-purple-600 dark:text-purple-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ things.length }}</div>
-                  </div>
-                  <Button
-                    label="View Things"
-                    icon="pi pi-arrow-right"
-                    class="p-button-text p-button-sm mt-2"
-                    @click="navigateToThings(location.id)"
-                  />
-                </div>
-                
-                <!-- Child Locations -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Child Locations</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-sitemap mr-2 text-blue-600 dark:text-blue-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ childLocations.length }}</div>
-                  </div>
-                </div>
-                
-                <!-- Thing Types -->
-                <div v-if="uniqueThingTypes.length > 0" class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Thing Types</div>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    <span 
-                      v-for="type in uniqueThingTypes" 
-                      :key="type"
-                      class="badge"
-                      :class="getThingTypeClass(type)"
-                    >
-                      {{ getThingTypeName(type) }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Created Date -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(location.created) }}</div>
-                </div>
-                
-                <!-- Last Updated -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(location.updated) }}</div>
-                </div>
+            
+            <!-- Name -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+              <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ location.name }}</div>
+            </div>
+            
+            <!-- Type -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Type</div>
+              <div class="flex items-center">
+                <span 
+                  class="badge"
+                  :class="getTypeClass(location.type)"
+                >
+                  {{ getTypeName(location.type) }}
+                </span>
               </div>
-              
-              <!-- Add Thing Button -->
-              <div class="mt-6">
-                <Button
-                  label="Add Thing to This Location"
-                  icon="pi pi-plus"
-                  @click="navigateToCreateThing(location.id)"
-                  class="w-full"
-                />
+            </div>
+            
+            <!-- Code Components -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code Components</div>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                  Type: {{ codeComponents.type }}
+                </span>
+                <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                  Number: {{ codeComponents.number }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Path -->
+            <div class="detail-field md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Path</div>
+              <div class="flex flex-wrap gap-1 items-center">
+                <span v-for="(segment, index) in parseLocationPath(location.path)" :key="index" class="flex items-center">
+                  <span v-if="index > 0" class="mx-1 text-content-tertiary dark:text-content-tertiary-dark">/</span>
+                  <span class="px-2 py-1 rounded-md text-sm bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+                    {{ segment }}
+                  </span>
+                </span>
+              </div>
+            </div>
+            
+            <!-- Edge Reference -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Edge</div>
+              <router-link 
+                :to="{ name: 'edge-detail', params: { id: location.edge_id } }"
+                class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
+              >
+                <span class="font-medium">{{ location.expand?.edge_id?.code || 'Unknown Edge' }}</span>
+                <span class="ml-2 text-sm text-content-secondary dark:text-content-secondary-dark">{{ location.expand?.edge_id?.name || '' }}</span>
+              </router-link>
+            </div>
+            
+            <!-- Parent Location -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Parent Location</div>
+              <router-link 
+                v-if="hasParent(location)"
+                :to="{ name: 'location-detail', params: { id: location.parent_id } }"
+                class="text-primary-600 dark:text-primary-400 hover:underline flex items-center"
+              >
+                <span class="font-medium">{{ location.expand?.parent_id?.code || '' }}</span>
+                <span class="ml-2 text-sm text-content-secondary dark:text-content-secondary-dark">{{ location.expand?.parent_id?.name || '' }}</span>
+              </router-link>
+              <span v-else class="text-content-secondary dark:text-content-secondary-dark">No parent location</span>
+            </div>
+            
+            <!-- Created Date (moved from overview card) -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(location.created) }}</div>
+            </div>
+            
+            <!-- Last Updated (moved from overview card) -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(location.updated) }}</div>
+            </div>
+            
+            <!-- Description -->
+            <div class="detail-field md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+              <div class="text-content-primary dark:text-content-primary-dark">{{ location.description || 'No description provided' }}</div>
+            </div>
+            
+            <!-- Metadata (if any) -->
+            <div v-if="hasMetadata(location)" class="md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Metadata</div>
+              <div class="p-3 rounded border font-mono text-sm overflow-x-auto bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
+                <pre>{{ JSON.stringify(location.metadata, null, 2) }}</pre>
               </div>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- Child Locations Card -->
+      <!-- Child Locations Card with count in title -->
       <div class="mt-6" v-if="childLocations.length > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
             <div class="flex justify-between items-center">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Child Locations</h2>
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Child Locations
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ childLocations.length }} total)
+                </span>
+              </h2>
               <Button
                 label="Add Child Location"
                 icon="pi pi-plus"
@@ -331,11 +270,24 @@
         </div>
       </div>
       
-      <!-- Connected Things -->
+      <!-- Connected Things with count in title -->
       <div class="mt-6" v-if="things.length > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Connected Things</h2>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Connected Things
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ things.length }} total)
+                </span>
+              </h2>
+              <Button
+                label="Add Thing"
+                icon="pi pi-plus"
+                class="p-button-sm"
+                @click="navigateToCreateThing(location.id)"
+              />
+            </div>
           </div>
           <div class="p-6">
             <DataTable
