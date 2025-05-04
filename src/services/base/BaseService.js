@@ -10,8 +10,7 @@ import {
 
 /**
  * Base service class for entity operations
- * Updated to integrate with the central cache store
- * Field mapping functionality has been removed for consistency across services
+ * Updated to support organization-based access control
  */
 export class BaseService {
   /**
@@ -34,19 +33,25 @@ export class BaseService {
   }
 
   /**
-   * Get current user ID from localStorage for cache segmentation
-   * @returns {string|null} - User ID or null
+   * Get user auth data from localStorage for cache segmentation and organization filtering
+   * @returns {Object|null} - User auth data or null
    */
-  getCurrentUserId() {
+  getUserAuthData() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return null;
       
-      const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null}');
-      return authData.user?.id || 'anonymous';
+      const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null, "currentOrgId":null}');
+      return {
+        userId: authData.user?.id || 'anonymous',
+        currentOrgId: authData.currentOrgId || null
+      };
     } catch (error) {
-      console.warn('Failed to get current user ID for cache:', error);
-      return 'anonymous';
+      console.warn('Failed to get user auth data:', error);
+      return {
+        userId: 'anonymous',
+        currentOrgId: null
+      };
     }
   }
 
@@ -64,6 +69,21 @@ export class BaseService {
       transformedParams.expand = this.options.expandFields.join(',')
     }
     
+    // Apply organization filtering if not explicitly overridden
+    if (!params.skipOrgFilter && !transformedParams.filter?.includes('organization_id') 
+        && this.collectionName !== 'organizations') {
+      const authData = this.getUserAuthData();
+      
+      if (authData && authData.currentOrgId) {
+        // If filter already exists, append organization filter
+        if (transformedParams.filter) {
+          transformedParams.filter = `${transformedParams.filter} && organization_id="${authData.currentOrgId}"`
+        } else {
+          transformedParams.filter = `organization_id="${authData.currentOrgId}"`
+        }
+      }
+    }
+    
     // Apply custom parameter transformations
     this.transformParams(transformedParams, params)
     
@@ -71,11 +91,12 @@ export class BaseService {
     const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
     
     // Setup caching options if enabled
+    const authData = this.getUserAuthData();
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       operation: 'list',
       id: null,
-      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
+      userId: authData?.userId || 'anonymous', // Add user ID for cache segmentation
       skipCache: params.skipCache === true || skipCacheFromURL
     } : null;
     
@@ -129,11 +150,12 @@ export class BaseService {
     const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
     
     // Setup caching options if enabled
+    const authData = this.getUserAuthData();
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       operation: 'detail',
       id: id,
-      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
+      userId: authData?.userId || 'anonymous', // Add user ID for cache segmentation
       skipCache: skipCacheFromURL
     } : null;
     
@@ -154,6 +176,14 @@ export class BaseService {
    */
   async create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
+    
+    // Add current organization ID if not already set and not organizations collection
+    if (this.collectionName !== 'organizations') {
+      const authData = this.getUserAuthData();
+      if (authData && authData.currentOrgId && !entity.organization_id) {
+        entity.organization_id = authData.currentOrgId;
+      }
+    }
     
     // Generate a UUIDv7 for the entity if ID is not already specified
     // Uses the uuidv7 library for robust, secure UUIDv7 generation
@@ -238,11 +268,11 @@ export class BaseService {
    * Clear cache for this collection in both localStorage and reactive store
    */
   async clearCache() {
-    const userId = this.getCurrentUserId();
+    const authData = this.getUserAuthData();
     
     // Clear localStorage cache
     if (configService.isCacheEnabled()) {
-      clearCollectionCache(this.collectionName, userId);
+      clearCollectionCache(this.collectionName, authData?.userId);
     }
     
     // Clear reactive store cache

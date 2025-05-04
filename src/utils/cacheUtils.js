@@ -1,34 +1,38 @@
 /**
  * Cache utilities for API responses
  * Provides functionality to store, retrieve, and manage API response caching
+ * Updated to support organization-based caching
  */
 
 // Cache namespace to avoid conflicts with other localStorage items
 const CACHE_PREFIX = 'iot_api_cache_';
 
 /**
- * Get the currently logged in user ID or null if not authenticated
- * @returns {string|null} - User ID or null
+ * Get the currently logged in user ID and organization ID or null if not authenticated
+ * @returns {Object} - User ID and organization ID
  */
-function getCurrentUserId() {
+function getCurrentUserAndOrgId() {
   try {
     const token = localStorage.getItem('token');
-    if (!token) return null;
+    if (!token) return { userId: null, orgId: null };
     
     // For simplicity, if we have a token we'll extract user ID from auth store
     // Use a default 'anonymous' if somehow we don't have a user ID
     // This could be improved by directly decoding the JWT, but we'll keep it simple
-    const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null}');
-    return authData.user?.id || 'anonymous';
+    const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null, "currentOrgId":null}');
+    return {
+      userId: authData.user?.id || 'anonymous',
+      orgId: authData.currentOrgId || 'default'
+    };
   } catch (error) {
-    console.warn('Failed to get current user ID for cache:', error);
-    return 'anonymous';
+    console.warn('Failed to get current user/org data for cache:', error);
+    return { userId: 'anonymous', orgId: 'default' };
   }
 }
 
 /**
  * Generate a cache key from the collection name and parameters
- * Now includes user scoping for better isolation
+ * Now includes user and organization scoping for better isolation
  * 
  * @param {string} collectionName - PocketBase collection name
  * @param {string} operation - Operation type (list, detail, etc)
@@ -38,10 +42,11 @@ function getCurrentUserId() {
  * @returns {string} - Cache key
  */
 export function generateCacheKey(collectionName, operation, id = null, params = null, userId = null) {
-  // Get user ID for cache segmentation - use provided ID or get current user
-  const userScope = userId || getCurrentUserId() || 'anonymous';
+  // Get user ID and org ID for cache segmentation - use provided ID or get current user
+  const { userId: currentUserId, orgId: currentOrgId } = getCurrentUserAndOrgId();
+  const userScope = userId || currentUserId || 'anonymous';
   
-  const parts = [userScope, collectionName, operation];
+  const parts = [userScope, currentOrgId, collectionName, operation];
   
   if (id) {
     parts.push(id);
@@ -135,15 +140,16 @@ export function removeCache(key) {
 
 /**
  * Clear all cache items for a specific collection
- * Now supports user-specific clearing
+ * Now supports user-specific and organization-specific clearing
  * 
  * @param {string} collectionName - PocketBase collection name
  * @param {string} userId - Optional user ID to scope clearing (defaults to current user)
  */
 export function clearCollectionCache(collectionName, userId = null) {
-  // Get user ID for cache segmentation - use provided ID or get current user
-  const userScope = userId || getCurrentUserId() || 'anonymous';
-  const prefix = `${CACHE_PREFIX}${userScope}_${collectionName}_`;
+  // Get user ID and org ID for cache segmentation - use provided ID or get current user
+  const { userId: currentUserId, orgId: currentOrgId } = getCurrentUserAndOrgId();
+  const userScope = userId || currentUserId || 'anonymous';
+  const prefix = `${CACHE_PREFIX}${userScope}_${currentOrgId}_${collectionName}_`;
   
   // Get all keys in localStorage
   for (let i = 0; i < localStorage.length; i++) {

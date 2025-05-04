@@ -22,6 +22,10 @@ import configService from '../config/configService'
  * - verified: Whether the email is verified
  * - created: Creation timestamp (auto-generated)
  * - updated: Update timestamp (auto-generated)
+ * - organizations: Relation to organizations (multiple)
+ * - org_roles: JSON mapping organization IDs to roles (admin or member)
+ * - current_organization_id: Relation to current organization (single)
+ * - is_org_admin: Boolean flag for users who can create/manage organizations globally
  */
 export class UserService extends BaseService {
   constructor() {
@@ -29,14 +33,14 @@ export class UserService extends BaseService {
       COLLECTIONS.USERS,
       collectionEndpoint,
       {
-        jsonFields: [],
-        expandFields: []
+        jsonFields: ['org_roles'],
+        expandFields: ['current_organization_id', 'organizations']
       }
     )
   }
   
   /**
-   * Get current user profile
+   * Get current user profile with organizations data
    * @returns {Promise} - Axios promise with user data
    */
   getCurrentUser() {
@@ -48,6 +52,16 @@ export class UserService extends BaseService {
       .then(response => {
         // Parse any potential JSON fields
         if (response.data && response.data.record) {
+          // Parse org_roles from string to object if needed
+          if (response.data.record.org_roles && typeof response.data.record.org_roles === 'string') {
+            try {
+              response.data.record.org_roles = JSON.parse(response.data.record.org_roles)
+            } catch (e) {
+              console.warn('Failed to parse org_roles', e)
+              response.data.record.org_roles = {}
+            }
+          }
+          
           response.data.record = this.parseJsonFields(response.data.record)
           return { data: response.data.record }
         }
@@ -79,6 +93,44 @@ export class UserService extends BaseService {
   changePassword(id, passwordData) {
     const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, id)
     return apiHelpers.axiosInstance.patch(`${endpoint}/change-password`, passwordData)
+  }
+  
+  /**
+   * Switch to a different organization
+   * @param {string} userId - User ID
+   * @param {string} organizationId - Organization ID to switch to
+   * @returns {Promise} - Axios promise
+   */
+  switchOrganization(userId, organizationId) {
+    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
+    return apiHelpers.axiosInstance.patch(`${endpoint}/switch-organization`, {
+      organization_id: organizationId
+    })
+  }
+  
+  /**
+   * Get user's role in an organization
+   * @param {string} userId - User ID
+   * @param {string} organizationId - Organization ID
+   * @returns {Promise} - Axios promise with role data
+   */
+  getUserRole(userId, organizationId) {
+    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
+    return apiHelpers.axiosInstance.get(`${endpoint}/organizations/${organizationId}/role`)
+  }
+  
+  /**
+   * Update user's role in an organization
+   * @param {string} userId - User ID
+   * @param {string} organizationId - Organization ID
+   * @param {string} role - Role to assign ('admin' or 'member')
+   * @returns {Promise} - Axios promise
+   */
+  updateUserRole(userId, organizationId, role) {
+    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
+    return apiHelpers.axiosInstance.patch(`${endpoint}/organizations/${organizationId}/role`, {
+      role: role
+    })
   }
 }
 

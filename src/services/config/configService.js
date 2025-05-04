@@ -5,6 +5,7 @@
  * 
  * This service provides a single point of access for application configuration
  * including environment variables, API endpoints, cache settings, and feature flags.
+ * Updated to include organizations collection.
  */
 class ConfigService {
   constructor() {
@@ -21,7 +22,8 @@ class ConfigService {
       GRAFANA_URL: import.meta.env.VITE_GRAFANA_URL || 'https://grafana.domain.com',
       
       // Feature flags
-      ENABLE_MAP_FEATURES: import.meta.env.VITE_ENABLE_MAP_FEATURES === 'true'
+      ENABLE_MAP_FEATURES: import.meta.env.VITE_ENABLE_MAP_FEATURES === 'true',
+      ENABLE_MULTI_ORG: import.meta.env.VITE_ENABLE_MULTI_ORG !== 'false' // Default to enabled
     }
     
     // API endpoints
@@ -43,7 +45,8 @@ class ConfigService {
       THINGS: 'things',
       CLIENTS: 'clients',
       TOPIC_PERMISSIONS: 'topic_permissions',
-      USERS: 'users'
+      USERS: 'users',
+      ORGANIZATIONS: 'organizations'
     }
     
     // Default pagination settings
@@ -126,6 +129,14 @@ class ConfigService {
    */
   setCacheEnabled(enabled) {
     this.cache.enabled = !!enabled;
+  }
+  
+  /**
+   * Check if multi-organization support is enabled
+   * @returns {boolean} - Whether multi-organization support is enabled
+   */
+  isMultiOrgEnabled() {
+    return this.env.ENABLE_MULTI_ORG;
   }
 }
 

@@ -6,7 +6,9 @@ import apiService from '../services/api'
 import router from '../router'
 import { ENDPOINTS } from '../services/pocketbase-config'
 import { useTypesStore } from './types'
+import { useOrganizationStore } from './organization'
 import { clearUserCache } from '../utils/cacheUtils'
+import { userService } from '../services/user/userService'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -22,11 +24,16 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = {
         id: decoded.id,
         email: decoded.email,
-        name: decoded.name
+        name: decoded.name,
+        org_roles: decoded.org_roles || {},
+        current_organization_id: decoded.current_organization_id || ''
       }
       
       // Store user data in localStorage for cache segmentation
-      localStorage.setItem('auth', JSON.stringify({ user: user.value }))
+      localStorage.setItem('auth', JSON.stringify({ 
+        user: user.value,
+        currentOrgId: user.value.current_organization_id || ''
+      }))
     } catch (err) {
       // Invalid token
       token.value = ''
@@ -66,22 +73,58 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = {
           id: decoded.id || decoded.sub,
           email: decoded.email,
-          name: decoded.name || decoded.email
+          name: decoded.name || decoded.email,
+          org_roles: decoded.org_roles || {},
+          current_organization_id: decoded.current_organization_id || ''
+        }
+        
+        // Initialize organization store
+        const organizationStore = useOrganizationStore()
+        
+        // Set current organization if available
+        if (response.data.organization) {
+          organizationStore.setCurrentOrganization(response.data.organization)
+        }
+        
+        // Set user organizations if available
+        if (response.data.organizations) {
+          organizationStore.setUserOrganizations(response.data.organizations)
         }
         
         // Store user data in localStorage for cache segmentation
-        localStorage.setItem('auth', JSON.stringify({ user: user.value }))
+        localStorage.setItem('auth', JSON.stringify({ 
+          user: user.value,
+          currentOrgId: user.value.current_organization_id
+        }))
       } catch (err) {
         console.warn('Error decoding token, using response data instead', err)
         // Fallback to response data if token cannot be decoded
         user.value = {
           id: response.data.record?.id,
           email: response.data.record?.email,
-          name: response.data.record?.name || response.data.record?.email
+          name: response.data.record?.name || response.data.record?.email,
+          org_roles: response.data.record?.org_roles || {},
+          current_organization_id: response.data.record?.current_organization_id || ''
+        }
+        
+        // Initialize organization store
+        const organizationStore = useOrganizationStore()
+        
+        // Set current organization if available
+        if (response.data.organization) {
+          organizationStore.setCurrentOrganization(response.data.organization)
+        }
+        
+        // Set user organizations if available
+        if (response.data.organizations) {
+          organizationStore.setUserOrganizations(response.data.organizations)
         }
         
         // Store user data in localStorage for cache segmentation even in fallback case
-        localStorage.setItem('auth', JSON.stringify({ user: user.value }))
+        localStorage.setItem('auth', JSON.stringify({ 
+          user: user.value,
+          currentOrgId: user.value.current_organization_id
+        }))
       }
       
       // Set the authorization header for future requests
@@ -115,6 +158,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('auth')
+    
+    // Reset organization store
+    const organizationStore = useOrganizationStore()
+    organizationStore.setCurrentOrganization(null)
+    organizationStore.setUserOrganizations([])
     
     // Remove authorization header
     delete apiService.defaults.headers.common['Authorization']
@@ -157,7 +205,51 @@ export const useAuthStore = defineStore('auth', () => {
     }
     
     // Update stored user data for cache segmentation
-    localStorage.setItem('auth', JSON.stringify({ user: user.value }))
+    localStorage.setItem('auth', JSON.stringify({ 
+      user: user.value,
+      currentOrgId: user.value.current_organization_id
+    }))
+  }
+  
+  // Refresh user data from server
+  async function refreshUserData() {
+    try {
+      const response = await userService.getCurrentUser()
+      
+      if (response && response.data) {
+        // Update user data
+        user.value = {
+          ...user.value,
+          ...response.data,
+          org_roles: response.data.org_roles || {}
+        }
+        
+        // Initialize organization store
+        const organizationStore = useOrganizationStore()
+        
+        // Set current organization if available
+        if (response.data.organization) {
+          organizationStore.setCurrentOrganization(response.data.organization)
+        }
+        
+        // Set user organizations if available
+        if (response.data.organizations) {
+          organizationStore.setUserOrganizations(response.data.organizations)
+        }
+        
+        // Update stored user data
+        localStorage.setItem('auth', JSON.stringify({ 
+          user: user.value,
+          currentOrgId: user.value.current_organization_id
+        }))
+        
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Error refreshing user data:', error)
+      return false
+    }
   }
   
   // Preload essential data after login for better UX
@@ -197,6 +289,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     checkToken,
     updateUser,
+    refreshUserData,
     preloadEssentialData
   }
 })
