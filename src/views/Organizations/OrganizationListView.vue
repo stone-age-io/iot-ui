@@ -29,7 +29,7 @@
                 label="Try Again" 
                 icon="pi pi-refresh" 
                 class="p-button-sm mt-2" 
-                @click="fetchOrganizations"
+                @click="refreshOrganizations"
               />
             </div>
           </div>
@@ -93,6 +93,7 @@
                 label="Switch to" 
                 icon="pi pi-arrow-right" 
                 class="p-button-sm p-button-text" 
+                :loading="switchingToId === org.id"
                 @click.stop="switchToOrganization(org)"
               />
               <Button 
@@ -134,7 +135,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useOrganization } from '../../composables/useOrganization'
 import { useDeleteConfirmation } from '../../composables/useConfirmation'
 import PageHeader from '../../components/common/PageHeader.vue'
@@ -168,20 +169,42 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
+// Local state for tracking which organization we're switching to
+const switchingToId = ref(null);
+
 // On component mount
 onMounted(async () => {
+  await refreshOrganizations();
+})
+
+// Refresh the organizations list
+const refreshOrganizations = async () => {
   // Load either all organizations (for admins) or just user's organizations
   if (canManageOrganizations.value) {
     await fetchOrganizations()
   } else {
     await fetchUserOrganizations()
   }
-})
+}
 
-// Switch to an organization
+// Switch to an organization with loading indicator
 const switchToOrganization = async (org) => {
-  if (org.id !== currentOrganization.value?.id) {
-    await switchOrganization(org.id)
+  if (org.id === currentOrganization.value?.id) {
+    return; // Skip if already on this organization
+  }
+  
+  try {
+    switchingToId.value = org.id;
+    const success = await switchOrganization(org.id);
+    
+    if (success) {
+      // Refresh the list to show updated "Current" indicator
+      await refreshOrganizations();
+    }
+  } catch (err) {
+    console.error('Error switching organization:', err);
+  } finally {
+    switchingToId.value = null;
   }
 }
 
@@ -205,11 +228,7 @@ const handleDeleteConfirm = async () => {
     resetDeleteDialog()
     
     // Refresh the list
-    if (canManageOrganizations.value) {
-      await fetchOrganizations()
-    } else {
-      await fetchUserOrganizations()
-    }
+    await refreshOrganizations();
   } else {
     updateDeleteDialog({ loading: false })
   }

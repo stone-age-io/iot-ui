@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { clearAllCache } from '../utils/cacheUtils'
 import { useTypesStore } from './types'
+import { organizationService } from '../services/organization/organizationService'
 
 /**
  * Centralized Pinia store for organization data and operations
@@ -41,10 +42,30 @@ export const useOrganizationStore = defineStore('organization', () => {
   /**
    * Find organization by ID
    * @param {string} organizationId - Organization ID
-   * @returns {Object} - Organization or null
+   * @returns {Promise<Object>} - Organization or null
    */
-  function findOrganizationById(organizationId) {
-    return userOrganizations.value.find(org => org.id === organizationId) || null
+  async function findOrganizationById(organizationId) {
+    // First try to find it in the local list
+    const localOrg = userOrganizations.value.find(org => org.id === organizationId)
+    if (localOrg) {
+      return localOrg
+    }
+    
+    // If not found in local list, try to fetch it from the server
+    try {
+      const response = await organizationService.getById(organizationId)
+      if (response && response.data) {
+        // Add to the local list if not already there
+        if (!userOrganizations.value.some(org => org.id === response.data.id)) {
+          userOrganizations.value.push(response.data)
+        }
+        return response.data
+      }
+    } catch (error) {
+      console.error(`Failed to fetch organization with ID ${organizationId}:`, error)
+    }
+    
+    return null
   }
   
   /**

@@ -57,6 +57,25 @@ export function useOrganization() {
   }
   
   /**
+   * Fetch a single organization by ID
+   * @param {string} id - Organization ID
+   * @returns {Promise<Object>} - Organization data
+   */
+  const fetchOrganization = async (id) => {
+    return performOperation(
+      () => organizationService.getById(id),
+      {
+        loadingRef: loading,
+        errorRef: error,
+        errorMessage: 'Failed to load organization details',
+        onSuccess: (response) => {
+          return response.data
+        }
+      }
+    )
+  }
+  
+  /**
    * Fetch all organizations (admin only)
    * @returns {Promise<Array>} - All organizations
    */
@@ -93,27 +112,65 @@ export function useOrganization() {
         errorRef: error,
         errorMessage: 'Failed to switch organization',
         onSuccess: async (response) => {
-          // Update auth store with new organization info
-          await authStore.refreshUserData()
-          
-          // Find the organization in the user's organizations
-          const org = organizationStore.findOrganizationById(organizationId)
-          
-          // Update organization store
-          await organizationStore.setCurrentOrganization(org)
-          
-          // Show success message
-          toast.add({
-            severity: 'success',
-            summary: 'Organization Switched',
-            detail: `Switched to ${org.name}`,
-            life: 3000
-          })
-          
-          // Clear all caches and reload needed data
-          organizationStore.clearCachesAndReload()
-          
-          return true
+          try {
+            // Update auth store with new organization info
+            await authStore.refreshUserData()
+            
+            // Try to find the organization in the user's organizations
+            const org = await organizationStore.findOrganizationById(organizationId)
+            
+            if (!org) {
+              // If org still not found, fetch it directly
+              const fetchedOrg = await fetchOrganization(organizationId)
+              if (fetchedOrg) {
+                // Update organization store with fetched org
+                await organizationStore.setCurrentOrganization(fetchedOrg)
+                
+                // Show success message
+                toast.add({
+                  severity: 'success',
+                  summary: 'Organization Switched',
+                  detail: `Switched to ${fetchedOrg.name}`,
+                  life: 3000
+                })
+                
+                // Clear all caches and reload needed data
+                organizationStore.clearCachesAndReload()
+                
+                return true
+              } else {
+                throw new Error(`Organization with ID ${organizationId} not found`)
+              }
+            } else {
+              // Update organization store
+              await organizationStore.setCurrentOrganization(org)
+              
+              // Show success message
+              toast.add({
+                severity: 'success',
+                summary: 'Organization Switched',
+                detail: `Switched to ${org.name}`,
+                life: 3000
+              })
+              
+              // Clear all caches and reload needed data
+              organizationStore.clearCachesAndReload()
+              
+              return true
+            }
+          } catch (err) {
+            console.error('Error switching organization:', err)
+            
+            // Show error toast
+            toast.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to complete organization switch. Please refresh and try again.',
+              life: 5000
+            })
+            
+            return false
+          }
         }
       }
     )
@@ -135,6 +192,10 @@ export function useOrganization() {
         entityIdentifier: data.name,
         collection: 'organizations',
         onSuccess: (response) => {
+          // Make sure to fetch organizations before switching
+          userOrganizations.value.push(response.data)
+          organizationStore.setUserOrganizations(userOrganizations.value)
+          
           // Switch to the new organization after creation
           switchOrganization(response.data.id)
           return response.data
@@ -243,6 +304,7 @@ export function useOrganization() {
     
     // Operations
     fetchUserOrganizations,
+    fetchOrganization,
     fetchOrganizations,
     switchOrganization,
     createOrganization,
