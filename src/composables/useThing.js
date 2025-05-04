@@ -296,6 +296,7 @@ export function useThing() {
         metadata: updatedMetadata
       })
       
+      // Notice: No toast notification here - let the parent component handle that
       return true
     } catch (err) {
       console.error('Error updating thing position:', err)

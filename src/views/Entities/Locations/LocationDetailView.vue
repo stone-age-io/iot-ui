@@ -76,7 +76,7 @@
         </div>
       </div>
       
-      <!-- Main Details Card - Now full width -->
+      <!-- 1. Main Details Card - Full width -->
       <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
         <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
           <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Location Details</h2>
@@ -189,7 +189,7 @@
         </div>
       </div>
       
-      <!-- Child Locations Card with count in title -->
+      <!-- 2. Child Locations Card (if present) -->
       <div class="mt-6" v-if="childLocations.length > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
@@ -249,28 +249,7 @@
         </div>
       </div>
       
-      <!-- Floor Plan Map Card -->
-      <div class="mt-6">
-        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Floor Plan</h2>
-          </div>
-          <div class="p-6">
-            <FloorPlanMap
-              :location="location"
-              :things="things"
-              height="550px"
-              :editable="true"
-              legendPosition="left"
-              @update-thing-position="updateThingPosition"
-              @upload-floor-plan="handleUploadFloorPlan"
-              @thing-click="navigateToThingDetail"
-            />
-          </div>
-        </div>
-      </div>
-      
-      <!-- Connected Things with count in title -->
+      <!-- 3. Connected Things -->
       <div class="mt-6" v-if="things.length > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
@@ -296,7 +275,7 @@
               :loading="thingsLoading"
               :searchable="true"
               empty-message="No things found for this location"
-              @row-click="(data) => navigateToThingDetail(data)"
+              @row-click="(data) => handleThingClick(data)"
             >
               <!-- Code column -->
               <template #code-body="{ data }">
@@ -330,13 +309,34 @@
                   <Button 
                     icon="pi pi-eye" 
                     class="p-button-rounded p-button-text p-button-sm" 
-                    @click.stop="navigateToThingDetail(data)"
+                    @click.stop="handleThingClick(data)"
                     tooltip="View"
                     tooltipOptions="{ position: 'top' }" 
                   />
                 </div>
               </template>
             </DataTable>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 4. Floor Plan Map Card (moved to last position) -->
+      <div class="mt-6">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Floor Plan</h2>
+          </div>
+          <div class="p-6">
+            <FloorPlanMap
+              :location="location"
+              :things="things"
+              height="550px"
+              :editable="true"
+              legendPosition="left"
+              @update-thing-position="updateThingPosition"
+              @upload-floor-plan="handleUploadFloorPlan"
+              @thing-click="handleThingClick"
+            />
           </div>
         </div>
       </div>
@@ -421,6 +421,7 @@ const { dialog: deleteDialog, updateDialog } = useConfirmation()
 const location = ref(null)
 const things = ref([])
 const thingsLoading = ref(false)
+const positionUpdateInProgress = ref(false) // Flag to prevent duplicate toast notifications
 
 // Extract type and number from location code for display
 const codeComponents = computed(() => {
@@ -435,21 +436,19 @@ const uniqueThingTypes = computed(() => {
   return [...new Set(things.value.map(thing => thing.type || thing.thing_type))]
 })
 
-// Thing columns for the table
+// Thing columns for the table - Removed redundant actions column
 const thingColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
-  { field: 'position', header: 'Indoor Position', sortable: false },
-  { field: 'actions', header: 'Actions', sortable: false }
+  { field: 'position', header: 'Indoor Position', sortable: false }
 ]
 
-// Child location columns for the table
+// Child location columns for the table - Removed redundant actions column
 const childLocationColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
-  { field: 'type', header: 'Type', sortable: true },
-  { field: 'actions', header: 'Actions', sortable: false }
+  { field: 'type', header: 'Type', sortable: true }
 ]
 
 // Fetch location data on component mount
@@ -510,28 +509,46 @@ const loadThings = async () => {
   }
 }
 
-// Update thing position on the floor plan
+// Handle thing click to navigate to thing details
+const handleThingClick = (thing) => {
+  // Extract the ID and navigate
+  const id = thing.id
+  if (id) {
+    navigateToThingDetail(id)
+  } else {
+    console.error('Cannot navigate: Thing ID is missing', thing)
+  }
+}
+
+// Update thing position on the floor plan with toast prevention
 const updateThingPosition = async ({ thingId, coordinates }) => {
+  // Prevent duplicate operations
+  if (positionUpdateInProgress.value) return
+  
   const thing = things.value.find(t => t.id === thingId)
   if (!thing) return
   
+  positionUpdateInProgress.value = true
+  
   try {
     // Use the composable method to update position
-    await updateThingPositionMethod(thingId, coordinates)
+    const success = await updateThingPositionMethod(thingId, coordinates)
     
-    // Update local state
-    if (!thing.metadata) thing.metadata = {}
-    if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
-    thing.metadata.coordinates.x = coordinates.x
-    thing.metadata.coordinates.y = coordinates.y
-    
-    // Show success toast
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Updated position for ${thing.name}`,
-      life: 2000
-    })
+    // Update local state if successful
+    if (success) {
+      if (!thing.metadata) thing.metadata = {}
+      if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
+      thing.metadata.coordinates.x = coordinates.x
+      thing.metadata.coordinates.y = coordinates.y
+      
+      // Show success toast
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: `Updated position for ${thing.name}`,
+        life: 2000
+      })
+    }
   } catch (error) {
     console.error('Error updating thing position:', error)
     toast.add({
@@ -540,6 +557,11 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
       detail: 'Failed to update thing position',
       life: 3000
     })
+  } finally {
+    // Add slight delay before allowing another update
+    setTimeout(() => {
+      positionUpdateInProgress.value = false
+    }, 500)
   }
 }
 
