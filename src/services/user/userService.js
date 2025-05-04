@@ -85,6 +85,16 @@ export class UserService extends BaseService {
   }
   
   /**
+   * Standard update method for the user entity
+   * @param {string} id - User ID
+   * @param {Object} userData - Updated user data
+   * @returns {Promise} - Axios promise with updated user
+   */
+  update(id, userData) {
+    return super.update(id, userData)
+  }
+  
+  /**
    * Change user password
    * @param {string} id - User ID
    * @param {Object} passwordData - Password change data
@@ -93,44 +103,6 @@ export class UserService extends BaseService {
   changePassword(id, passwordData) {
     const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, id)
     return apiHelpers.axiosInstance.patch(`${endpoint}/change-password`, passwordData)
-  }
-  
-  /**
-   * Switch to a different organization
-   * @param {string} userId - User ID
-   * @param {string} organizationId - Organization ID to switch to
-   * @returns {Promise} - Axios promise
-   */
-  switchOrganization(userId, organizationId) {
-    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
-    return apiHelpers.axiosInstance.patch(`${endpoint}/switch-organization`, {
-      organization_id: organizationId
-    })
-  }
-  
-  /**
-   * Get user's role in an organization
-   * @param {string} userId - User ID
-   * @param {string} organizationId - Organization ID
-   * @returns {Promise} - Axios promise with role data
-   */
-  getUserRole(userId, organizationId) {
-    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
-    return apiHelpers.axiosInstance.get(`${endpoint}/organizations/${organizationId}/role`)
-  }
-  
-  /**
-   * Update user's role in an organization
-   * @param {string} userId - User ID
-   * @param {string} organizationId - Organization ID
-   * @param {string} role - Role to assign ('admin' or 'member')
-   * @returns {Promise} - Axios promise
-   */
-  updateUserRole(userId, organizationId, role) {
-    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, userId)
-    return apiHelpers.axiosInstance.patch(`${endpoint}/organizations/${organizationId}/role`, {
-      role: role
-    })
   }
 }
 

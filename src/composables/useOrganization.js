@@ -81,6 +81,11 @@ export function useOrganization() {
    * @returns {Promise<boolean>} - Success status
    */
   const switchOrganization = async (organizationId) => {
+    // Ensure we don't switch to the same organization
+    if (organizationId === currentOrganization.value?.id) {
+      return true;
+    }
+    
     return performOperation(
       () => organizationService.setCurrentOrganization(organizationId),
       {
@@ -91,8 +96,10 @@ export function useOrganization() {
           // Update auth store with new organization info
           await authStore.refreshUserData()
           
-          // Update organization store
+          // Find the organization in the user's organizations
           const org = organizationStore.findOrganizationById(organizationId)
+          
+          // Update organization store
           await organizationStore.setCurrentOrganization(org)
           
           // Show success message

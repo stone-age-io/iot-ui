@@ -230,6 +230,13 @@ export const useAuthStore = defineStore('auth', () => {
         // Set current organization if available
         if (response.data.organization) {
           organizationStore.setCurrentOrganization(response.data.organization)
+        } else if (response.data.current_organization_id) {
+          // If the organization object is not included in the response but the ID is,
+          // check if it's in the user's organizations and set it
+          const org = organizationStore.findOrganizationById(response.data.current_organization_id)
+          if (org) {
+            organizationStore.setCurrentOrganization(org)
+          }
         }
         
         // Set user organizations if available

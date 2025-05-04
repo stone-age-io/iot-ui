@@ -3,6 +3,7 @@ import { BaseService } from '../base/BaseService'
 import { COLLECTIONS, collectionEndpoint } from '../pocketbase-config'
 import { apiHelpers } from '../api'
 import configService from '../config/configService'
+import { userService } from '../user/userService'
 
 /**
  * Service for Organization operations
@@ -27,20 +28,27 @@ export class OrganizationService extends BaseService {
    * @returns {Promise} - Axios promise with organizations data
    */
   getUserOrganizations(params = {}) {
-    return this.getList({
-      filter: 'user_organizations',
-      ...params
-    })
+    return this.getList()
   }
   
   /**
    * Set current organization for user
+   * Using standard user update pattern rather than custom endpoint
    * @param {string} organizationId - Organization ID
    * @returns {Promise} - Axios promise
    */
   setCurrentOrganization(organizationId) {
-    return apiHelpers.axiosInstance.post('/pb/api/users/me/switch-organization', {
-      organization_id: organizationId
+    // Get current user from auth store via localStorage
+    const authData = JSON.parse(localStorage.getItem('auth') || '{}')
+    const userId = authData.user?.id
+    
+    if (!userId) {
+      return Promise.reject(new Error('User not authenticated'))
+    }
+    
+    // Update user record with new current_organization_id
+    return userService.update(userId, {
+      current_organization_id: organizationId
     })
   }
   
