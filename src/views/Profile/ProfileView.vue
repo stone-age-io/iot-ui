@@ -236,9 +236,62 @@
           </div>
         </div>
         
+        <!-- Theme Settings -->
+        <div class="mt-6 bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              <i class="pi pi-palette mr-2"></i>
+              Theme Settings
+            </h2>
+          </div>
+          <div class="p-6">
+            <div class="flex flex-col gap-3">
+              <div
+                class="p-3 rounded-lg border cursor-pointer theme-option"
+                :class="currentTheme === 'light' ? 
+                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
+                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
+                @click="setLightTheme"
+              >
+                <div class="flex items-center">
+                  <i class="pi pi-sun mr-3 text-yellow-500"></i>
+                  <span class="font-medium">Light Theme</span>
+                  <i v-if="currentTheme === 'light'" class="pi pi-check ml-auto text-primary-500"></i>
+                </div>
+              </div>
+              
+              <div
+                class="p-3 rounded-lg border cursor-pointer theme-option"
+                :class="currentTheme === 'dark' ? 
+                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
+                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
+                @click="setDarkTheme"
+              >
+                <div class="flex items-center">
+                  <i class="pi pi-moon mr-3 text-blue-500"></i>
+                  <span class="font-medium">Dark Theme</span>
+                  <i v-if="currentTheme === 'dark'" class="pi pi-check ml-auto text-primary-500"></i>
+                </div>
+              </div>
+              
+              <div
+                class="p-3 rounded-lg border cursor-pointer theme-option"
+                :class="currentTheme === 'auto' ? 
+                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
+                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
+                @click="setSystemTheme"
+              >
+                <div class="flex items-center">
+                  <i class="pi pi-desktop mr-3 text-green-500"></i>
+                  <span class="font-medium">System Theme</span>
+                  <i v-if="currentTheme === 'auto'" class="pi pi-check ml-auto text-primary-500"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <Toast />
   </div>
 </template>
 
@@ -253,7 +306,6 @@ import FormField from '../../components/common/FormField.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
-import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 // Composables

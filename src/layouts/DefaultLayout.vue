@@ -61,7 +61,7 @@
       class="fixed bottom-0 left-0 right-0 z-30"
     />
     
-    <!-- Notifications -->
+    <!-- Global Notifications - ONLY define these components once at the layout level -->
     <Toast position="bottom-right" />
     <ConfirmDialog />
   </div>

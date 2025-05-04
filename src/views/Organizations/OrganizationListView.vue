@@ -128,9 +128,6 @@
       :details="deleteDialog.details"
       @confirm="handleDeleteConfirm"
     />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 
@@ -141,7 +138,6 @@ import { useDeleteConfirmation } from '../../composables/useConfirmation'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ConfirmationDialog from '../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
-import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 // Get organization functionality from composable

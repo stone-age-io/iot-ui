@@ -10,7 +10,7 @@ import {
 
 /**
  * Base service class for entity operations
- * Updated to support organization-based access control
+ * Updated to rely on PocketBase API rules for organization-based access control
  */
 export class BaseService {
   /**
@@ -33,7 +33,7 @@ export class BaseService {
   }
 
   /**
-   * Get user auth data from localStorage for cache segmentation and organization filtering
+   * Get user auth data from localStorage for cache segmentation
    * @returns {Object|null} - User auth data or null
    */
   getUserAuthData() {
@@ -69,20 +69,8 @@ export class BaseService {
       transformedParams.expand = this.options.expandFields.join(',')
     }
     
-    // Apply organization filtering if not explicitly overridden
-    if (!params.skipOrgFilter && !transformedParams.filter?.includes('organization_id') 
-        && this.collectionName !== 'organizations') {
-      const authData = this.getUserAuthData();
-      
-      if (authData && authData.currentOrgId) {
-        // If filter already exists, append organization filter
-        if (transformedParams.filter) {
-          transformedParams.filter = `${transformedParams.filter} && organization_id="${authData.currentOrgId}"`
-        } else {
-          transformedParams.filter = `organization_id="${authData.currentOrgId}"`
-        }
-      }
-    }
+    // No explicit organization filtering - PocketBase API rules will handle this
+    // We rely on the PocketBase API rules for organization-based access control
     
     // Apply custom parameter transformations
     this.transformParams(transformedParams, params)
@@ -177,13 +165,8 @@ export class BaseService {
   async create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
-    // Add current organization ID if not already set and not organizations collection
-    if (this.collectionName !== 'organizations') {
-      const authData = this.getUserAuthData();
-      if (authData && authData.currentOrgId && !entity.organization_id) {
-        entity.organization_id = authData.currentOrgId;
-      }
-    }
+    // Note: We don't need to add organization_id manually here
+    // The PocketBase API rules will automatically use the current organization
     
     // Generate a UUIDv7 for the entity if ID is not already specified
     // Uses the uuidv7 library for robust, secure UUIDv7 generation
