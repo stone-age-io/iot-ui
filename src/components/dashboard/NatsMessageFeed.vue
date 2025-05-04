@@ -19,11 +19,11 @@
     <div class="flex flex-wrap items-center justify-between mb-4 gap-2">
       <div class="flex items-center">
         <Button 
-          :label="paused ? 'Resume' : 'Pause'" 
+          :label="paused ? 'Start' : 'Pause'" 
           :icon="paused ? 'pi pi-play' : 'pi pi-pause'"
-          class="p-button-sm mr-2"
+          :class="paused ? 'p-button-sm mr-2 p-button-success' : 'p-button-sm mr-2'"
           @click="togglePause"
-          :disabled="!connectionReady || paginatedMessages.length === 0"
+          :disabled="!connectionReady"
         />
         <Button 
           label="Clear" 
@@ -59,12 +59,15 @@
       <span class="ml-2">Loading messages...</span>
     </div>
     
-    <!-- Empty State -->
+    <!-- Empty State with Start Prompt -->
     <div v-else-if="paginatedMessages.length === 0" class="empty-state">
       <i class="pi pi-inbox text-4xl mb-2 opacity-40"></i>
       <div class="text-center">
         <p>No messages received yet.</p>
-        <p v-if="connectionReady && isSubscribed" class="text-xs mt-1 max-w-md">
+        <p v-if="connectionReady && isSubscribed && paused" class="text-xs mt-1 max-w-md text-amber-600 dark:text-amber-400">
+          Click the Start button to begin receiving messages.
+        </p>
+        <p v-else-if="connectionReady && isSubscribed" class="text-xs mt-1 max-w-md">
           Messages will appear here when they are received from the NATS server.
         </p>
         <p v-else-if="connectionReady && !isSubscribed" class="text-xs mt-1 max-w-md text-amber-600 dark:text-amber-400">
@@ -87,6 +90,7 @@
         <div v-if="showDebugInfo" class="mt-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-md text-left text-xs">
           <div><strong>Connection Ready:</strong> {{ connectionReady }}</div>
           <div><strong>Is Subscribed:</strong> {{ isSubscribed }}</div>
+          <div><strong>Paused State:</strong> {{ paused }}</div>
           <div><strong>Topics:</strong> {{ topics.length > 0 ? topics.join(', ') : 'None' }}</div>
           <div v-if="error"><strong>Error:</strong> {{ error }}</div>
         </div>
@@ -158,6 +162,11 @@
     <!-- Hidden textarea for clipboard copy fallback -->
     <textarea ref="clipboardFallback" class="sr-only" aria-hidden="true"></textarea>
     
+    <!-- Paused Indicator - Shows when feed is active but paused -->
+    <div v-if="paused && paginatedMessages.length > 0" class="paused-indicator mt-2 p-2 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 text-center text-sm rounded">
+      <i class="pi pi-pause mr-1"></i> Message stream is paused. Click Start to resume.
+    </div>
+    
     <!-- Toast for copy notification -->
     <Toast position="bottom-right" />
   </div>
@@ -216,6 +225,7 @@ const formatTopicForDisplay = (topic) => {
 const expandedMessagesByPage = ref(new Map());
 
 // Use the NATS messages composable with a maximum message limit
+// Initialize with startPaused = true
 const { 
   messages,
   paginatedMessages,
@@ -237,7 +247,7 @@ const {
   formatTimestamp,
   nextPage,
   prevPage
-} = useNatsMessages(100);
+} = useNatsMessages(100, true);
 
 // Update the container height based on content
 const updateListHeight = () => {
@@ -503,5 +513,14 @@ pre::-webkit-scrollbar-thumb:hover {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* Paused indicator styles */
+.paused-indicator {
+  border-left: 3px solid rgb(217, 119, 6);
+}
+
+.dark .paused-indicator {
+  border-left: 3px solid rgb(245, 158, 11);
 }
 </style>

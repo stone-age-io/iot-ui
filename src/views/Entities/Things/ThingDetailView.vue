@@ -245,6 +245,21 @@
           </div>
         </div>
       </div>
+      
+      <!-- Message Stream Card -->
+      <div class="mt-6">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Message Stream</h2>
+          </div>
+          <div class="p-6">
+            <ThingMessageFeed 
+              :thing="thing"
+              :maxMessages="50"
+            />
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- Activity Dialog -->
@@ -384,6 +399,7 @@ import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
+import ThingMessageFeed from '../../../components/things/ThingMessageFeed.vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'

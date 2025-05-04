@@ -7,49 +7,78 @@ import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for managing NATS messages subscriptions and display
- * Simplified implementation for more reliable message handling
+ * Enhanced implementation for more flexible topic management and UI control
  * 
- * @param {number} maxMessages - Maximum number of messages to store
+ * @param {Object} options - Configuration options
+ * @param {number} options.maxMessages - Maximum number of messages to store (default: 100)
+ * @param {boolean} options.startPaused - Whether to start in paused state (default: true)
+ * @param {boolean} options.showToasts - Whether to show toast notifications (default: true)
+ * @param {string|Array} options.specificTopic - Specific topic(s) to subscribe to (bypasses config)
+ * @param {string} options.namespace - Unique namespace for multiple instances (default: 'default')
  * @returns {Object} - Messages state and methods
  */
-export function useNatsMessages(maxMessages = 100) {
-  const toast = useToast()
-  const { performOperation } = useApiOperation()
+export function useNatsMessages(options = {}) {
+  const {
+    maxMessages = 100,
+    startPaused = true,
+    showToasts = true,
+    specificTopic = null,
+    namespace = 'default'
+  } = options;
+  
+  // Get the toast service
+  const toast = useToast();
+  const { performOperation } = useApiOperation();
   
   // Core state
-  const messages = ref([])
-  const paused = ref(false)
-  const subscriptions = ref({})
-  const topics = ref([])
-  const currentPage = ref(1)
-  const pageSize = ref(5) // Default to 5 messages per page
-  const loading = ref(false)
-  const error = ref(null)
-  const isSubscribed = ref(false)
-  const connectionReady = ref(natsService.isConnected())
+  const messages = ref([]);
+  const paused = ref(startPaused);
+  const subscriptions = ref({});
+  const topics = ref([]);
+  const currentPage = ref(1);
+  const pageSize = ref(5); // Default to 5 messages per page
+  const loading = ref(false);
+  const error = ref(null);
+  const isSubscribed = ref(false);
+  const connectionReady = ref(natsService.isConnected());
   
   // Pagination state
-  const paginatedMessagesCache = ref([])
-  const lastRefreshKey = ref('')
+  const paginatedMessagesCache = ref([]);
+  const lastRefreshKey = ref('');
 
-  // Batching variables
-  let messageQueue = []
-  let processingTimer = null
-  let isProcessing = false
+  // Batching variables to improve performance
+  let messageQueue = [];
+  let processingTimer = null;
+  let isProcessing = false;
   
-  // Get saved topics from config
+  /**
+   * Load topics from config or use specificTopic if provided
+   */
   const loadTopics = () => {
-    const config = natsConfigService.getConfig()
-    const configTopics = config.subjects || []
+    // If specificTopic is provided, use it and bypass config
+    if (specificTopic) {
+      // Handle both string and array formats
+      const topicArray = Array.isArray(specificTopic) 
+        ? specificTopic 
+        : [specificTopic];
+      
+      // Set topics and return them
+      topics.value = topicArray;
+      return topicArray;
+    }
+    
+    // Otherwise, load from config
+    const config = natsConfigService.getConfig();
+    const configTopics = config.subjects || [];
     
     // If no topics are configured, add a default topic for testing
     if (configTopics.length === 0) {
-      configTopics.push('>')  // Subscribe to all messages
+      configTopics.push('>');  // Subscribe to all messages
     }
     
-    topics.value = configTopics
-    return configTopics
-  }
+    topics.value = configTopics;
+    return configTopics;
+  };
   
   /**
    * Process queued messages efficiently
@@ -57,39 +86,39 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const processMessageQueue = () => {
     if (messageQueue.length === 0 || isProcessing || paused.value) {
-      return
+      return;
     }
     
-    isProcessing = true
+    isProcessing = true;
     
     try {
       // Take all current messages from the queue
-      const newMessages = [...messageQueue]
-      messageQueue = [] // Clear the queue
+      const newMessages = [...messageQueue];
+      messageQueue = []; // Clear the queue
       
       // Add new messages at the start (newest first)
       // and ensure we stay within the limit
-      messages.value = [...newMessages.reverse(), ...messages.value].slice(0, maxMessages)
+      messages.value = [...newMessages.reverse(), ...messages.value].slice(0, maxMessages);
       
       // Only refresh pagination if we're on the first page
       // This prevents UI jumps when viewing historical data
       if (currentPage.value === 1 && !paused.value) {
-        refreshPaginatedMessages(true)
+        refreshPaginatedMessages(true);
       }
       
       // Debug count
       if (process.env.NODE_ENV !== 'production') {
-        console.debug(`NATS messages: ${messages.value.length}/${maxMessages}`)
+        console.debug(`NATS messages (${namespace}): ${messages.value.length}/${maxMessages}`);
       }
     } finally {
-      isProcessing = false
+      isProcessing = false;
       
       // Process any new messages that arrived while we were updating
       if (messageQueue.length > 0) {
-        scheduleProcessing(0) // Process immediately
+        scheduleProcessing(0); // Process immediately
       }
     }
-  }
+  };
   
   /**
    * Schedule message processing with intelligent timing
@@ -97,45 +126,45 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const scheduleProcessing = (delay = 100) => {
     if (processingTimer) {
-      clearTimeout(processingTimer)
+      clearTimeout(processingTimer);
     }
     
-    processingTimer = setTimeout(processMessageQueue, delay)
-  }
+    processingTimer = setTimeout(processMessageQueue, delay);
+  };
   
   /**
    * Add a new message to the queue
    * @param {Object} message - Message to add
    */
   const queueMessage = (message) => {
-    if (paused.value) return
+    if (paused.value) return;
     
     // Add message to queue
-    messageQueue.push(message)
+    messageQueue.push(message);
     
     // If we have lots of messages, process more frequently
-    const quickProcessThreshold = 20
-    const delay = messageQueue.length > quickProcessThreshold ? 0 : 100
+    const quickProcessThreshold = 20;
+    const delay = messageQueue.length > quickProcessThreshold ? 0 : 100;
     
     // Schedule processing
-    scheduleProcessing(delay)
-  }
+    scheduleProcessing(delay);
+  };
   
   /**
-   * Subscribe to a topic with simplified error handling
+   * Subscribe to a topic with improved error handling
    * @param {string} topic - Topic to subscribe to
-   * @returns {Object|null} - Subscription object or null
+   * @returns {Promise<Object|null>} - Subscription object or null
    */
   const subscribe = async (topic) => {
     // Skip if already subscribed
     if (subscriptions.value[topic]) {
-      return subscriptions.value[topic]
+      return subscriptions.value[topic];
     }
     
     // Skip if NATS is not connected
     if (!natsService.isConnected()) {
-      error.value = 'Cannot subscribe: NATS is not connected'
-      return null
+      error.value = 'Cannot subscribe: NATS is not connected';
+      return null;
     }
     
     try {
@@ -147,26 +176,27 @@ export function useNatsMessages(maxMessages = 100) {
           topic: subject,
           data: message,
           timestamp: new Date()
-        })
-      })
+        });
+      });
       
       if (subscription) {
         // Store subscription
-        subscriptions.value[topic] = subscription
-        isSubscribed.value = true
+        subscriptions.value[topic] = subscription;
+        isSubscribed.value = true;
         
         if (process.env.NODE_ENV !== 'production') {
-          console.debug(`Subscribed to ${topic}`)
+          console.debug(`Subscribed to ${topic} (${namespace})`);
         }
+        return subscription;
+      } else {
+        throw new Error(`Failed to create subscription for topic: ${topic}`);
       }
-      
-      return subscription
     } catch (err) {
-      console.error(`Failed to subscribe to ${topic}:`, err)
-      error.value = `Failed to subscribe to topic: ${topic}`
-      return null
+      console.error(`Failed to subscribe to ${topic} (${namespace}):`, err);
+      error.value = err.message || `Failed to subscribe to topic: ${topic}`;
+      return null;
     }
-  }
+  };
   
   /**
    * Unsubscribe from a topic
@@ -174,27 +204,27 @@ export function useNatsMessages(maxMessages = 100) {
    * @returns {Promise<boolean>} - Success status
    */
   const unsubscribe = async (topic) => {
-    const subscription = subscriptions.value[topic]
-    if (!subscription) return true
+    const subscription = subscriptions.value[topic];
+    if (!subscription) return true;
     
     try {
       // Perform NATS unsubscribe
-      await natsService.unsubscribe(subscription)
+      await natsService.unsubscribe(subscription);
       
       // Remove from subscriptions
-      delete subscriptions.value[topic]
+      delete subscriptions.value[topic];
       
       if (process.env.NODE_ENV !== 'production') {
-        console.debug(`Unsubscribed from ${topic}`)
+        console.debug(`Unsubscribed from ${topic} (${namespace})`);
       }
       
-      return true
+      return true;
     } catch (err) {
-      console.error(`Error unsubscribing from ${topic}:`, err)
-      error.value = `Error unsubscribing from topic: ${topic}`
-      return false
+      console.error(`Error unsubscribing from ${topic} (${namespace}):`, err);
+      error.value = `Error unsubscribing from topic: ${topic}`;
+      return false;
     }
-  }
+  };
   
   /**
    * Subscribe to all configured topics
@@ -202,41 +232,41 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const subscribeToAllTopics = async () => {
     if (isSubscribed.value && Object.keys(subscriptions.value).length > 0) {
-      return true
+      return true;
     }
     
-    loading.value = true
+    loading.value = true;
     
     try {
-      // Load topics from config
-      const configTopics = loadTopics()
+      // Load topics from config or specificTopic parameter
+      const topicsToSubscribe = loadTopics();
       
       // Clear messages if subscribing for the first time
-      if (configTopics.length > 0 && !isSubscribed.value) {
-        messages.value = []
+      if (topicsToSubscribe.length > 0 && !isSubscribed.value) {
+        messages.value = [];
       }
       
       // Check if NATS is connected
       if (!natsService.isConnected()) {
-        error.value = 'Cannot subscribe: NATS is not connected'
-        return false
+        error.value = 'Cannot subscribe: NATS is not connected';
+        return false;
       }
       
       // Subscribe to each topic
-      let successCount = 0
-      for (const topic of configTopics) {
-        const result = await subscribe(topic)
-        if (result) successCount++
+      let successCount = 0;
+      for (const topic of topicsToSubscribe) {
+        const result = await subscribe(topic);
+        if (result) successCount++;
       }
       
       // Mark as subscribed if at least one subscription succeeded
-      isSubscribed.value = successCount > 0
+      isSubscribed.value = successCount > 0;
       
-      return successCount > 0
+      return successCount > 0;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
   
   /**
    * Unsubscribe from all topics
@@ -244,64 +274,78 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const unsubscribeFromAllTopics = async () => {
     if (!isSubscribed.value && Object.keys(subscriptions.value).length === 0) {
-      return
+      return;
     }
     
-    loading.value = true
+    loading.value = true;
     
     try {
       // Get all subscribed topics
-      const topicKeys = Object.keys(subscriptions.value)
+      const topicKeys = Object.keys(subscriptions.value);
       
       // Unsubscribe from each topic
       for (const topic of topicKeys) {
-        await unsubscribe(topic)
+        await unsubscribe(topic);
       }
       
       // Reset subscription flag
-      isSubscribed.value = false
+      isSubscribed.value = false;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
   
   /**
    * Toggle pause/resume of message reception
+   * Optionally show toast notification
+   * @param {boolean} showNotification - Whether to show toast notification (overrides global setting)
    */
-  const togglePause = () => {
-    paused.value = !paused.value
+  const togglePause = (showNotification = null) => {
+    paused.value = !paused.value;
     
-    toast.add({
-      severity: 'info',
-      summary: paused.value ? 'Paused' : 'Resumed',
-      detail: paused.value ? 'Message stream paused' : 'Message stream resumed',
-      life: 2000
-    })
-  }
+    // Determine if toast should be shown
+    const shouldShowToast = showNotification !== null ? showNotification : showToasts;
+    
+    if (shouldShowToast) {
+      toast.add({
+        severity: 'info',
+        summary: paused.value ? 'Paused' : 'Started',
+        detail: paused.value ? 'Message stream paused' : 'Message stream started',
+        life: 2000
+      });
+    }
+  };
   
   /**
    * Generate a unique message ID
    * @returns {string} - Unique ID
    */
   const generateMessageId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2)
-  }
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  };
   
   /**
    * Clear all messages
+   * Optionally show toast notification
+   * @param {boolean} showNotification - Whether to show toast notification (overrides global setting)
    */
-  const clearMessages = () => {
-    messages.value = []
-    currentPage.value = 1
-    refreshPaginatedMessages(true)
+  const clearMessages = (showNotification = null) => {
+    messages.value = [];
+    currentPage.value = 1;
+    refreshPaginatedMessages(true);
     
-    toast.add({
-      severity: 'info',
-      summary: 'Cleared',
-      detail: 'All messages cleared',
-      life: 2000
-    })
-  }
+    // Determine if toast should be shown
+    const shouldShowToast = showNotification !== null ? showNotification : showToasts;
+    
+    if (shouldShowToast) {
+      toast.add({
+        severity: 'info',
+        summary: 'Cleared',
+        detail: 'All messages cleared',
+        life: 2000
+      });
+    }
+  };
   
   /**
    * Format message data for display
@@ -310,10 +354,10 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const formatMessageData = (data) => {
     if (typeof data === 'object') {
-      return JSON.stringify(data, null, 2)
+      return JSON.stringify(data, null, 2);
     }
-    return String(data)
-  }
+    return String(data);
+  };
   
   /**
    * Creates a minimized representation of message data
@@ -436,9 +480,9 @@ export function useNatsMessages(maxMessages = 100) {
    * @returns {string} - Formatted timestamp
    */
   const formatTimestamp = (timestamp, includeDate = false) => {
-    if (!timestamp) return ''
+    if (!timestamp) return '';
     
-    const date = new Date(timestamp)
+    const date = new Date(timestamp);
     
     if (includeDate) {
       // Format with date for detail view
@@ -450,7 +494,7 @@ export function useNatsMessages(maxMessages = 100) {
         minute: '2-digit',
         second: '2-digit',
         fractionalSecondDigits: 3
-      })
+      });
     }
     
     // Format time only for list view
@@ -459,8 +503,8 @@ export function useNatsMessages(maxMessages = 100) {
       minute: '2-digit',
       second: '2-digit',
       fractionalSecondDigits: 3
-    })
-  }
+    });
+  };
   
   /**
    * Refresh paginated messages with optional force
@@ -468,28 +512,28 @@ export function useNatsMessages(maxMessages = 100) {
    * @returns {Array} - Paginated messages
    */
   const refreshPaginatedMessages = (force = false) => {
-    const key = `${currentPage.value}-${pageSize.value}-${messages.value.length}`
+    const key = `${currentPage.value}-${pageSize.value}-${messages.value.length}`;
     
     // Only recalculate if needed or forced
     if (force || key !== lastRefreshKey.value || paginatedMessagesCache.value.length === 0) {
-      const start = (currentPage.value - 1) * pageSize.value
-      const end = start + pageSize.value
-      paginatedMessagesCache.value = messages.value.slice(start, end)
-      lastRefreshKey.value = key
+      const start = (currentPage.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      paginatedMessagesCache.value = messages.value.slice(start, end);
+      lastRefreshKey.value = key;
     }
     
-    return paginatedMessagesCache.value
-  }
+    return paginatedMessagesCache.value;
+  };
   
   // Computed for paginated messages
   const paginatedMessages = computed(() => {
-    return refreshPaginatedMessages()
-  })
+    return refreshPaginatedMessages();
+  });
   
   // Computed for total pages
   const totalPages = computed(() => {
-    return Math.ceil(messages.value.length / pageSize.value) || 1
-  })
+    return Math.ceil(messages.value.length / pageSize.value) || 1;
+  });
   
   /**
    * Go to a specific page
@@ -498,88 +542,88 @@ export function useNatsMessages(maxMessages = 100) {
    */
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
-      currentPage.value = page
-      refreshPaginatedMessages(true)
-      return true
+      currentPage.value = page;
+      refreshPaginatedMessages(true);
+      return true;
     }
-    return false
-  }
+    return false;
+  };
   
   // Go to next page
   const nextPage = () => {
-    return goToPage(currentPage.value + 1)
-  }
+    return goToPage(currentPage.value + 1);
+  };
   
   // Go to previous page
   const prevPage = () => {
-    return goToPage(currentPage.value - 1)
-  }
+    return goToPage(currentPage.value - 1);
+  };
   
   // Reset all state to initial values
   const reset = () => {
-    messages.value = []
-    paused.value = false
-    currentPage.value = 1
-    error.value = null
-    isSubscribed.value = false
-    refreshPaginatedMessages(true)
-  }
+    messages.value = [];
+    paused.value = startPaused;
+    currentPage.value = 1;
+    error.value = null;
+    isSubscribed.value = false;
+    refreshPaginatedMessages(true);
+  };
   
   // Handle NATS connection status changes
   const connectionListener = (status) => {
-    connectionReady.value = status === 'connected'
+    connectionReady.value = status === 'connected';
     
     // If connection becomes available and we're not subscribed yet, try to subscribe
     if (status === 'connected' && !isSubscribed.value) {
-      subscribeToAllTopics()
+      subscribeToAllTopics();
     }
-  }
+  };
   
   // Watch for changes in messages to handle pagination properly
   watch(() => messages.value.length, () => {
     // If we're on a page that no longer exists, go to the last page
     if (currentPage.value > totalPages.value && totalPages.value > 0) {
       nextTick(() => {
-        currentPage.value = totalPages.value
-        refreshPaginatedMessages(true)
-      })
+        currentPage.value = totalPages.value;
+        refreshPaginatedMessages(true);
+      });
     }
-  })
+  });
   
   // Watch for page size changes
   watch(pageSize, () => {
-    refreshPaginatedMessages(true)
-  })
+    refreshPaginatedMessages(true);
+  });
   
   // Setup on mount
   onMounted(() => {
     // Register connection status listener
-    natsService.onStatusChange(connectionListener)
+    natsService.onStatusChange(connectionListener);
     
     // Try to subscribe if already connected
     if (natsService.isConnected()) {
-      subscribeToAllTopics()
+      subscribeToAllTopics();
     }
     
-    // Load topics from config
-    loadTopics()
-  })
+    // Load topics from config or specificTopic parameter
+    loadTopics();
+  });
   
   // Clean up when unmounted
   onUnmounted(() => {
     // Remove connection listener
-    natsService.removeStatusListener(connectionListener)
+    natsService.removeStatusListener(connectionListener);
     
     // Clear any pending timers
     if (processingTimer) {
-      clearTimeout(processingTimer)
+      clearTimeout(processingTimer);
     }
     
     // Unsubscribe from all topics and reset state
     unsubscribeFromAllTopics().then(() => {
-      reset()
-    })
-  })
+      reset();
+    });
+  });
   
   return {
     // State
@@ -609,5 +653,5 @@ export function useNatsMessages(maxMessages = 100) {
     nextPage,
     prevPage,
     reset
-  }
+  };
 }
