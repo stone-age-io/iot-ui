@@ -421,7 +421,6 @@ const { dialog: deleteDialog, updateDialog } = useConfirmation()
 const location = ref(null)
 const things = ref([])
 const thingsLoading = ref(false)
-const positionUpdateInProgress = ref(false) // Flag to prevent duplicate toast notifications
 
 // Extract type and number from location code for display
 const codeComponents = computed(() => {
@@ -442,6 +441,7 @@ const thingColumns = [
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true },
   { field: 'position', header: 'Indoor Position', sortable: false }
+  // Removed redundant actions column from here
 ]
 
 // Child location columns for the table - Removed redundant actions column
@@ -449,6 +449,7 @@ const childLocationColumns = [
   { field: 'code', header: 'Code', sortable: true },
   { field: 'name', header: 'Name', sortable: true },
   { field: 'type', header: 'Type', sortable: true }
+  // Removed redundant actions column from here
 ]
 
 // Fetch location data on component mount
@@ -509,9 +510,9 @@ const loadThings = async () => {
   }
 }
 
-// Handle thing click to navigate to thing details
+// Handle thing click to navigate to thing details - new handler function
 const handleThingClick = (thing) => {
-  // Extract the ID and navigate
+  // Extract the ID from the thing object and navigate
   const id = thing.id
   if (id) {
     navigateToThingDetail(id)
@@ -520,35 +521,28 @@ const handleThingClick = (thing) => {
   }
 }
 
-// Update thing position on the floor plan with toast prevention
+// Update thing position on the floor plan
 const updateThingPosition = async ({ thingId, coordinates }) => {
-  // Prevent duplicate operations
-  if (positionUpdateInProgress.value) return
-  
   const thing = things.value.find(t => t.id === thingId)
   if (!thing) return
   
-  positionUpdateInProgress.value = true
-  
   try {
     // Use the composable method to update position
-    const success = await updateThingPositionMethod(thingId, coordinates)
+    await updateThingPositionMethod(thingId, coordinates)
     
-    // Update local state if successful
-    if (success) {
-      if (!thing.metadata) thing.metadata = {}
-      if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
-      thing.metadata.coordinates.x = coordinates.x
-      thing.metadata.coordinates.y = coordinates.y
-      
-      // Show success toast
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Updated position for ${thing.name}`,
-        life: 2000
-      })
-    }
+    // Update local state
+    if (!thing.metadata) thing.metadata = {}
+    if (!thing.metadata.coordinates) thing.metadata.coordinates = {}
+    thing.metadata.coordinates.x = coordinates.x
+    thing.metadata.coordinates.y = coordinates.y
+    
+    // Show success toast
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Updated position for ${thing.name}`,
+      life: 2000
+    })
   } catch (error) {
     console.error('Error updating thing position:', error)
     toast.add({
@@ -557,11 +551,6 @@ const updateThingPosition = async ({ thingId, coordinates }) => {
       detail: 'Failed to update thing position',
       life: 3000
     })
-  } finally {
-    // Add slight delay before allowing another update
-    setTimeout(() => {
-      positionUpdateInProgress.value = false
-    }, 500)
   }
 }
 
