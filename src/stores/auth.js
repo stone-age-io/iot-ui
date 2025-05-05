@@ -35,6 +35,24 @@ export const useAuthStore = defineStore('auth', () => {
         user: user.value,
         currentOrgId: user.value.current_organization_id || ''
       }))
+      
+      // Initialize organization data if we have a current_organization_id
+      if (user.value.current_organization_id) {
+        // Dispatch an async function to load the organization
+        // We use setTimeout to avoid blocking and potential circular dependencies
+        setTimeout(async () => {
+          try {
+            const organizationStore = useOrganizationStore()
+            const orgResponse = await organizationService.getById(user.value.current_organization_id)
+            if (orgResponse && orgResponse.data) {
+              organizationStore.setCurrentOrganization(orgResponse.data)
+              console.log('Loaded organization on init:', orgResponse.data.code)
+            }
+          } catch (err) {
+            console.error('Error loading organization on init:', err)
+          }
+        }, 0)
+      }
     } catch (err) {
       // Invalid token
       token.value = ''
@@ -92,12 +110,14 @@ export const useAuthStore = defineStore('auth', () => {
         if (response.data.record?.expand?.current_organization_id) {
           // Direct from response's expanded data
           currentOrg = response.data.record.expand.current_organization_id
+          console.log('Found expanded organization:', currentOrg);
         } else if (response.data.record?.current_organization_id) {
           // Try to fetch organization separately if it wasn't expanded
           try {
             const orgResponse = await organizationService.getById(response.data.record.current_organization_id)
             if (orgResponse && orgResponse.data) {
               currentOrg = orgResponse.data
+              console.log('Fetched organization by ID:', currentOrg);
             }
           } catch (orgErr) {
             console.warn('Error fetching current organization:', orgErr)
@@ -107,17 +127,22 @@ export const useAuthStore = defineStore('auth', () => {
         // Set current organization if available
         if (currentOrg) {
           organizationStore.setCurrentOrganization(currentOrg)
+          console.log('Set current organization in store:', currentOrg.code);
+        } else {
+          console.warn('No current organization found for user');
         }
         
         // Set user organizations if available
         if (response.data.record?.expand?.organizations) {
           organizationStore.setUserOrganizations(response.data.record.expand.organizations)
+          console.log('Set user organizations from expand:', response.data.record.expand.organizations.length);
         } else if (response.data.record?.organizations) {
           // Try to fetch organizations if they weren't expanded
           try {
             const userResponse = await userService.getCurrentUser()
             if (userResponse?.data?.organizations) {
               organizationStore.setUserOrganizations(userResponse.data.organizations)
+              console.log('Set user organizations from getCurrentUser:', userResponse.data.organizations.length);
             }
           } catch (userErr) {
             console.warn('Error fetching user organizations:', userErr)
@@ -231,6 +256,10 @@ export const useAuthStore = defineStore('auth', () => {
   function updateUser(userData) {
     if (!userData) return
     
+    // Track if current_organization_id changed
+    const orgIdChanged = userData.current_organization_id && 
+                         userData.current_organization_id !== user.value?.current_organization_id;
+    
     user.value = {
       ...user.value,
       ...userData
@@ -241,6 +270,22 @@ export const useAuthStore = defineStore('auth', () => {
       user: user.value,
       currentOrgId: user.value.current_organization_id
     }))
+    
+    // If the organization ID changed, update the organization store
+    if (orgIdChanged) {
+      setTimeout(async () => {
+        try {
+          const organizationStore = useOrganizationStore()
+          const orgResponse = await organizationService.getById(user.value.current_organization_id)
+          if (orgResponse && orgResponse.data) {
+            organizationStore.setCurrentOrganization(orgResponse.data)
+            console.log('Updated organization after user update:', orgResponse.data.code)
+          }
+        } catch (err) {
+          console.error('Error updating organization after user update:', err)
+        }
+      }, 0)
+    }
   }
   
   // Refresh user data from server
@@ -249,6 +294,9 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await userService.getCurrentUser()
       
       if (response && response.data) {
+        // Capture old organization ID for comparison
+        const oldOrgId = user.value?.current_organization_id;
+        
         // Update user data
         user.value = {
           ...user.value,
@@ -262,7 +310,9 @@ export const useAuthStore = defineStore('auth', () => {
         // Set current organization if available from expanded data
         if (response.data.organization) {
           organizationStore.setCurrentOrganization(response.data.organization)
-        } else if (response.data.current_organization_id) {
+          console.log('Set organization from refreshUserData expanded data:', response.data.organization.code)
+        } else if (response.data.current_organization_id && 
+                  (response.data.current_organization_id !== oldOrgId || !organizationStore.currentOrganization)) {
           // If organization object not included, try to fetch it
           try {
             // First check if it's in the user's organizations
@@ -279,6 +329,7 @@ export const useAuthStore = defineStore('auth', () => {
             // Set the organization if found
             if (org) {
               organizationStore.setCurrentOrganization(org)
+              console.log('Set organization from refreshUserData fetch:', org.code)
             }
           } catch (orgErr) {
             console.warn('Error fetching current organization:', orgErr)

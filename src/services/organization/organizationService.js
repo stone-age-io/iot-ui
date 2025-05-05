@@ -24,11 +24,16 @@ export class OrganizationService extends BaseService {
   
   /**
    * Get organizations for the current user
+   * With expanded fields to ensure we have full organization data
    * @param {Object} params - Query parameters
    * @returns {Promise} - Axios promise with organizations data
    */
   getUserOrganizations(params = {}) {
-    return this.getList()
+    return this.getList({
+      ...params,
+      expand: 'user_organization_roles',
+      sort: 'name'
+    })
   }
   
   /**
@@ -49,6 +54,33 @@ export class OrganizationService extends BaseService {
     // Update user record with new current_organization_id
     return userService.update(userId, {
       current_organization_id: organizationId
+    })
+  }
+  
+  /**
+   * Get organization by code 
+   * This is useful when we have the organization code but not the ID
+   * @param {string} code - Organization code
+   * @returns {Promise} - Axios promise with organization data
+   */
+  getByCode(code) {
+    if (!code) {
+      return Promise.reject(new Error('Organization code is required'))
+    }
+    
+    return this.getList({
+      filter: `code="${code}"`,
+      limit: 1
+    }).then(response => {
+      if (response.data && response.data.items && response.data.items.length > 0) {
+        return {
+          ...response,
+          data: response.data.items[0]
+        }
+      }
+      
+      // Organization not found
+      return Promise.reject(new Error(`Organization with code ${code} not found`))
     })
   }
   
@@ -103,6 +135,55 @@ export class OrganizationService extends BaseService {
     return apiHelpers.axiosInstance.patch(`/pb/api/organizations/${organizationId}/users/${userId}`, {
       role: role
     })
+  }
+  
+  /**
+   * Derive an organization code from a name
+   * Useful for creating new organizations or fallback when code isn't available
+   * @param {string} name - Organization name
+   * @returns {string} - Derived organization code
+   */
+  deriveOrganizationCode(name) {
+    if (!name) return 'org';
+    
+    // Remove non-alphanumeric characters, convert to lowercase, and take first 4 letters
+    let code = name.toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .substring(0, 4);
+    
+    // Ensure code is at least 2 characters
+    if (code.length < 2) {
+      code = code.padEnd(2, 'o');
+    }
+    
+    return code;
+  }
+  
+  /**
+   * Get the current organization code from the current user's organization
+   * This is a utility method that can be called from anywhere to get the current org code
+   * @returns {Promise<string>} - Current organization code or default value
+   */
+  async getCurrentOrganizationCode() {
+    try {
+      // Get current user data
+      const userData = JSON.parse(localStorage.getItem('auth') || '{}')
+      const currentOrgId = userData.user?.current_organization_id
+      
+      if (!currentOrgId) return 'org'
+      
+      // Fetch the organization by ID
+      const response = await this.getById(currentOrgId)
+      
+      if (response && response.data && response.data.code) {
+        return response.data.code
+      }
+      
+      return 'org'
+    } catch (error) {
+      console.warn('Error getting current organization code:', error)
+      return 'org'
+    }
   }
 }
 
