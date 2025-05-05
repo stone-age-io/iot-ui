@@ -6,10 +6,12 @@ import { organizationService } from '../services/organization/organizationServic
 import { useApiOperation } from './useApiOperation'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for organization-related functionality
  * Centralizes organization operations, formatting helpers, and navigation
+ * Enhanced to use the reactive data cache system
  */
 export function useOrganization() {
   const router = useRouter()
@@ -19,10 +21,28 @@ export function useOrganization() {
   const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
   
   // Common state
-  const organizations = ref([])
-  const userOrganizations = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Set up reactive data from the cache store for all organizations
+  const organizationsData = useReactiveData({
+    collection: 'organizations',
+    operation: 'list',
+    fetchFunction: fetchOrganizationsRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Set up reactive data for user organizations
+  const userOrganizationsData = useReactiveData({
+    collection: 'user_organizations',
+    operation: 'list',
+    fetchFunction: fetchUserOrganizationsRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose organizations as computed properties that return from reactive cache
+  const organizations = computed(() => organizationsData.data.value || [])
+  const userOrganizations = computed(() => userOrganizationsData.data.value || [])
   
   // Computed properties
   const currentOrganization = computed(() => organizationStore.currentOrganization)
@@ -37,23 +57,57 @@ export function useOrganization() {
   const canManageOrganizations = computed(() => authStore.user?.is_org_admin === true)
   
   /**
+   * Raw function to fetch all organizations - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchOrganizationsRaw(options = {}) {
+    return await organizationService.getList({
+      sort: 'name',
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
+   * Raw function to fetch user organizations - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchUserOrganizationsRaw(options = {}) {
+    return await organizationService.getUserOrganizations({
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+
+  /**
    * Fetch organizations the user belongs to
+   * @param {Object} params - Optional query parameters
    * @returns {Promise<Array>} - User organizations
    */
-  const fetchUserOrganizations = async () => {
-    return performOperation(
-      () => organizationService.getUserOrganizations(),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load organizations',
-        onSuccess: (response) => {
-          userOrganizations.value = response.data.items || []
-          organizationStore.setUserOrganizations(userOrganizations.value)
-          return userOrganizations.value
-        }
-      }
-    )
+  const fetchUserOrganizations = async (params = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      // Use the reactive data system
+      await userOrganizationsData.refreshData(skipCache)
+      
+      // Update the organization store
+      organizationStore.setUserOrganizations(userOrganizations.value)
+      
+      return userOrganizations.value
+    } catch (err) {
+      console.error('Error in fetchUserOrganizations:', err)
+      error.value = 'Failed to load user organizations'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -68,6 +122,7 @@ export function useOrganization() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to load organization details',
+        collection: 'organizations', // Specify collection for cache updates
         onSuccess: (response) => {
           return response.data
         }
@@ -77,21 +132,28 @@ export function useOrganization() {
   
   /**
    * Fetch all organizations (admin only)
+   * @param {Object} params - Optional query parameters
    * @returns {Promise<Array>} - All organizations
    */
-  const fetchOrganizations = async () => {
-    return performOperation(
-      () => organizationService.getList(),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load all organizations',
-        onSuccess: (response) => {
-          organizations.value = response.data.items || []
-          return organizations.value
-        }
-      }
-    )
+  const fetchOrganizations = async (params = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      // Use the reactive data system
+      await organizationsData.refreshData(skipCache)
+      
+      return organizations.value
+    } catch (err) {
+      console.error('Error in fetchOrganizations:', err)
+      error.value = 'Failed to load all organizations'
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -111,6 +173,7 @@ export function useOrganization() {
         loadingRef: loading,
         errorRef: error,
         errorMessage: 'Failed to switch organization',
+        collection: 'organizations', // Specify collection for cache updates
         onSuccess: async (response) => {
           try {
             // Update auth store with new organization info
@@ -190,9 +253,12 @@ export function useOrganization() {
         errorMessage: 'Failed to create organization',
         entityName: 'Organization',
         entityIdentifier: data.name,
-        collection: 'organizations',
+        collection: 'organizations', // Specify collection for cache updates
         onSuccess: (response) => {
-          // Make sure to fetch organizations before switching
+          // Force refresh of user organizations
+          userOrganizationsData.refreshData(true)
+          
+          // Add to locally tracked user organizations
           userOrganizations.value.push(response.data)
           organizationStore.setUserOrganizations(userOrganizations.value)
           
@@ -219,19 +285,16 @@ export function useOrganization() {
         errorMessage: 'Failed to update organization',
         entityName: 'Organization',
         entityIdentifier: data.name,
-        collection: 'organizations',
+        collection: 'organizations', // Specify collection for cache updates
         onSuccess: (response) => {
           // If this is the current organization, update it in the store
           if (currentOrganization.value?.id === id) {
             organizationStore.setCurrentOrganization(response.data)
           }
           
-          // Update the organization in the list
-          const index = userOrganizations.value.findIndex(o => o.id === id)
-          if (index !== -1) {
-            userOrganizations.value[index] = response.data
-            organizationStore.setUserOrganizations(userOrganizations.value)
-          }
+          // Update cached data
+          organizationsData.refreshData(true)
+          userOrganizationsData.refreshData(true)
           
           return response.data
         }
@@ -254,19 +317,23 @@ export function useOrganization() {
         errorMessage: 'Failed to delete organization',
         entityName: 'Organization',
         entityIdentifier: name,
-        collection: 'organizations',
+        collection: 'organizations', // Specify collection for cache updates
         onSuccess: async () => {
           // If this was the current organization, switch to another one
           if (currentOrganization.value?.id === id) {
             // Find another organization to switch to
+            // Force refresh user organizations first
+            await fetchUserOrganizations({ skipCache: true })
+            
             const otherOrg = userOrganizations.value.find(o => o.id !== id)
             if (otherOrg) {
               await switchOrganization(otherOrg.id)
             }
           }
           
-          // Update the organizations list
-          await fetchUserOrganizations()
+          // Force refresh cached data
+          organizationsData.refreshData(true)
+          userOrganizationsData.refreshData(true)
           
           return true
         }
