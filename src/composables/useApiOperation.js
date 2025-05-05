@@ -8,7 +8,7 @@ import { useCacheStore } from '../stores/cacheStore'
  * Provides a consistent way to handle loading states, errors, and toast notifications
  * Enhanced to work with the centralized cache store
  * 
- * @returns {Object} - API operation handler functions
+ * @returns {Object} API operation handler functions
  */
 export function useApiOperation() {
   const toast = useToast()
@@ -48,7 +48,7 @@ export function useApiOperation() {
       // Perform the operation
       response = await operation()
       
-      // Update cache store timestamp if collection is specified (for GET operations)
+      // Update cache store timestamp if collection is specified
       if (collection && response && !response.skipCacheUpdate) {
         cacheStore.updateTimestamp(collection)
       }
