@@ -9,6 +9,7 @@ import { useTypesStore } from './types'
 import { useOrganizationStore } from './organization'
 import { clearUserCache } from '../utils/cacheUtils'
 import { userService } from '../services/user/userService'
+import { organizationService } from '../services/organization/organizationService'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -60,8 +61,13 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      // Fixed endpoint access - ENDPOINTS is already the AUTH object from configService
-      const response = await apiService.post('/pb/api' + ENDPOINTS.LOGIN, credentials)
+      // Add expand parameters to get organization data immediately
+      const queryParams = new URLSearchParams({
+        expand: 'organizations,current_organization_id'
+      }).toString()
+      
+      // Login with expand parameters
+      const response = await apiService.post(`/pb/api${ENDPOINTS.LOGIN}?${queryParams}`, credentials)
       
       // Store the token and user info
       token.value = response.data.token
@@ -81,14 +87,41 @@ export const useAuthStore = defineStore('auth', () => {
         // Initialize organization store
         const organizationStore = useOrganizationStore()
         
+        // Get organization data from the expanded response
+        let currentOrg = null
+        if (response.data.record?.expand?.current_organization_id) {
+          // Direct from response's expanded data
+          currentOrg = response.data.record.expand.current_organization_id
+        } else if (response.data.record?.current_organization_id) {
+          // Try to fetch organization separately if it wasn't expanded
+          try {
+            const orgResponse = await organizationService.getById(response.data.record.current_organization_id)
+            if (orgResponse && orgResponse.data) {
+              currentOrg = orgResponse.data
+            }
+          } catch (orgErr) {
+            console.warn('Error fetching current organization:', orgErr)
+          }
+        }
+        
         // Set current organization if available
-        if (response.data.organization) {
-          organizationStore.setCurrentOrganization(response.data.organization)
+        if (currentOrg) {
+          organizationStore.setCurrentOrganization(currentOrg)
         }
         
         // Set user organizations if available
-        if (response.data.organizations) {
-          organizationStore.setUserOrganizations(response.data.organizations)
+        if (response.data.record?.expand?.organizations) {
+          organizationStore.setUserOrganizations(response.data.record.expand.organizations)
+        } else if (response.data.record?.organizations) {
+          // Try to fetch organizations if they weren't expanded
+          try {
+            const userResponse = await userService.getCurrentUser()
+            if (userResponse?.data?.organizations) {
+              organizationStore.setUserOrganizations(userResponse.data.organizations)
+            }
+          } catch (userErr) {
+            console.warn('Error fetching user organizations:', userErr)
+          }
         }
         
         // Store user data in localStorage for cache segmentation
@@ -97,7 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
           currentOrgId: user.value.current_organization_id
         }))
       } catch (err) {
-        console.warn('Error decoding token, using response data instead', err)
+        console.warn('Error decoding token or processing user data:', err)
         // Fallback to response data if token cannot be decoded
         user.value = {
           id: response.data.record?.id,
@@ -107,20 +140,19 @@ export const useAuthStore = defineStore('auth', () => {
           current_organization_id: response.data.record?.current_organization_id || ''
         }
         
-        // Initialize organization store
+        // Still try to initialize organization data
         const organizationStore = useOrganizationStore()
         
-        // Set current organization if available
-        if (response.data.organization) {
-          organizationStore.setCurrentOrganization(response.data.organization)
+        // Attempt to set organization data
+        if (response.data.record?.expand?.current_organization_id) {
+          organizationStore.setCurrentOrganization(response.data.record.expand.current_organization_id)
         }
         
-        // Set user organizations if available
-        if (response.data.organizations) {
-          organizationStore.setUserOrganizations(response.data.organizations)
+        if (response.data.record?.expand?.organizations) {
+          organizationStore.setUserOrganizations(response.data.record.expand.organizations)
         }
         
-        // Store user data in localStorage for cache segmentation even in fallback case
+        // Store user data in localStorage even in fallback case
         localStorage.setItem('auth', JSON.stringify({ 
           user: user.value,
           currentOrgId: user.value.current_organization_id
@@ -227,15 +259,29 @@ export const useAuthStore = defineStore('auth', () => {
         // Initialize organization store
         const organizationStore = useOrganizationStore()
         
-        // Set current organization if available
+        // Set current organization if available from expanded data
         if (response.data.organization) {
           organizationStore.setCurrentOrganization(response.data.organization)
         } else if (response.data.current_organization_id) {
-          // If the organization object is not included in the response but the ID is,
-          // check if it's in the user's organizations and set it
-          const org = organizationStore.findOrganizationById(response.data.current_organization_id)
-          if (org) {
-            organizationStore.setCurrentOrganization(org)
+          // If organization object not included, try to fetch it
+          try {
+            // First check if it's in the user's organizations
+            let org = organizationStore.findOrganizationById(response.data.current_organization_id)
+            
+            // If not found locally, try to fetch it
+            if (!org) {
+              const orgResponse = await organizationService.getById(response.data.current_organization_id)
+              if (orgResponse && orgResponse.data) {
+                org = orgResponse.data
+              }
+            }
+            
+            // Set the organization if found
+            if (org) {
+              organizationStore.setCurrentOrganization(org)
+            }
+          } catch (orgErr) {
+            console.warn('Error fetching current organization:', orgErr)
           }
         }
         

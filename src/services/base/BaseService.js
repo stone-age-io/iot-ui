@@ -10,7 +10,7 @@ import {
 
 /**
  * Base service class for entity operations
- * Updated to rely on PocketBase API rules for organization-based access control
+ * Updated to automatically include organization_id on creation
  */
 export class BaseService {
   /**
@@ -159,24 +159,33 @@ export class BaseService {
 
   /**
    * Create a new entity with auto-generated UUIDv7
+   * Now automatically includes the current organization ID if available
    * @param {Object} entity - Entity data
    * @returns {Promise} - Axios promise with created entity
    */
   async create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
-    // Note: We don't need to add organization_id manually here
-    // The PocketBase API rules will automatically use the current organization
+    // Get current organization ID from getUserAuthData
+    const authData = this.getUserAuthData();
+    const currentOrgId = authData?.currentOrgId;
     
-    // Generate a UUIDv7 for the entity if ID is not already specified
-    // Uses the uuidv7 library for robust, secure UUIDv7 generation
-    const entityWithId = {
-      ...entity,
-      id: entity.id || generateUUIDv7()
+    // Create a copy of the entity to avoid mutating the original
+    const entityData = { ...entity };
+    
+    // Add organization_id if not already provided and we have a current org
+    if (currentOrgId && !entityData.organization_id) {
+      entityData.organization_id = currentOrgId;
     }
     
+    // Generate a UUIDv7 for the entity if ID is not already specified
+    const entityWithId = {
+      ...entityData,
+      id: entityData.id || generateUUIDv7()
+    };
+    
     // Process entity data before sending to API
-    const processedData = this.stringifyJsonFields(entityWithId)
+    const processedData = this.stringifyJsonFields(entityWithId);
     
     try {
       const response = await apiHelpers.create(endpoint, processedData);

@@ -41,14 +41,20 @@ export class UserService extends BaseService {
   
   /**
    * Get current user profile with organizations data
+   * Ensuring organizations are properly expanded
    * @returns {Promise} - Axios promise with user data
    */
   getCurrentUser() {
     // Use proper path construction from config service
     const endpoint = configService.getPocketBaseUrl(configService.endpoints.AUTH.REFRESH)
     
-    // Use POST method with auth token for refresh endpoint
-    return apiHelpers.axiosInstance.post(endpoint)
+    // Add expansions for organization data
+    const params = {
+      expand: 'organizations,current_organization_id'
+    }
+    
+    // Use POST method with auth token for refresh endpoint and append expansions
+    return apiHelpers.axiosInstance.post(`${endpoint}?${new URLSearchParams(params).toString()}`)
       .then(response => {
         // Parse any potential JSON fields
         if (response.data && response.data.record) {
@@ -62,15 +68,27 @@ export class UserService extends BaseService {
             }
           }
           
-          response.data.record = this.parseJsonFields(response.data.record)
-          return { data: response.data.record }
+          // Extract expanded organization data
+          const userData = this.parseJsonFields(response.data.record)
+          
+          // Extract the organization from the expand object if available
+          if (response.data.record.expand?.current_organization_id) {
+            userData.organization = response.data.record.expand.current_organization_id
+          }
+          
+          // Extract all organizations from the expand object if available
+          if (response.data.record.expand?.organizations) {
+            userData.organizations = response.data.record.expand.organizations
+          }
+          
+          return { data: userData }
         }
         return response
       })
       .catch(error => {
-        console.error('Error fetching user profile:', error);
-        throw error;
-      });
+        console.error('Error fetching user profile:', error)
+        throw error
+      })
   }
   
   /**

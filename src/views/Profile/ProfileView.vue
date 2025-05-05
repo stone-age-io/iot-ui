@@ -170,123 +170,96 @@
             </h2>
           </div>
           <div class="p-6">
-            <div class="mb-4">
-              <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Current Organization</h3>
-              <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark mb-3">
-                <div class="flex items-center">
-                  <div v-if="currentOrganization?.logo" class="w-8 h-8 mr-3">
-                    <img :src="currentOrganization.logo" alt="Logo" class="w-full h-full object-contain rounded" />
-                  </div>
-                  <div v-else class="w-8 h-8 bg-primary-700 rounded-md flex items-center justify-center text-white mr-3">
-                    {{ currentOrganization?.name ? currentOrganization.name.charAt(0).toUpperCase() : '?' }}
-                  </div>
-                  <div>
-                    <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ currentOrganization?.name }}</div>
-                    <div class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ currentOrganization?.code }}</div>
-                  </div>
-                </div>
-              </div>
+            <!-- Loading indicator for organizations -->
+            <div v-if="organizationsLoading" class="flex justify-center items-center py-4">
+              <ProgressSpinner strokeWidth="3" style="width: 30px; height: 30px;" />
             </div>
             
-            <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Your Organizations</h3>
-            <div class="grid grid-cols-1 gap-3 mb-4">
-              <div
-                v-for="org in userOrganizations"
-                :key="org.id"
-                class="p-3 rounded-lg border cursor-pointer hover:shadow-md"
-                :class="org.id === currentOrganization?.id ? 
-                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
-                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
-                @click="switchToOrganization(org)"
-              >
-                <div class="flex items-center">
-                  <div v-if="org.logo" class="w-6 h-6 mr-2">
-                    <img :src="org.logo" alt="Logo" class="w-full h-full object-contain rounded" />
-                  </div>
-                  <div v-else class="w-6 h-6 bg-primary-700 rounded-sm flex items-center justify-center text-white mr-2">
-                    {{ org.name.charAt(0).toUpperCase() }}
-                  </div>
-                  <div>
-                    <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ org.name }}</div>
-                  </div>
-                  <div v-if="org.id === currentOrganization?.id" class="ml-auto">
-                    <i class="pi pi-check text-primary-500"></i>
+            <div v-else>
+              <!-- Current Organization Card -->
+              <div class="mb-4">
+                <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Current Organization</h3>
+                
+                <div v-if="currentOrganization" class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark mb-3">
+                  <div class="flex items-center">
+                    <div v-if="currentOrganization.logo" class="w-8 h-8 mr-3">
+                      <img :src="currentOrganization.logo" alt="Logo" class="w-full h-full object-contain rounded" />
+                    </div>
+                    <div v-else class="w-8 h-8 bg-primary-700 rounded-md flex items-center justify-center text-white mr-3">
+                      {{ currentOrganization.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ currentOrganization.name }}</div>
+                      <div class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ currentOrganization.code }}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <!-- Only users with is_org_admin=true can create new organizations -->
-            <Button
-              v-if="canManageOrganizations"
-              label="Create New Organization"
-              icon="pi pi-plus"
-              @click="navigateToCreateOrganization"
-              class="w-full"
-            />
-            
-            <!-- Add management button for org admins -->
-            <Button
-              v-if="canManageOrganizations"
-              label="Manage Organizations"
-              icon="pi pi-cog"
-              @click="navigateToOrganizations"
-              class="w-full mt-2 p-button-outlined"
-            />
-          </div>
-        </div>
-        
-        <!-- Theme Settings -->
-        <div class="mt-6 bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-              <i class="pi pi-palette mr-2"></i>
-              Theme Settings
-            </h2>
-          </div>
-          <div class="p-6">
-            <div class="flex flex-col gap-3">
-              <div
-                class="p-3 rounded-lg border cursor-pointer theme-option"
-                :class="currentTheme === 'light' ? 
-                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
-                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
-                @click="setLightTheme"
-              >
-                <div class="flex items-center">
-                  <i class="pi pi-sun mr-3 text-yellow-500"></i>
-                  <span class="font-medium">Light Theme</span>
-                  <i v-if="currentTheme === 'light'" class="pi pi-check ml-auto text-primary-500"></i>
+                
+                <!-- No current organization state -->
+                <div v-else class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark mb-3">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 mr-3">
+                      <i class="pi pi-building"></i>
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-secondary dark:text-content-secondary-dark">No Current Organization</div>
+                      <div class="text-sm text-content-tertiary dark:text-content-tertiary-dark">Select an organization below</div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div
-                class="p-3 rounded-lg border cursor-pointer theme-option"
-                :class="currentTheme === 'dark' ? 
-                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
-                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
-                @click="setDarkTheme"
-              >
-                <div class="flex items-center">
-                  <i class="pi pi-moon mr-3 text-blue-500"></i>
-                  <span class="font-medium">Dark Theme</span>
-                  <i v-if="currentTheme === 'dark'" class="pi pi-check ml-auto text-primary-500"></i>
+              <!-- Organizations List -->
+              <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Your Organizations</h3>
+              
+              <div v-if="userOrganizations.length === 0" class="text-center py-4 text-content-secondary dark:text-content-secondary-dark">
+                <p>You are not a member of any organizations yet.</p>
+              </div>
+              
+              <div v-else class="grid grid-cols-1 gap-3 mb-4">
+                <div
+                  v-for="org in userOrganizations"
+                  :key="org.id"
+                  class="p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200"
+                  :class="currentOrganization && org.id === currentOrganization.id ? 
+                    'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
+                    'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
+                  @click="switchToOrganization(org)"
+                >
+                  <div class="flex items-center">
+                    <div v-if="org.logo" class="w-6 h-6 mr-2">
+                      <img :src="org.logo" alt="Logo" class="w-full h-full object-contain rounded" />
+                    </div>
+                    <div v-else class="w-6 h-6 bg-primary-700 rounded-sm flex items-center justify-center text-white mr-2">
+                      {{ org.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ org.name }}</div>
+                    </div>
+                    <div v-if="currentOrganization && org.id === currentOrganization.id" class="ml-auto">
+                      <i class="pi pi-check text-primary-500"></i>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div
-                class="p-3 rounded-lg border cursor-pointer theme-option"
-                :class="currentTheme === 'auto' ? 
-                  'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
-                  'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
-                @click="setSystemTheme"
-              >
-                <div class="flex items-center">
-                  <i class="pi pi-desktop mr-3 text-green-500"></i>
-                  <span class="font-medium">System Theme</span>
-                  <i v-if="currentTheme === 'auto'" class="pi pi-check ml-auto text-primary-500"></i>
-                </div>
-              </div>
+              <!-- Only users with is_org_admin=true can create new organizations -->
+              <Button
+                v-if="canManageOrganizations"
+                label="Create New Organization"
+                icon="pi pi-plus"
+                @click="navigateToCreateOrganization"
+                class="w-full"
+              />
+              
+              <!-- Add management button for org admins -->
+              <Button
+                v-if="canManageOrganizations"
+                label="Manage Organizations"
+                icon="pi pi-cog"
+                @click="navigateToOrganizations"
+                class="w-full mt-2 p-button-outlined"
+              />
             </div>
           </div>
         </div>
@@ -301,12 +274,16 @@ import { useUserProfile } from '../../composables/useUserProfile'
 import { useTheme } from '../../composables/useTheme'
 import { useOrganization } from '../../composables/useOrganization'
 import { useAuthStore } from '../../stores/auth'
+import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../components/common/PageHeader.vue'
 import FormField from '../../components/common/FormField.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import ProgressSpinner from 'primevue/progressspinner'
+
+// Toast service
+const toast = useToast()
 
 // Composables
 const { profile, loading, error, fetchProfile, updateProfile: saveProfile, changePassword: savePassword, formatDate } = useUserProfile()
@@ -343,6 +320,7 @@ const passwordErrors = ref({
 
 const saving = ref(false)
 const changingPassword = ref(false)
+const organizationsLoading = ref(false)
 
 // Auth store for user initials
 const authStore = useAuthStore()
@@ -350,6 +328,7 @@ const userInitials = computed(() => authStore.userInitials)
 
 // Load profile data on component mount
 onMounted(async () => {
+  // Load user profile data
   await fetchProfile()
   
   // Copy profile data to form
@@ -362,7 +341,25 @@ onMounted(async () => {
   }
   
   // Load user organizations
-  await fetchUserOrganizations()
+  organizationsLoading.value = true
+  try {
+    await fetchUserOrganizations()
+    
+    // If we don't have a current organization set, refresh user data to ensure we get it
+    if (!currentOrganization.value) {
+      await authStore.refreshUserData()
+    }
+  } catch (err) {
+    console.error('Error loading organizations:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load organizations. Please refresh the page.',
+      life: 5000
+    })
+  } finally {
+    organizationsLoading.value = false
+  }
 })
 
 // Update profile info
@@ -378,6 +375,12 @@ const updateProfile = async () => {
     // Success is handled by the composable
   } catch (err) {
     console.error('Error updating profile:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update profile. Please try again.',
+      life: 3000
+    })
   } finally {
     saving.value = false
   }
@@ -440,6 +443,12 @@ const changePassword = async () => {
     // Success is handled by the composable
   } catch (err) {
     console.error('Error changing password:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to change password. Please verify your current password and try again.',
+      life: 3000
+    })
   } finally {
     changingPassword.value = false
   }
@@ -447,8 +456,28 @@ const changePassword = async () => {
 
 // Switch to selected organization
 const switchToOrganization = async (org) => {
-  if (org.id !== currentOrganization.value?.id) {
-    await switchOrganization(org.id)
+  if (!org || (currentOrganization.value && org.id === currentOrganization.value.id)) {
+    return // Skip if no org or already on current org
+  }
+  
+  try {
+    const success = await switchOrganization(org.id)
+    if (success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Organization Changed',
+        detail: `Switched to ${org.name}`,
+        life: 3000
+      })
+    }
+  } catch (err) {
+    console.error('Error switching organization:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to switch organization. Please try again.',
+      life: 3000
+    })
   }
 }
 </script>
