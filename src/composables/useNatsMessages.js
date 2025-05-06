@@ -4,6 +4,7 @@ import { useToast } from 'primevue/usetoast'
 import natsService from '../services/nats/natsService'
 import { natsConfigService } from '../services/nats/natsConfigService'
 import { useApiOperation } from './useApiOperation'
+import { useOrganizationStore } from '../stores/organization'
 
 /**
  * Composable for managing NATS messages subscriptions and display
@@ -29,6 +30,7 @@ export function useNatsMessages(options = {}) {
   // Get the toast service
   const toast = useToast();
   const { performOperation } = useApiOperation();
+  const organizationStore = useOrganizationStore();
   
   // Core state
   const messages = ref([]);
@@ -41,6 +43,7 @@ export function useNatsMessages(options = {}) {
   const error = ref(null);
   const isSubscribed = ref(false);
   const connectionReady = ref(natsService.isConnected());
+  const activeSpecificTopic = ref(specificTopic);
   
   // Pagination state
   const paginatedMessagesCache = ref([]);
@@ -56,11 +59,11 @@ export function useNatsMessages(options = {}) {
    */
   const loadTopics = () => {
     // If specificTopic is provided, use it and bypass config
-    if (specificTopic) {
+    if (activeSpecificTopic.value) {
       // Handle both string and array formats
-      const topicArray = Array.isArray(specificTopic) 
-        ? specificTopic 
-        : [specificTopic];
+      const topicArray = Array.isArray(activeSpecificTopic.value) 
+        ? activeSpecificTopic.value 
+        : [activeSpecificTopic.value];
       
       // Set topics and return them
       topics.value = topicArray;
@@ -255,8 +258,10 @@ export function useNatsMessages(options = {}) {
       // Subscribe to each topic
       let successCount = 0;
       for (const topic of topicsToSubscribe) {
-        const result = await subscribe(topic);
-        if (result) successCount++;
+        if (topic) { // Only subscribe to valid topics
+          const result = await subscribe(topic);
+          if (result) successCount++;
+        }
       }
       
       // Mark as subscribed if at least one subscription succeeded
@@ -559,6 +564,27 @@ export function useNatsMessages(options = {}) {
     return goToPage(currentPage.value - 1);
   };
   
+  /**
+   * Update the specific topic and resubscribe
+   * @param {string|null} newTopic - New topic to subscribe to
+   */
+  const updateSpecificTopic = async (newTopic) => {
+    if (newTopic === activeSpecificTopic.value) return;
+    
+    console.log(`Updating specific topic to: ${newTopic}`);
+    
+    // Unsubscribe from all current topics
+    await unsubscribeFromAllTopics();
+    
+    // Update the active topic
+    activeSpecificTopic.value = newTopic;
+    
+    // Subscribe to the new topic if connected
+    if (natsService.isConnected()) {
+      await subscribeToAllTopics();
+    }
+  };
+  
   // Reset all state to initial values
   const reset = () => {
     messages.value = [];
@@ -579,6 +605,13 @@ export function useNatsMessages(options = {}) {
     }
   };
   
+  // Watch for changes in the specificTopic option to update subscriptions
+  watch(() => options.specificTopic, (newTopic) => {
+    if (newTopic !== activeSpecificTopic.value) {
+      updateSpecificTopic(newTopic);
+    }
+  });
+  
   // Watch for changes in messages to handle pagination properly
   watch(() => messages.value.length, () => {
     // If we're on a page that no longer exists, go to the last page
@@ -593,6 +626,16 @@ export function useNatsMessages(options = {}) {
   // Watch for page size changes
   watch(pageSize, () => {
     refreshPaginatedMessages(true);
+  });
+  
+  // Watch for organization changes to update subscriptions
+  watch(() => organizationStore.currentOrganization?.id, () => {
+    console.log('Organization changed, checking topic subscriptions');
+    
+    // If the topics change due to organization, we'll catch it in the watch for specificTopic
+    if (activeSpecificTopic.value !== options.specificTopic) {
+      updateSpecificTopic(options.specificTopic);
+    }
   });
   
   // Setup on mount
@@ -652,6 +695,7 @@ export function useNatsMessages(options = {}) {
     goToPage,
     nextPage,
     prevPage,
-    reset
+    reset,
+    updateSpecificTopic
   };
 }

@@ -1,14 +1,16 @@
 // src/composables/useTypeManagement.js
-import { ref, computed, inject } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import dayjs from 'dayjs'
 import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Base composable for type management
  * Provides common functions for all type entities (edge types, location types, etc.)
+ * Enhanced to use the reactive data cache system
  * 
  * @param {Object} typeService - Service instance for the specific type
  * @param {Object} routeNames - Route names for navigation (list, detail, create, edit)
@@ -18,16 +20,29 @@ import { useTypesStore } from '../stores/types'
 export function useTypeManagement(typeService, routeNames, entityName) {
   const router = useRouter()
   const toast = useToast()
-  const { performOperation, performCreate, performUpdate, performDelete } = useApiOperation()
+  const { performOperation, performDelete } = useApiOperation()
   const typesStore = useTypesStore()
   
   // Determine the store collection name based on entityName
   const storeCollectionName = getStoreCollectionName(entityName)
   
+  // Map entityName to a collection name for cache purposes
+  const cacheCollection = mapToCollectionName(entityName)
+  
   // Common state
-  const types = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Set up reactive data from the cache store
+  const typesData = useReactiveData({
+    collection: cacheCollection,
+    operation: 'list',
+    fetchFunction: fetchTypesRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose types as a computed property that returns from reactive cache
+  const types = computed(() => typesData.data.value || [])
   
   /**
    * Determine the store collection name based on entity name
@@ -43,6 +58,19 @@ export function useTypeManagement(typeService, routeNames, entityName) {
   }
   
   /**
+   * Map entity name to a collection name for caching
+   * @param {string} name - Entity name
+   * @returns {string} - Collection name
+   */
+  function mapToCollectionName(name) {
+    if (name.includes('Edge Type')) return 'edge_types'
+    if (name.includes('Edge Region')) return 'edge_regions' 
+    if (name.includes('Location Type')) return 'location_types'
+    if (name.includes('Thing Type')) return 'thing_types'
+    return name.toLowerCase().replace(/\s+/g, '_')
+  }
+
+  /**
    * Format date for display
    * @param {string} dateString - ISO date string
    * @returns {string} - Formatted date
@@ -53,26 +81,57 @@ export function useTypeManagement(typeService, routeNames, entityName) {
   }
   
   /**
-   * Fetch all types
+   * Raw function to fetch types - used internally by useReactiveData
+   * @param {Object} options - Fetch options including skipCache flag
+   * @returns {Promise<Object>} - Response from API
+   */
+  async function fetchTypesRaw(options = {}) {
+    return await typeService.getList({
+      sort: 'type',
+      ...options,
+      skipCache: options?.skipCache
+    })
+  }
+  
+  /**
+   * Fetch all types with optional filtering
    * @param {Object} params - Optional query params
    * @returns {Promise<Array>} - List of types
    */
   const fetchTypes = async (params = {}) => {
-    return performOperation(
-      () => typeService.getList({ 
-        sort: 'type',
-        ...params
-      }),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: `Failed to load ${entityName.toLowerCase()}s`,
-        onSuccess: (response) => {
-          types.value = response.data.items || []
-          return types.value
+    loading.value = true
+    error.value = null
+    
+    try {
+      // If user explicitly wants fresh data or provides filters
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      if (skipCache || Object.keys(params).length > 0) {
+        // For filtered queries, use direct API call
+        const response = await typeService.getList({
+          sort: 'type',
+          ...params,
+          skipCache
+        })
+        
+        // Update the cache with this response
+        if (response && response.data) {
+          typesData.updateData(response)
+          return response.data.items || []
         }
+        return []
+      } else {
+        // Use the reactive data system for standard fetches
+        await typesData.refreshData(skipCache)
+        return types.value
       }
-    )
+    } catch (err) {
+      console.error(`Error in fetch${entityName}s:`, err)
+      error.value = `Failed to load ${entityName.toLowerCase()}s`
+      return []
+    } finally {
+      loading.value = false
+    }
   }
   
   /**
@@ -92,6 +151,7 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         loadingRef: loading,
         errorRef: error,
         errorMessage: `Failed to load ${entityName.toLowerCase()} details`,
+        collection: cacheCollection, // Specify collection for cache updates
         onSuccess: (response) => response.data
       }
     )
@@ -125,7 +185,11 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorRef: error,
         errorMessage: `Failed to create ${entityName.toLowerCase()}`,
         successMessage: `${entityName} "${typeData.type}" has been created`,
+        collection: cacheCollection, // Specify collection for cache updates
         onSuccess: (response) => {
+          // Force refresh the data
+          typesData.refreshData(true)
+          
           // Refresh the types store
           if (storeCollectionName) {
             typesStore.refreshTypeCollection(storeCollectionName)
@@ -167,7 +231,11 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorRef: error,
         errorMessage: `Failed to update ${entityName.toLowerCase()}`,
         successMessage: `${entityName} "${typeData.type}" has been updated`,
+        collection: cacheCollection, // Specify collection for cache updates
         onSuccess: (response) => {
+          // Force refresh the data
+          typesData.refreshData(true)
+          
           // Refresh the types store
           if (storeCollectionName) {
             typesStore.refreshTypeCollection(storeCollectionName)
@@ -193,7 +261,11 @@ export function useTypeManagement(typeService, routeNames, entityName) {
         errorMessage: `Failed to delete ${entityName.toLowerCase()}`,
         entityName: entityName,
         entityIdentifier: `"${name}"`,
+        collection: cacheCollection, // Specify collection for cache updates
         onSuccess: () => {
+          // Force refresh the data
+          typesData.refreshData(true)
+          
           // Refresh the types store
           if (storeCollectionName) {
             typesStore.refreshTypeCollection(storeCollectionName)
@@ -218,6 +290,9 @@ export function useTypeManagement(typeService, routeNames, entityName) {
   const navigateToTypeDetail = (id) => router.push({ name: routeNames.detail, params: { id } })
   const navigateToTypeEdit = (id) => router.push({ name: routeNames.edit, params: { id } })
   const navigateToTypeCreate = () => router.push({ name: routeNames.create })
+  
+  // Refresh the types data when the composable is initialized
+  typesData.refreshData(false)
   
   return {
     // State

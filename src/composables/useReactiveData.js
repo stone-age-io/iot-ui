@@ -1,7 +1,7 @@
 // src/composables/useReactiveData.js
-import { ref, computed, watch, onMounted } from 'vue';
-import { useCacheStore } from '../stores/cacheStore';
-import { useApiOperation } from './useApiOperation';
+import { ref, computed, watch, onMounted } from 'vue'
+import { useCacheStore } from '../stores/cacheStore'
+import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for working with reactive data from the cache store
@@ -9,7 +9,7 @@ import { useApiOperation } from './useApiOperation';
  * that automatically updates when the background refresh happens
  * 
  * @param {Object} options - Configuration options
- * @param {string} options.collection - Collection name
+ * @param {string} options.collection - Collection name (e.g., 'edges', 'locations')
  * @param {string} options.operation - Operation type ('list' or 'detail')
  * @param {string} options.id - ID for detail operations (optional)
  * @param {Function} options.fetchFunction - Function to call to fetch data
@@ -23,22 +23,22 @@ export function useReactiveData(options) {
     id = null,
     fetchFunction,
     processData = data => data
-  } = options;
+  } = options
   
   // API operation composable for loading/error handling
-  const { performOperation } = useApiOperation();
+  const { performOperation } = useApiOperation()
   
   // Get the cache store
-  const cacheStore = useCacheStore();
+  const cacheStore = useCacheStore()
   
   // Local state
-  const loading = ref(true);
-  const error = ref(null);
-  const initialLoadComplete = ref(false);
-  const data = ref(null);
+  const loading = ref(true)
+  const error = ref(null)
+  const initialLoadComplete = ref(false)
+  const data = ref(null)
   
   // Get timestamp from the cache store
-  const timestamp = computed(() => cacheStore.lastUpdated[collection]);
+  const timestamp = computed(() => cacheStore.lastUpdated[collection])
   
   /**
    * Retrieve data from cache and update the local reference
@@ -46,27 +46,30 @@ export function useReactiveData(options) {
    */
   const getDataFromCache = () => {
     try {
-      const cachedData = cacheStore.getData(collection, operation, id);
+      const cachedData = cacheStore.getData(collection, operation, id)
       if (cachedData) {
-        data.value = processData(cachedData);
-        return true;
+        data.value = processData(cachedData)
+        return true
       }
     } catch (err) {
-      console.warn(`Error retrieving ${collection} data from cache:`, err);
+      console.warn(`Error retrieving ${collection} data from cache:`, err)
     }
-    return false;
-  };
+    return false
+  }
   
-  // Load data from API (initial load)
+  /**
+   * Load data from API (initial load)
+   * @returns {Promise<any>} - Loaded data
+   */
   const loadData = async () => {
     // Check cache first for immediate display
     if (getDataFromCache()) {
-      loading.value = false; // Data from cache is immediately available
+      loading.value = false // Data from cache is immediately available
     } else {
-      loading.value = true;
+      loading.value = true
     }
     
-    error.value = null;
+    error.value = null
     
     try {
       const response = await performOperation(
@@ -77,35 +80,39 @@ export function useReactiveData(options) {
           errorMessage: `Failed to load ${collection} data`,
           collection
         }
-      );
+      )
       
       // Process the response data and store it
       if (response && (response.data || response.fromCache)) {
         // Handle different response formats
-        const rawData = response.data || response;
-        data.value = processData(rawData);
+        const rawData = response.data || response
+        data.value = processData(rawData)
         
         // Also update the cache store if it's a cacheable operation
         if (operation === 'list' || operation === 'detail') {
-          cacheStore.storeData(collection, operation, id, rawData);
+          cacheStore.storeData(collection, operation, id, rawData)
         }
       }
       
-      initialLoadComplete.value = true;
-      return data.value;
+      initialLoadComplete.value = true
+      return data.value
     } catch (err) {
-      console.error(`Error loading ${collection} data:`, err);
-      error.value = err.message || `Failed to load ${collection} data`;
-      return null;
+      console.error(`Error loading ${collection} data:`, err)
+      error.value = err.message || `Failed to load ${collection} data`
+      return null
     } finally {
-      loading.value = false;
+      loading.value = false
     }
-  };
+  }
   
-  // Refresh data (manual refresh)
+  /**
+   * Refresh data (manual refresh)
+   * @param {boolean} skipCache - Whether to skip cache and force fresh data
+   * @returns {Promise<any>} - Refreshed data
+   */
   const refreshData = async (skipCache = true) => {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
     
     try {
       const response = await performOperation(
@@ -116,29 +123,29 @@ export function useReactiveData(options) {
           errorMessage: `Failed to refresh ${collection} data`,
           collection
         }
-      );
+      )
       
       // Process the response data and store it
       if (response && (response.data || response.fromCache)) {
         // Handle different response formats
-        const rawData = response.data || response;
-        data.value = processData(rawData);
+        const rawData = response.data || response
+        data.value = processData(rawData)
         
         // Also update the cache store
         if (operation === 'list' || operation === 'detail') {
-          cacheStore.storeData(collection, operation, id, rawData);
+          cacheStore.storeData(collection, operation, id, rawData)
         }
       }
       
-      return data.value;
+      return data.value
     } catch (err) {
-      console.error(`Error refreshing ${collection} data:`, err);
-      error.value = err.message || `Failed to refresh ${collection} data`;
-      return null;
+      console.error(`Error refreshing ${collection} data:`, err)
+      error.value = err.message || `Failed to refresh ${collection} data`
+      return null
     } finally {
-      loading.value = false;
+      loading.value = false
     }
-  };
+  }
   
   /**
    * Manually update the data in the reactive state and cache store
@@ -147,29 +154,29 @@ export function useReactiveData(options) {
    * @param {Object} newData - New data to store
    */
   const updateData = (newData) => {
-    if (!newData) return;
+    if (!newData) return
     
     // Update local state
-    const processedData = processData(newData.data || newData);
-    data.value = processedData;
+    const processedData = processData(newData.data || newData)
+    data.value = processedData
     
     // Update the cache store
     if (operation === 'list' || operation === 'detail') {
-      cacheStore.storeData(collection, operation, id, newData.data || newData);
-      cacheStore.updateTimestamp(collection);
+      cacheStore.storeData(collection, operation, id, newData.data || newData)
+      cacheStore.updateTimestamp(collection)
     }
-  };
+  }
   
   // Watch for changes in the cache timestamp for this collection
-  // This is the key fix to ensure reactivity when the cache is updated
+  // This is the key to ensuring reactivity when the cache is updated
   watch(
     () => timestamp.value,
     (newTimestamp, oldTimestamp) => {
       if (newTimestamp && initialLoadComplete.value) {
-        getDataFromCache();
+        getDataFromCache()
       }
     }
-  );
+  )
   
   // Watch for changes in the current collection
   watch(
@@ -177,18 +184,18 @@ export function useReactiveData(options) {
     (newCollection) => {
       if (newCollection === collection && !initialLoadComplete.value) {
         // Load data when navigating to this collection and not yet loaded
-        loadData();
+        loadData()
       }
     },
     { immediate: true }
-  );
+  )
   
   // Load data on component mount if not already loading/loaded
   onMounted(() => {
     if (!initialLoadComplete.value && !loading.value) {
-      loadData();
+      loadData()
     }
-  });
+  })
   
   return {
     data,
@@ -197,5 +204,5 @@ export function useReactiveData(options) {
     refreshData,
     updateData,
     timestamp
-  };
+  }
 }

@@ -1,3 +1,4 @@
+<!-- src/views/Entities/Things/ThingDetailView.vue -->
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -99,6 +100,15 @@
                     >
                       {{ thing.active ? 'Active' : 'Inactive' }}
                     </span>
+                  </div>
+                </div>
+                
+                <!-- Organization -->
+                <div v-if="currentOrganization" class="detail-field">
+                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Organization</div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono text-xs text-content-secondary dark:text-content-secondary-dark">{{ currentOrganization.code }}</span>
+                    <span class="text-content-primary dark:text-content-primary-dark">{{ currentOrganization.name }}</span>
                   </div>
                 </div>
                 
@@ -254,7 +264,7 @@
           </div>
           <div class="p-6">
             <ThingMessageFeed 
-              :thing="thing"
+              :thing="thingWithExpandedEdge"
               :maxMessages="50"
             />
           </div>
@@ -385,18 +395,17 @@
       @confirm="handleDeleteConfirm"
     />
     
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThing } from '../../../composables/useThing'
 import { useMessages } from '../../../composables/useMessages'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
 import { useTypesStore } from '../../../stores/types'
+import { useOrganizationStore } from '../../../stores/organization'
 import DataTable from '../../../components/common/DataTable.vue'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import ThingMessageFeed from '../../../components/things/ThingMessageFeed.vue'
@@ -408,6 +417,10 @@ import ProgressSpinner from 'primevue/progressspinner'
 const route = useRoute()
 const router = useRouter()
 const typesStore = useTypesStore()
+const organizationStore = useOrganizationStore()
+
+// Get current organization
+const currentOrganization = computed(() => organizationStore.currentOrganization)
 
 // Ensure thing types are loaded
 typesStore.loadThingTypes()
@@ -457,6 +470,24 @@ const edge = ref(null)
 const showActivityDialog = ref(false)
 const messagesPaused = ref(false)
 
+// Create a computed property that ensures edge is properly expanded in the thing object
+const thingWithExpandedEdge = computed(() => {
+  if (!thing.value) return null;
+  
+  // Create a copy of the thing object to avoid modifying the original
+  const expandedThing = { ...thing.value };
+  
+  // If edge is loaded but not expanded in the thing, add it to the expand object
+  if (edge.value && !expandedThing.expand?.edge_id) {
+    expandedThing.expand = {
+      ...(expandedThing.expand || {}),
+      edge_id: edge.value
+    };
+  }
+  
+  return expandedThing;
+});
+
 // Column definitions for messages table
 const messageColumns = [
   { field: 'type', header: 'Type', sortable: true },
@@ -464,8 +495,6 @@ const messageColumns = [
   { field: 'summary', header: 'Description', sortable: false },
   { field: 'details', header: 'Details', sortable: false }
 ]
-
-// We now use the composable's navigateToThingEdit method which has the correct route name
 
 // Fetch thing data on component mount
 onMounted(async () => {

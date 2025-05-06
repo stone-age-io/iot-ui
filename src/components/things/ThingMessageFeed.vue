@@ -15,6 +15,14 @@
       </div>
     </div>
     
+    <!-- Organization Missing Alert -->
+    <div v-else-if="!getOrganizationCode()" class="mb-4 p-3 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded-md">
+      <div class="flex items-center">
+        <i class="pi pi-exclamation-triangle mr-2"></i>
+        <span>Organization code not available. Using fallback topic pattern.</span>
+      </div>
+    </div>
+    
     <!-- Topic Subscription Info -->
     <div v-if="connectionReady && calculatedTopic" class="mb-4 p-3 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-md">
       <div class="flex items-center">
@@ -105,8 +113,11 @@
           <div><strong>Is Subscribed:</strong> {{ isSubscribed }}</div>
           <div><strong>Paused State:</strong> {{ paused }}</div>
           <div><strong>Calculated Topic:</strong> {{ calculatedTopic || 'None' }}</div>
+          <div><strong>Organization Store Data:</strong> {{ organizationStoreData }}</div>
+          <div><strong>Auth Store Data:</strong> {{ authStoreData }}</div>
           <div><strong>Thing Code:</strong> {{ thing?.code || 'None' }}</div>
           <div><strong>Thing Type:</strong> {{ thing?.type || 'None' }}</div>
+          <div><strong>Edge Code:</strong> {{ getEdgeCode() || 'None' }}</div>
           <div v-if="error"><strong>Error:</strong> {{ error }}</div>
         </div>
       </div>
@@ -191,6 +202,8 @@
 import { onMounted, onBeforeUnmount, ref, nextTick, watch, computed } from 'vue';
 import { useNatsMessages } from '../../composables/useNatsMessages';
 import { useToast } from 'primevue/usetoast';
+import { useOrganizationStore } from '../../stores/organization';
+import { useAuthStore } from '../../stores/auth';
 import NatsStatus from '../nats/NatsStatus.vue';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
@@ -215,6 +228,27 @@ const props = defineProps({
   }
 });
 
+// Get the organization store and auth store
+const organizationStore = useOrganizationStore();
+const authStore = useAuthStore();
+
+// Debug information for organization and auth stores
+const organizationStoreData = computed(() => {
+  return {
+    currentOrgId: organizationStore.currentOrganization?.id || null,
+    currentOrgCode: organizationStore.currentOrganization?.code || null,
+    hasUserOrgs: (organizationStore.userOrganizations?.length > 0) || false
+  };
+});
+
+const authStoreData = computed(() => {
+  return {
+    isAuthenticated: authStore.isAuthenticated,
+    userId: authStore.user?.id || null,
+    currentOrgId: authStore.user?.current_organization_id || null
+  };
+});
+
 // Debug state
 const showDebugInfo = ref(false);
 const expandedMessages = ref(new Set());
@@ -223,32 +257,69 @@ const clipboardFallback = ref(null);
 const messagesContainer = ref(null);
 const messageListHeight = ref(300); // Default height
 
-// Function to calculate topic for this thing
+// Function to get edge code safely from the thing object
+const getEdgeCode = () => {
+  if (props.thing?.expand?.edge_id?.code) {
+    return props.thing.expand.edge_id.code;
+  }
+  return null;
+};
+
+// Function to get organization code with multiple fallback options
+const getOrganizationCode = () => {
+  // First try from organization store
+  if (organizationStore.currentOrganization?.code) {
+    return organizationStore.currentOrganization.code;
+  }
+  
+  // Second try from thing's organization_id
+  if (props.thing?.expand?.organization_id?.code) {
+    return props.thing.expand.organization_id.code;
+  }
+  
+  // Try to derive code from organization name if available
+  if (organizationStore.currentOrganization?.name) {
+    // Generate a code from the name (first 3-4 chars lowercase)
+    const name = organizationStore.currentOrganization.name;
+    const derivedCode = name.trim().substring(0, 4).toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (derivedCode.length >= 2) {
+      console.log(`Using derived organization code: ${derivedCode} from name: ${name}`);
+      return derivedCode;
+    }
+  }
+  
+  // If all else fails, use a default code
+  return 'org';
+};
+
+// Function to calculate topic for this thing - with multiple fallback strategies
 const calculatedTopic = computed(() => {
   if (!props.thing) return null;
   
   const thingCode = props.thing.code;
   const thingType = props.thing.type;
+  const orgCode = getOrganizationCode();
+  const edgeCode = getEdgeCode();
   
-  // If we have the edge object with edge.code
-  if (props.thing.expand?.edge_id?.code) {
-    const edgeCode = props.thing.expand.edge_id.code;
+  // First, ensure we have the minimum required data
+  if (!thingCode || !thingType) return null;
+  
+  // Build topic pattern with whatever information we have
+  if (orgCode && edgeCode) {
+    // Full topic pattern with all components
+    return `${orgCode}.${edgeCode}.${thingType}.${thingCode}.>`;
+  }
+  else if (orgCode) {
+    // Organization but no edge - use wildcard for edge
+    return `${orgCode}.>.${thingType}.${thingCode}.>`;
+  }
+  else if (edgeCode) {
+    // Edge but no organization
     return `org.${edgeCode}.${thingType}.${thingCode}.>`;
   }
   
-  // If we have the edge_id as a string (not expanded)
-  if (props.thing.edge_id && typeof props.thing.edge_id === 'string') {
-    // We don't have the edge code, so we use a placeholder pattern
-    // that will still receive messages for this thing
-    return `>.${thingType}.${thingCode}.>`;
-  }
-  
-  // Fallback if we can't calculate a proper topic
-  if (thingCode && thingType) {
-    return `>.${thingType}.${thingCode}.>`;
-  }
-  
-  return null;
+  // Most generic fallback pattern
+  return `>.${thingType}.${thingCode}.>`;
 });
 
 // Function to intelligently format topics for display
@@ -301,7 +372,8 @@ const {
   extractPayload,
   formatTimestamp,
   nextPage,
-  prevPage
+  prevPage,
+  updateSpecificTopic
 } = useNatsMessages({
   maxMessages: props.maxMessages,
   startPaused: true,
@@ -351,10 +423,15 @@ watch(currentPage, (newPage, oldPage) => {
 });
 
 // Watch for changes in the calculated topic and update the subscription
-watch(calculatedTopic, (newTopic) => {
-  // Re-initialize the useNatsMessages composable with the new topic
-  if (newTopic && connectionReady.value) {
-    // This will happen automatically through the updated composable
+watch(calculatedTopic, (newTopic, oldTopic) => {
+  // Only update if the topic has actually changed
+  if (newTopic !== oldTopic) {
+    console.log(`Topic changed from ${oldTopic} to ${newTopic}, updating subscription`);
+    
+    // Update the subscription with the new topic
+    if (newTopic && connectionReady.value) {
+      updateSpecificTopic(newTopic);
+    }
   }
 });
 
@@ -466,8 +543,26 @@ const showCopyFailed = () => {
   });
 };
 
-// Initialize component - NOTE: All watchers are defined here to ensure proper initialization order
+// Log organization details on mounted to help debugging
+const logOrganizationDetails = () => {
+  console.log('Organization Store Details:', {
+    currentOrg: organizationStore.currentOrganization,
+    userOrgs: organizationStore.userOrganizations?.length
+  });
+  
+  console.log('Auth Store Details:', {
+    userId: authStore.user?.id,
+    currentOrgId: authStore.user?.current_organization_id
+  });
+  
+  console.log('Calculated Topic:', calculatedTopic.value);
+};
+
+// Initialize component
 onMounted(() => {
+  // Log organization details for debugging
+  logOrganizationDetails();
+  
   // Calculate initial height
   updateListHeight();
   

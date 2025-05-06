@@ -31,6 +31,7 @@ import natsConnectionManager from './services/nats/natsConnectionManager'
 import { useAuthStore } from './stores/auth'
 import { useTypesStore } from './stores/types'
 import { useThemeStore } from './stores/theme'
+import { useOrganizationStore } from './stores/organization'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -88,6 +89,11 @@ const preloadAppData = async () => {
     
     // Initialize stores
     const typesStore = useTypesStore()
+    const authStore = useAuthStore()
+    const organizationStore = useOrganizationStore()
+    
+    // Initialize organization data
+    await initializeOrganizationData()
     
     // Load all type collections for form dropdowns
     await typesStore.loadAllTypes()
@@ -97,6 +103,80 @@ const preloadAppData = async () => {
   } catch (error) {
     console.warn('Error during data preloading:', error)
     // Continue even if preloading fails to avoid blocking the user
+  }
+}
+
+// Improved function to ensure organization data is initialized
+const initializeOrganizationData = async () => {
+  const authStore = useAuthStore()
+  const organizationStore = useOrganizationStore()
+  
+  // First check if organization is already set
+  if (organizationStore.currentOrganization) {
+    console.log('Organization already initialized:', organizationStore.currentOrganizationCode)
+    return true
+  }
+  
+  try {
+    console.log('Initializing organization data...')
+    
+    // Multi-step initialization process:
+    
+    // Step 1: Try to initialize from auth store
+    if (authStore.isAuthenticated && authStore.user?.current_organization_id) {
+      // Initialize org from auth store using the added method
+      const result = await authStore.initOrganization()
+      
+      if (result) {
+        console.log('Successfully initialized organization from auth store:', organizationStore.currentOrganizationCode)
+        return true
+      } else {
+        console.warn('Failed to initialize organization from auth store')
+      }
+    }
+    
+    // Step 2: If auth store initialization failed, try the comprehensive method
+    if (!organizationStore.currentOrganization) {
+      const result = await organizationStore.initFromAllSources()
+      
+      if (result) {
+        console.log('Successfully initialized organization from alternate sources:', organizationStore.currentOrganizationCode)
+        return true
+      }
+    }
+    
+    // Step 3: If we still don't have organization data, use fallback
+    if (!organizationStore.currentOrganization && authStore.isAuthenticated) {
+      // Attempt to load first available organization from user organizations
+      const userOrgs = organizationStore.userOrganizations
+      if (userOrgs && userOrgs.length > 0) {
+        organizationStore.setCurrentOrganization(userOrgs[0])
+        console.log('Set fallback organization from user organizations:', userOrgs[0].code)
+        
+        // Update auth store to keep them in sync
+        if (authStore.user && userOrgs[0].id) {
+          authStore.updateUser({
+            ...authStore.user,
+            current_organization_id: userOrgs[0].id
+          })
+        }
+        
+        return true
+      } else {
+        console.warn('No available organizations found for user')
+      }
+    }
+    
+    if (!authStore.isAuthenticated) {
+      console.log('User not authenticated, skipping organization initialization')
+    } else if (!organizationStore.currentOrganization) {
+      console.warn('Failed to initialize organization data from any source')
+    }
+    
+    return !!organizationStore.currentOrganization
+  } catch (error) {
+    console.error('Error initializing organization data:', error)
+    return false
   }
 }
 
@@ -124,6 +204,7 @@ router.beforeEach(async (to, from, next) => {
     if (from.name === 'login' && to.name === 'dashboard') {
       console.log('Initial login navigation detected, attempting NATS auto-connect')
       // This is the initial login navigation, attempt to connect NATS
+      await initializeOrganizationData() // Ensure organization is loaded for NATS topics
       natsConnectionManager.attemptAutoConnect()
     }
     

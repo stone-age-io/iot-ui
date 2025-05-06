@@ -10,8 +10,7 @@ import {
 
 /**
  * Base service class for entity operations
- * Updated to integrate with the central cache store
- * Field mapping functionality has been removed for consistency across services
+ * Updated to automatically include organization_id on creation
  */
 export class BaseService {
   /**
@@ -34,19 +33,79 @@ export class BaseService {
   }
 
   /**
-   * Get current user ID from localStorage for cache segmentation
-   * @returns {string|null} - User ID or null
+   * Get user auth data from localStorage for organization context and cache segmentation
+   * @returns {Object|null} - User auth data or null
    */
-  getCurrentUserId() {
+  getUserAuthData() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return null;
       
-      const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null}');
-      return authData.user?.id || 'anonymous';
+      // Try multiple ways to get the organization ID from localStorage
+      let currentOrgId = null;
+      let userId = 'anonymous';
+      
+      try {
+        // Most likely structure based on the auth store code
+        const authDataStr = localStorage.getItem('auth');
+        if (authDataStr) {
+          const authData = JSON.parse(authDataStr);
+          
+          // Check different possible locations for org ID
+          if (authData.currentOrgId) {
+            currentOrgId = authData.currentOrgId;
+          } else if (authData.user?.current_organization_id) {
+            currentOrgId = authData.user.current_organization_id;
+          }
+          
+          // Get user ID
+          userId = authData.user?.id || 'anonymous';
+        }
+      } catch (parseError) {
+        console.warn('Error parsing auth data:', parseError);
+      }
+      
+      // Try looking for direct token data as another possibility
+      if (!currentOrgId) {
+        try {
+          // Some implementations store current_organization_id in the JWT payload
+          const tokenParts = token.split('.');
+          if (tokenParts.length >= 2) {
+            const tokenPayload = JSON.parse(atob(tokenParts[1]));
+            if (tokenPayload.current_organization_id) {
+              currentOrgId = tokenPayload.current_organization_id;
+            }
+          }
+        } catch (tokenError) {
+          console.warn('Error extracting data from token:', tokenError);
+        }
+      }
+      
+      // Fallback to checking the organization store's persisted data
+      if (!currentOrgId) {
+        try {
+          const storedOrg = localStorage.getItem('currentOrganization');
+          if (storedOrg) {
+            const parsedOrg = JSON.parse(storedOrg);
+            if (parsedOrg && parsedOrg.id) {
+              currentOrgId = parsedOrg.id;
+            }
+          }
+        } catch (storageError) {
+          console.warn('Error reading from localStorage:', storageError);
+        }
+      }
+      
+      return {
+        userId,
+        currentOrgId
+      };
     } catch (error) {
-      console.warn('Failed to get current user ID for cache:', error);
-      return 'anonymous';
+      console.warn('Failed to get user auth data:', error);
+      return {
+        userId: 'anonymous',
+        currentOrgId: null
+      };
     }
   }
 
@@ -64,6 +123,9 @@ export class BaseService {
       transformedParams.expand = this.options.expandFields.join(',')
     }
     
+    // No explicit organization filtering - PocketBase API rules will handle this
+    // We rely on the PocketBase API rules for organization-based access control
+    
     // Apply custom parameter transformations
     this.transformParams(transformedParams, params)
     
@@ -71,11 +133,12 @@ export class BaseService {
     const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
     
     // Setup caching options if enabled
+    const authData = this.getUserAuthData();
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       operation: 'list',
       id: null,
-      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
+      userId: authData?.userId || 'anonymous', // Add user ID for cache segmentation
       skipCache: params.skipCache === true || skipCacheFromURL
     } : null;
     
@@ -129,11 +192,12 @@ export class BaseService {
     const skipCacheFromURL = new URLSearchParams(window.location.search).get('skipCache') === 'true'
     
     // Setup caching options if enabled
+    const authData = this.getUserAuthData();
     const cacheOptions = configService.isCacheEnabled() ? {
       collectionName: this.collectionName,
       operation: 'detail',
       id: id,
-      userId: this.getCurrentUserId(), // Add user ID for cache segmentation
+      userId: authData?.userId || 'anonymous', // Add user ID for cache segmentation
       skipCache: skipCacheFromURL
     } : null;
     
@@ -149,21 +213,39 @@ export class BaseService {
 
   /**
    * Create a new entity with auto-generated UUIDv7
+   * Automatically includes the current organization ID if available
    * @param {Object} entity - Entity data
    * @returns {Promise} - Axios promise with created entity
    */
   async create(entity) {
     const endpoint = this.collectionEndpoint(this.collectionName)
     
-    // Generate a UUIDv7 for the entity if ID is not already specified
-    // Uses the uuidv7 library for robust, secure UUIDv7 generation
-    const entityWithId = {
-      ...entity,
-      id: entity.id || generateUUIDv7()
+    // Get current organization ID from getUserAuthData
+    const authData = this.getUserAuthData();
+    const currentOrgId = authData?.currentOrgId;
+    
+    // Create a copy of the entity to avoid mutating the original
+    const entityData = { ...entity };
+    
+    // Add organization_id if not already provided and we have a current org
+    if (currentOrgId && !entityData.organization_id) {
+      entityData.organization_id = currentOrgId;
+      console.debug(`BaseService.create - Adding organization_id ${currentOrgId} to ${this.collectionName}`);
+    } else if (!currentOrgId) {
+      // Log a warning if we couldn't find an organization ID
+      console.warn(`BaseService.create - No current organization ID found for ${this.collectionName}`);
+    } else if (entityData.organization_id) {
+      console.debug(`BaseService.create - Entity already has organization_id: ${entityData.organization_id}`);
     }
     
+    // Generate a UUIDv7 for the entity if ID is not already specified
+    const entityWithId = {
+      ...entityData,
+      id: entityData.id || generateUUIDv7()
+    };
+    
     // Process entity data before sending to API
-    const processedData = this.stringifyJsonFields(entityWithId)
+    const processedData = this.stringifyJsonFields(entityWithId);
     
     try {
       const response = await apiHelpers.create(endpoint, processedData);
@@ -238,11 +320,11 @@ export class BaseService {
    * Clear cache for this collection in both localStorage and reactive store
    */
   async clearCache() {
-    const userId = this.getCurrentUserId();
+    const authData = this.getUserAuthData();
     
     // Clear localStorage cache
     if (configService.isCacheEnabled()) {
-      clearCollectionCache(this.collectionName, userId);
+      clearCollectionCache(this.collectionName, authData?.userId);
     }
     
     // Clear reactive store cache

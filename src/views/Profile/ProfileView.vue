@@ -1,352 +1,507 @@
-<!-- src/views/Profile/ProfileView.vue -->
 <template>
-  <div class="profile-container">
-    <PageHeader 
-      title="Profile" 
-      subtitle="Manage your account information"
-    />
+  <div>
+    <PageHeader title="My Profile" subtitle="Manage your account information and settings" />
     
-    <div v-if="initialLoading" class="flex justify-center items-center py-12">
-      <ProgressSpinner strokeWidth="4" class="text-primary-500 dark:text-primary-400" />
-    </div>
-    
-    <div v-else-if="error" class="p-6 text-center rounded-lg bg-surface-primary dark:bg-surface-primary-dark border border-border-primary dark:border-border-primary-dark">
-      <div class="text-red-600 dark:text-red-400 text-xl mb-4">
-        <i class="pi pi-exclamation-circle mr-2"></i>
-        Failed to load profile
-      </div>
-      <p class="mb-4 text-content-secondary dark:text-content-secondary-dark">{{ error }}</p>
-      <Button label="Try Again" icon="pi pi-refresh" @click="fetchProfile" />
-    </div>
-    
-    <div v-else class="grid grid-cols-1 gap-6">
-      <!-- Profile Information Card -->
-      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-            <i class="pi pi-user mr-2"></i>
-            Profile Information
-          </h2>
-        </div>
-        <div class="p-6">
-          <EntityForm
-            :loading="loading"
-            submit-label="Save Changes"
-            @submit="submitProfileForm"
-          >
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- First Name -->
-              <FormField
-                id="first_name"
-                label="First Name"
-                :required="true"
-                :error-message="v$.first_name.$errors[0]?.$message"
-              >
-                <InputText
-                  id="first_name"
-                  v-model="profileForm.first_name"
-                  placeholder="Enter your first name"
-                  class="w-full form-input"
-                  :class="{ 'p-invalid': v$.first_name.$error }"
-                />
-              </FormField>
-              
-              <!-- Last Name -->
-              <FormField
-                id="last_name"
-                label="Last Name"
-                :required="true"
-                :error-message="v$.last_name.$errors[0]?.$message"
-              >
-                <InputText
-                  id="last_name"
-                  v-model="profileForm.last_name"
-                  placeholder="Enter your last name"
-                  class="w-full form-input"
-                  :class="{ 'p-invalid': v$.last_name.$error }"
-                />
-              </FormField>
-              
-              <!-- Email -->
-              <FormField
-                id="email"
-                label="Email"
-                :required="true"
-                :error-message="v$.email.$errors[0]?.$message"
-                class="md:col-span-2"
-              >
-                <InputText
-                  id="email"
-                  v-model="profileForm.email"
-                  placeholder="Enter your email address"
-                  class="w-full form-input"
-                  :class="{ 'p-invalid': v$.email.$error }"
-                  type="email"
-                />
-              </FormField>
-              
-              <!-- Username (readonly) -->
-              <FormField
-                id="username"
-                label="Username"
-                hint="Not editable"
-                class="md:col-span-2"
-              >
-                <InputText
-                  id="username"
-                  v-model="profileForm.username"
-                  placeholder="Username"
-                  class="w-full form-input bg-surface-secondary dark:bg-surface-secondary-dark"
-                  readonly
-                  disabled
-                />
-              </FormField>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left column - Profile information -->
+      <div class="lg:col-span-2">
+        <!-- Basic Information -->
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              <i class="pi pi-user mr-2"></i>
+              Profile Information
+            </h2>
+          </div>
+          <div class="p-6">
+            <div v-if="loading" class="flex justify-center py-4">
+              <ProgressSpinner strokeWidth="4" />
             </div>
-          </EntityForm>
-        </div>
-      </div>
-      
-      <!-- Password Change Card -->
-      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-            <i class="pi pi-lock mr-2"></i>
-            Change Password
-          </h2>
-        </div>
-        <div class="p-6">
-          <EntityForm
-            :loading="loading"
-            submit-label="Update Password"
-            @submit="submitPasswordForm"
-          >
-            <div class="space-y-4">
-              <!-- Current Password -->
-              <FormField
-                id="oldPassword"
-                label="Current Password"
-                :required="true"
-                :error-message="p$.oldPassword.$errors[0]?.$message"
-              >
-                <Password
-                  id="oldPassword"
-                  v-model="passwordForm.oldPassword"
-                  placeholder="Enter current password"
-                  class="w-full"
-                  toggleMask
-                  :feedback="false"
-                  :inputClass="['form-input', { 'p-invalid': p$.oldPassword.$error }]"
-                />
-              </FormField>
+            <div v-else>
+              <div class="flex flex-col md:flex-row md:items-center mb-6">
+                <div class="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
+                  <div class="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 text-2xl font-bold">
+                    {{ userInitials }}
+                  </div>
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium text-content-primary dark:text-content-primary-dark">
+                    {{ profile.name || profile.email }}
+                  </h3>
+                  <p class="text-content-secondary dark:text-content-secondary-dark">{{ profile.email }}</p>
+                  <p v-if="profile.created" class="text-sm text-content-tertiary dark:text-content-tertiary-dark mt-1">
+                    Member since {{ formatDate(profile.created) }}
+                  </p>
+                </div>
+              </div>
               
-              <!-- New Password -->
-              <FormField
-                id="password"
-                label="New Password"
-                :required="true"
-                help-text="Password must be at least 8 characters"
-                :error-message="p$.password.$errors[0]?.$message"
-              >
-                <Password
-                  id="password"
-                  v-model="passwordForm.password"
-                  placeholder="Enter new password"
-                  class="w-full"
-                  toggleMask
-                  :inputClass="['form-input', { 'p-invalid': p$.password.$error }]"
-                />
-              </FormField>
-              
-              <!-- Confirm Password -->
-              <FormField
-                id="passwordConfirm"
-                label="Confirm Password"
-                :required="true"
-                :error-message="p$.passwordConfirm.$errors[0]?.$message"
-              >
-                <Password
-                  id="passwordConfirm"
-                  v-model="passwordForm.passwordConfirm"
-                  placeholder="Confirm new password"
-                  class="w-full"
-                  toggleMask
-                  :feedback="false"
-                  :inputClass="['form-input', { 'p-invalid': p$.passwordConfirm.$error }]"
-                />
-              </FormField>
+              <form @submit.prevent="updateProfile">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Form Fields -->
+                  <FormField label="First Name" id="first_name">
+                    <InputText 
+                      v-model="formData.first_name" 
+                      id="first_name" 
+                      class="w-full" 
+                    />
+                  </FormField>
+                  
+                  <FormField label="Last Name" id="last_name">
+                    <InputText 
+                      v-model="formData.last_name" 
+                      id="last_name" 
+                      class="w-full" 
+                    />
+                  </FormField>
+                  
+                  <FormField label="Email Address" id="email" class="md:col-span-2">
+                    <InputText 
+                      v-model="formData.email" 
+                      id="email" 
+                      class="w-full" 
+                      disabled
+                    />
+                    <small class="text-content-tertiary dark:text-content-tertiary-dark">
+                      Contact administrator to update your email address.
+                    </small>
+                  </FormField>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="flex justify-end mt-6">
+                  <Button 
+                    type="submit" 
+                    label="Save Changes" 
+                    icon="pi pi-save"
+                    :loading="saving"
+                  />
+                </div>
+              </form>
             </div>
-          </EntityForm>
+          </div>
+        </div>
+        
+        <!-- Password Section -->
+        <div class="mt-6 bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              <i class="pi pi-lock mr-2"></i>
+              Change Password
+            </h2>
+          </div>
+          <div class="p-6">
+            <form @submit.prevent="changePassword">
+              <div class="grid grid-cols-1 gap-4">
+                <FormField 
+                  label="Current Password" 
+                  id="current_password"
+                  :error-message="passwordErrors.currentPassword"
+                >
+                  <Password 
+                    v-model="passwordData.currentPassword" 
+                    id="current_password" 
+                    :feedback="false"
+                    toggleMask
+                    inputClass="w-full" 
+                    class="w-full"
+                    :class="{ 'p-invalid': passwordErrors.currentPassword }"
+                    placeholder="Enter your current password"
+                  />
+                </FormField>
+                
+                <FormField 
+                  label="New Password" 
+                  id="new_password"
+                  :error-message="passwordErrors.newPassword"
+                  help-text="Password must be at least 8 characters long"
+                >
+                  <Password 
+                    v-model="passwordData.newPassword" 
+                    id="new_password" 
+                    :feedback="true"
+                    toggleMask
+                    inputClass="w-full" 
+                    class="w-full"
+                    :class="{ 'p-invalid': passwordErrors.newPassword }"
+                    placeholder="Enter your new password"
+                  />
+                </FormField>
+                
+                <FormField 
+                  label="Confirm New Password" 
+                  id="confirm_password"
+                  :error-message="passwordErrors.confirmPassword"
+                >
+                  <Password 
+                    v-model="passwordData.confirmPassword" 
+                    id="confirm_password" 
+                    :feedback="false"
+                    toggleMask
+                    inputClass="w-full" 
+                    class="w-full"
+                    :class="{ 'p-invalid': passwordErrors.confirmPassword }"
+                    placeholder="Confirm your new password"
+                  />
+                </FormField>
+              </div>
+              
+              <!-- Password Form Actions -->
+              <div class="flex justify-end mt-6">
+                <Button 
+                  type="submit" 
+                  label="Update Password" 
+                  icon="pi pi-lock"
+                  :loading="changingPassword"
+                />
+              </div>
+            </form>
+          </div>
         </div>
       </div>
       
-      <!-- Account Information Card -->
-      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-            <i class="pi pi-info-circle mr-2"></i>
-            Account Information
-          </h2>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Created Date -->
-            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
-              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Account Created</div>
-              <div class="font-medium text-content-primary dark:text-content-primary-dark">
-                <i class="pi pi-calendar mr-2 text-blue-500 dark:text-blue-400"></i>
-                {{ formatDate(profile.created) }}
-              </div>
+      <!-- Right column - Organization and settings -->
+      <div class="lg:col-span-1">
+        <!-- Organizations Card -->
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              <i class="pi pi-building mr-2"></i>
+              Organizations
+            </h2>
+          </div>
+          <div class="p-6">
+            <!-- Loading indicator for organizations -->
+            <div v-if="organizationsLoading" class="flex justify-center items-center py-4">
+              <ProgressSpinner strokeWidth="3" style="width: 30px; height: 30px;" />
             </div>
             
-            <!-- Last Updated -->
-            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
-              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
-              <div class="font-medium text-content-primary dark:text-content-primary-dark">
-                <i class="pi pi-clock mr-2 text-blue-500 dark:text-blue-400"></i>
-                {{ formatDate(profile.updated) }}
+            <div v-else>
+              <!-- Current Organization Card -->
+              <div class="mb-4">
+                <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Current Organization</h3>
+                
+                <div v-if="currentOrganization" class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark mb-3">
+                  <div class="flex items-center">
+                    <div v-if="currentOrganization.logo" class="w-8 h-8 mr-3">
+                      <img :src="currentOrganization.logo" alt="Logo" class="w-full h-full object-contain rounded" />
+                    </div>
+                    <div v-else class="w-8 h-8 bg-primary-700 rounded-md flex items-center justify-center text-white mr-3">
+                      {{ currentOrganization.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ currentOrganization.name }}</div>
+                      <div class="text-sm text-content-secondary dark:text-content-secondary-dark">{{ currentOrganization.code }}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- No current organization state -->
+                <div v-else class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark mb-3">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 mr-3">
+                      <i class="pi pi-building"></i>
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-secondary dark:text-content-secondary-dark">No Current Organization</div>
+                      <div class="text-sm text-content-tertiary dark:text-content-tertiary-dark">Select an organization below</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <!-- Verified Status -->
-            <div class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark">
-              <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Email Verified</div>
-              <div class="font-medium flex items-center text-content-primary dark:text-content-primary-dark">
-                <i 
-                  :class="[
-                    profile.verified ? 'pi pi-check-circle text-green-500 dark:text-green-400' : 'pi pi-times-circle text-red-500 dark:text-red-400', 
-                    'mr-2'
-                  ]"
-                ></i>
-                {{ profile.verified ? 'Verified' : 'Not Verified' }}
+              
+              <!-- Organizations List -->
+              <h3 class="font-medium mb-2 text-content-primary dark:text-content-primary-dark">Your Organizations</h3>
+              
+              <div v-if="userOrganizations.length === 0" class="text-center py-4 text-content-secondary dark:text-content-secondary-dark">
+                <p>You are not a member of any organizations yet.</p>
               </div>
+              
+              <div v-else class="grid grid-cols-1 gap-3 mb-4">
+                <div
+                  v-for="org in userOrganizations"
+                  :key="org.id"
+                  class="p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200"
+                  :class="currentOrganization && org.id === currentOrganization.id ? 
+                    'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-700' : 
+                    'bg-surface-secondary dark:bg-surface-secondary-dark border-border-light dark:border-border-light-dark'"
+                  @click="switchToOrganization(org)"
+                >
+                  <div class="flex items-center">
+                    <div v-if="org.logo" class="w-6 h-6 mr-2">
+                      <img :src="org.logo" alt="Logo" class="w-full h-full object-contain rounded" />
+                    </div>
+                    <div v-else class="w-6 h-6 bg-primary-700 rounded-sm flex items-center justify-center text-white mr-2">
+                      {{ org.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ org.name }}</div>
+                    </div>
+                    <div v-if="currentOrganization && org.id === currentOrganization.id" class="ml-auto">
+                      <i class="pi pi-check text-primary-500"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Only users with is_org_admin=true can create new organizations -->
+              <Button
+                v-if="canManageOrganizations"
+                label="Create New Organization"
+                icon="pi pi-plus"
+                @click="navigateToCreateOrganization"
+                class="w-full"
+              />
+              
+              <!-- Add management button for org admins -->
+              <Button
+                v-if="canManageOrganizations"
+                label="Manage Organizations"
+                icon="pi pi-cog"
+                @click="navigateToOrganizations"
+                class="w-full mt-2 p-button-outlined"
+              />
             </div>
           </div>
         </div>
       </div>
     </div>
-    
-    <Toast />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserProfile } from '../../composables/useUserProfile'
-import { useProfileForm } from '../../composables/useProfileForm'
+import { useTheme } from '../../composables/useTheme'
+import { useOrganization } from '../../composables/useOrganization'
+import { useAuthStore } from '../../stores/auth'
+import { useToast } from 'primevue/usetoast'
 import PageHeader from '../../components/common/PageHeader.vue'
-import EntityForm from '../../components/common/EntityForm.vue'
 import FormField from '../../components/common/FormField.vue'
+import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
-import Button from 'primevue/button'
-import Toast from 'primevue/toast'
 import ProgressSpinner from 'primevue/progressspinner'
 
-// Get user profile functionality
-const { profile, error, loading: profileLoading, fetchProfile, formatDate } = useUserProfile()
+// Toast service
+const toast = useToast()
 
-// Get form functionality
+// Composables
+const { profile, loading, error, fetchProfile, updateProfile: saveProfile, changePassword: savePassword, formatDate } = useUserProfile()
+const { currentTheme, setLightTheme, setDarkTheme, setSystemTheme } = useTheme()
 const { 
-  profileForm, 
-  passwordForm, 
-  v$, 
-  p$, 
-  loading: formLoading, 
-  loadProfile,
-  submitProfileForm,
-  submitPasswordForm
-} = useProfileForm()
+  currentOrganization, 
+  userOrganizations, 
+  isAdmin,
+  canManageOrganizations,
+  switchOrganization,
+  fetchUserOrganizations,
+  navigateToCreateOrganization,
+  navigateToOrganizations
+} = useOrganization()
 
-// Combined loading state
-const loading = ref(false)
-const initialLoading = ref(true)
-
-// Watch loading states
-watch([profileLoading, formLoading], () => {
-  loading.value = profileLoading.value || formLoading.value
+// Local state
+const formData = ref({
+  first_name: '',
+  last_name: '',
+  email: ''
 })
 
-// Load profile data on mount
+const passwordData = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const passwordErrors = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const saving = ref(false)
+const changingPassword = ref(false)
+const organizationsLoading = ref(false)
+
+// Auth store for user initials
+const authStore = useAuthStore()
+const userInitials = computed(() => authStore.userInitials)
+
+// Load profile data on component mount
 onMounted(async () => {
-  try {
-    document.title = 'My Profile | IoT Platform'
-    const userData = await fetchProfile()
-    if (userData) {
-      loadProfile(userData)
+  // Load user profile data
+  await fetchProfile()
+  
+  // Copy profile data to form
+  if (profile.value) {
+    formData.value = {
+      first_name: profile.value.first_name || '',
+      last_name: profile.value.last_name || '',
+      email: profile.value.email || ''
     }
+  }
+  
+  // Load user organizations
+  organizationsLoading.value = true
+  try {
+    await fetchUserOrganizations()
+    
+    // If we don't have a current organization set, refresh user data to ensure we get it
+    if (!currentOrganization.value) {
+      await authStore.refreshUserData()
+    }
+  } catch (err) {
+    console.error('Error loading organizations:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load organizations. Please refresh the page.',
+      life: 5000
+    })
   } finally {
-    initialLoading.value = false
+    organizationsLoading.value = false
   }
 })
+
+// Update profile info
+const updateProfile = async () => {
+  saving.value = true
+  
+  try {
+    await saveProfile({
+      first_name: formData.value.first_name,
+      last_name: formData.value.last_name
+    })
+    
+    // Success is handled by the composable
+  } catch (err) {
+    console.error('Error updating profile:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update profile. Please try again.',
+      life: 3000
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+// Change password
+const changePassword = async () => {
+  // Reset errors
+  passwordErrors.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  
+  // Validate
+  let hasErrors = false
+  
+  if (!passwordData.value.currentPassword) {
+    passwordErrors.value.currentPassword = 'Current password is required'
+    hasErrors = true
+  }
+  
+  if (!passwordData.value.newPassword) {
+    passwordErrors.value.newPassword = 'New password is required'
+    hasErrors = true
+  } else if (passwordData.value.newPassword.length < 8) {
+    passwordErrors.value.newPassword = 'Password must be at least 8 characters'
+    hasErrors = true
+  }
+  
+  if (!passwordData.value.confirmPassword) {
+    passwordErrors.value.confirmPassword = 'Please confirm your new password'
+    hasErrors = true
+  } else if (passwordData.value.newPassword !== passwordData.value.confirmPassword) {
+    passwordErrors.value.confirmPassword = 'Passwords do not match'
+    hasErrors = true
+  }
+  
+  if (hasErrors) {
+    return
+  }
+  
+  // Submit password change
+  changingPassword.value = true
+  
+  try {
+    await savePassword(
+      passwordData.value.currentPassword,
+      passwordData.value.newPassword,
+      passwordData.value.confirmPassword
+    )
+    
+    // Reset form on success
+    passwordData.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+    
+    // Success is handled by the composable
+  } catch (err) {
+    console.error('Error changing password:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to change password. Please verify your current password and try again.',
+      life: 3000
+    })
+  } finally {
+    changingPassword.value = false
+  }
+}
+
+// Switch to selected organization
+const switchToOrganization = async (org) => {
+  if (!org || (currentOrganization.value && org.id === currentOrganization.value.id)) {
+    return // Skip if no org or already on current org
+  }
+  
+  try {
+    const success = await switchOrganization(org.id)
+    if (success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Organization Changed',
+        detail: `Switched to ${org.name}`,
+        life: 3000
+      })
+    }
+  } catch (err) {
+    console.error('Error switching organization:', err)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to switch organization. Please try again.',
+      life: 3000
+    })
+  }
+}
 </script>
 
 <style scoped>
-.profile-container {
-  margin-bottom: 2rem;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-/* Form input styling for consistency */
-.form-input {
+.theme-option {
   transition: all 0.2s ease;
 }
 
-/* Fix for Password component that doesn't properly inherit theme */
-:deep(.p-password) {
-  width: 100%;
+.theme-option:hover {
+  transform: translateY(-2px);
 }
 
-:deep(.p-password-input) {
-  width: 100%;
-}
-
-/* Fix password panel styling */
-:deep(.p-password-panel) {
-  background-color: var(--surface-overlay);
-  color: var(--text-color);
-  border-color: var(--surface-border);
-}
-
-:deep(.p-password .p-password-toggle) {
-  background: transparent !important;
-  border: none !important;
-  color: var(--text-color-secondary) !important;
-}
-
-:deep(.p-password .p-password-toggle:hover) {
-  color: var(--text-color) !important;
-}
-
-:deep(.dark .p-password .p-password-toggle) {
-  background: transparent !important;
-  color: var(--text-color-secondary) !important;
-}
-
-:deep(.dark .p-password .p-password-toggle:hover) {
-  color: var(--text-color) !important;
-}
-
-/* Fix for dark mode styling */
-:deep(.dark .p-inputtext),
-:deep(.dark .p-dropdown),
-:deep(.dark .p-inputnumber) {
+/* Fix PrimeVue components styling in dark mode */
+:deep(.dark .p-password-input) {
   background-color: var(--surface-hover);
   color: var(--text-color);
   border-color: var(--surface-border);
 }
 
-:deep(.dark .p-inputtext:enabled:focus) {
-  box-shadow: 0 0 0 1px var(--primary-400);
-  border-color: var(--primary-400);
-}
-
-:deep(.p-invalid.p-inputtext:enabled:focus) {
-  box-shadow: 0 0 0 1px var(--red-400);
-  border-color: var(--red-400);
-}
-
-/* Empty state styling for consistency */
-:deep(.empty-state) {
+:deep(.dark .p-inputtext:disabled) {
+  background-color: var(--surface-hover);
+  color: var(--text-color-secondary);
   opacity: 0.7;
+  border-color: var(--surface-border);
 }
 </style>

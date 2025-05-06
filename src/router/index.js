@@ -51,6 +51,12 @@ import ProfileView from '../views/Profile/ProfileView.vue'
 // Settings View - New
 import UserSettingsView from '../views/Settings/UserSettingsView.vue'
 
+// Organization Views
+import OrganizationListView from '../views/Organizations/OrganizationListView.vue'
+import OrganizationDetailView from '../views/Organizations/OrganizationDetailView.vue'
+import OrganizationCreateView from '../views/Organizations/OrganizationCreateView.vue'
+import OrganizationEditView from '../views/Organizations/OrganizationEditView.vue'
+
 import EdgeTypeListView from '../views/Types/EdgeTypes/EdgeTypeListView.vue'
 import EdgeTypeDetailView from '../views/Types/EdgeTypes/EdgeTypeDetailView.vue'
 import EdgeTypeCreateView from '../views/Types/EdgeTypes/EdgeTypeCreateView.vue'
@@ -89,7 +95,10 @@ const ROUTE_TO_COLLECTION_MAP = {
   'types/edge-types': 'edge_types',
   'types/edge-regions': 'edge_regions',
   'types/location-types': 'location_types',
-  'types/thing-types': 'thing_types'
+  'types/thing-types': 'thing_types',
+  
+  // Organization collection
+  'organizations': 'organizations'
 };
 
 /**
@@ -281,108 +290,135 @@ const router = createRouter({
           component: TopicPermissionEditView,
           meta: { title: 'Edit Topic Permission', collection: 'topic_permissions' }
         },
+        
+        // Organization routes
         {
-    	  path: 'types/edge-types',
+          path: 'organizations',
+          name: 'organizations',
+          component: OrganizationListView,
+          meta: { title: 'Organizations', collection: 'organizations' }
+        },
+        {
+          path: 'organizations/create',
+          name: 'create-organization',
+          component: OrganizationCreateView,
+          meta: { title: 'Create Organization', collection: 'organizations' }
+        },
+        {
+          path: 'organizations/:id',
+          name: 'organization-detail',
+          component: OrganizationDetailView,
+          meta: { title: 'Organization Details', collection: 'organizations' }
+        },
+        {
+          path: 'organizations/:id/edit',
+          name: 'edit-organization',
+          component: OrganizationEditView,
+          meta: { title: 'Edit Organization', collection: 'organizations' }
+        },
+        
+        {
+          path: 'types/edge-types',
           name: 'edge-types',
           component: EdgeTypeListView,
           meta: { title: 'Edge Types', collection: 'edge_types' }
-	},
-  	{
-        path: 'types/edge-types/create',
-        name: 'create-edge-type',
-        component: EdgeTypeCreateView,
-        meta: { title: 'Create Edge Type', collection: 'edge_types' }
         },
-  	{
-        path: 'types/edge-types/:id',
-        name: 'edge-type-detail',
-        component: EdgeTypeDetailView,
-        meta: { title: 'Edge Type Details', collection: 'edge_types' }
+        {
+          path: 'types/edge-types/create',
+          name: 'create-edge-type',
+          component: EdgeTypeCreateView,
+          meta: { title: 'Create Edge Type', collection: 'edge_types' }
         },
-  	{
-  	path: 'types/edge-types/:id/edit',
-  	name: 'edit-edge-type',
-  	component: EdgeTypeEditView,
-  	meta: { title: 'Edit Edge Type', collection: 'edge_types' }
-	},
+        {
+          path: 'types/edge-types/:id',
+          name: 'edge-type-detail',
+          component: EdgeTypeDetailView,
+          meta: { title: 'Edge Type Details', collection: 'edge_types' }
+        },
+        {
+          path: 'types/edge-types/:id/edit',
+          name: 'edit-edge-type',
+          component: EdgeTypeEditView,
+          meta: { title: 'Edit Edge Type', collection: 'edge_types' }
+        },
 
-	// Edge Region routes
-	{
-  	path: 'types/edge-regions',
-  	name: 'edge-regions',
-  	component: EdgeRegionListView,
-  	meta: { title: 'Edge Regions', collection: 'edge_regions' }
-	},
-	{
-  	path: 'types/edge-regions/create',
-  	name: 'create-edge-region',
-  	component: EdgeRegionCreateView,
-  	meta: { title: 'Create Edge Region', collection: 'edge_regions' }
-	},
-	{
-  	path: 'types/edge-regions/:id',
-  	name: 'edge-region-detail',
-  	component: EdgeRegionDetailView,
-  	meta: { title: 'Edge Region Details', collection: 'edge_regions' }
-	},
-	{
-  	path: 'types/edge-regions/:id/edit',
-  	name: 'edit-edge-region',
-  	component: EdgeRegionEditView,
-  	meta: { title: 'Edit Edge Region', collection: 'edge_regions' }
-	},
+        // Edge Region routes
+        {
+          path: 'types/edge-regions',
+          name: 'edge-regions',
+          component: EdgeRegionListView,
+          meta: { title: 'Edge Regions', collection: 'edge_regions' }
+        },
+        {
+          path: 'types/edge-regions/create',
+          name: 'create-edge-region',
+          component: EdgeRegionCreateView,
+          meta: { title: 'Create Edge Region', collection: 'edge_regions' }
+        },
+        {
+          path: 'types/edge-regions/:id',
+          name: 'edge-region-detail',
+          component: EdgeRegionDetailView,
+          meta: { title: 'Edge Region Details', collection: 'edge_regions' }
+        },
+        {
+          path: 'types/edge-regions/:id/edit',
+          name: 'edit-edge-region',
+          component: EdgeRegionEditView,
+          meta: { title: 'Edit Edge Region', collection: 'edge_regions' }
+        },
 
-	// Location Type routes
-	{
-  	path: 'types/location-types',
-  	name: 'location-types',
-  	component: LocationTypeListView,
-  	meta: { title: 'Location Types', collection: 'location_types' }
-	},
-	{
-  	path: 'types/location-types/create',
-  	name: 'create-location-type',
-  	component: LocationTypeCreateView,
-  	meta: { title: 'Create Location Type', collection: 'location_types' }
-	},
-	{
-  	path: 'types/location-types/:id',
-  	name: 'location-type-detail',
-  	component: LocationTypeDetailView,
-  	meta: { title: 'Location Type Details', collection: 'location_types' }
-	},
-	{
-  	path: 'types/location-types/:id/edit',
-  	name: 'edit-location-type',
-  	component: LocationTypeEditView,
-  	meta: { title: 'Edit Location Type', collection: 'location_types' }
-	},
+        // Location Type routes
+        {
+          path: 'types/location-types',
+          name: 'location-types',
+          component: LocationTypeListView,
+          meta: { title: 'Location Types', collection: 'location_types' }
+        },
+        {
+          path: 'types/location-types/create',
+          name: 'create-location-type',
+          component: LocationTypeCreateView,
+          meta: { title: 'Create Location Type', collection: 'location_types' }
+        },
+        {
+          path: 'types/location-types/:id',
+          name: 'location-type-detail',
+          component: LocationTypeDetailView,
+          meta: { title: 'Location Type Details', collection: 'location_types' }
+        },
+        {
+          path: 'types/location-types/:id/edit',
+          name: 'edit-location-type',
+          component: LocationTypeEditView,
+          meta: { title: 'Edit Location Type', collection: 'location_types' }
+        },
 
-	// Thing Type routes
-	{
-  	path: 'types/thing-types',
-  	name: 'thing-types',
-  	component: ThingTypeListView,
-  	meta: { title: 'Thing Types', collection: 'thing_types' }
-	},
-	{
-  	path: 'types/thing-types/create',
-  	name: 'create-thing-type',
-  	component: ThingTypeCreateView,
-  	meta: { title: 'Create Thing Type', collection: 'thing_types' }
-	},
-	{
-  	path: 'types/thing-types/:id',
-  	name: 'thing-type-detail',
-  	component: ThingTypeDetailView,
-  	meta: { title: 'Thing Type Details', collection: 'thing_types' }
-	},
-	{
-  	path: 'types/thing-types/:id/edit',
-  	name: 'edit-thing-type',
-  	component: ThingTypeEditView,
-  	meta: { title: 'Edit Thing Type', collection: 'thing_types' }
-	}
+        // Thing Type routes
+        {
+          path: 'types/thing-types',
+          name: 'thing-types',
+          component: ThingTypeListView,
+          meta: { title: 'Thing Types', collection: 'thing_types' }
+        },
+        {
+          path: 'types/thing-types/create',
+          name: 'create-thing-type',
+          component: ThingTypeCreateView,
+          meta: { title: 'Create Thing Type', collection: 'thing_types' }
+        },
+        {
+          path: 'types/thing-types/:id',
+          name: 'thing-type-detail',
+          component: ThingTypeDetailView,
+          meta: { title: 'Thing Type Details', collection: 'thing_types' }
+        },
+        {
+          path: 'types/thing-types/:id/edit',
+          name: 'edit-thing-type',
+          component: ThingTypeEditView,
+          meta: { title: 'Edit Thing Type', collection: 'thing_types' }
+        }
       ]
     },
     {

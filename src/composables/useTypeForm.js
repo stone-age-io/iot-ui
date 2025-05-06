@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
 import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
+import { useApiOperation } from './useApiOperation'
 import { useTypesStore } from '../stores/types'
 
 /**
@@ -19,8 +19,8 @@ import { useTypesStore } from '../stores/types'
  * @returns {Object} - Form methods and state
  */
 export function useTypeForm(typeService, options) {
-  const toast = useToast()
   const router = useRouter()
+  const { performOperation } = useApiOperation()
   const typesStore = useTypesStore()
   
   const { 
@@ -138,72 +138,58 @@ export function useTypeForm(typeService, options) {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
     
-    loading.value = true
-    
-    try {
-      const typeData = {
-        type: type.value.type,
-        code: type.value.code,
-        description: type.value.description
-      }
-      
-      let response
-      
-      if (mode === 'create') {
-        // Create new type
-        response = await typeService.createType(typeData)
-        
-        if (!response) {
-          return false
-        }
-        
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `${entityName} "${typeData.type}" has been created`,
-          life: 3000
-        })
-        
-        // Refresh the types store collection to make the new type immediately available
-        if (storeCollectionName) {
-          await typesStore.refreshTypeCollection(storeCollectionName)
-        }
-      } else {
-        // Update existing type
-        response = await typeService.updateType(type.value.id, typeData)
-        
-        if (!response) {
-          return false
-        }
-        
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `${entityName} "${type.value.type}" has been updated`,
-          life: 3000
-        })
-        
-        // Refresh the types store collection to make the updated type immediately available
-        if (storeCollectionName) {
-          await typesStore.refreshTypeCollection(storeCollectionName)
-        }
-      }
-      
-      // Navigate to type list view
-      router.push({ name: routeNames.list })
-      return true
-    } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} ${entityName.toLowerCase()}:`, error)
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Failed to ${mode === 'create' ? 'create' : 'update'} ${entityName.toLowerCase()}. Please try again.`,
-        life: 3000
-      })
-      return false
-    } finally {
-      loading.value = false
+    const typeData = {
+      type: type.value.type,
+      code: type.value.code,
+      description: type.value.description
     }
+    
+    // Use appropriate operation based on mode
+    const operation = mode === 'create' 
+      ? async () => {
+          // Check if code is already in use
+          const isCodeInUse = await typeService.isCodeInUse(typeData.code)
+          
+          if (isCodeInUse) {
+            throw new Error(`Code "${typeData.code}" is already in use. Please choose a different code.`)
+          }
+          
+          return typeService.createType(typeData)
+        }
+      : async () => {
+          // Check if code is already in use (excluding current type)
+          if (typeData.code) {
+            const isCodeInUse = await typeService.isCodeInUse(typeData.code, type.value.id)
+            
+            if (isCodeInUse) {
+              throw new Error(`Code "${typeData.code}" is already in use. Please choose a different code.`)
+            }
+          }
+          
+          return typeService.updateType(type.value.id, typeData)
+        }
+    
+    return performOperation(
+      operation,
+      {
+        loadingRef: loading,
+        errorRef: null,
+        errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} ${entityName.toLowerCase()}`,
+        successMessage: `${entityName} "${type.value.type}" has been ${mode === 'create' ? 'created' : 'updated'}`,
+        collection: storeCollectionName ? `${storeCollectionName.toLowerCase()}` : null,
+        onSuccess: async (response) => {
+          // Refresh the types store collection to make the updated type immediately available
+          if (storeCollectionName) {
+            await typesStore.refreshTypeCollection(storeCollectionName)
+          }
+          
+          // Navigate to type list view
+          router.push({ name: routeNames.list })
+          return true
+        },
+        onError: () => false
+      }
+    )
   }
   
   /**
