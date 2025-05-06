@@ -1,11 +1,10 @@
 // src/composables/useAuditLogs.js
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { auditLogService } from '../services/audit/auditLogService'
 import { useApiOperation } from './useApiOperation'
 
 /**
  * Composable for working with audit logs
- * Enhanced implementation with improved filtering options
  * @returns {Object} - Audit logs state and methods
  */
 export function useAuditLogs() {
@@ -71,7 +70,8 @@ export function useAuditLogs() {
       {
         loadingRef: loading,
         errorRef: error,
-        errorMessage: 'Failed to load audit logs'
+        errorMessage: 'Failed to load audit logs',
+        collection: 'audit_logs' // For cache invalidation
       }
     )
   }
@@ -113,7 +113,8 @@ export function useAuditLogs() {
       {
         loadingRef: loading,
         errorRef: error,
-        errorMessage: `Failed to load history for ${collection}`
+        errorMessage: `Failed to load history for ${collection}`,
+        collection: 'audit_logs' // For cache invalidation
       }
     )
   }
