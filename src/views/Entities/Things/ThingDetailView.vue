@@ -237,6 +237,19 @@
         </div>
       </div>
       
+      <!-- Message Stream Card -->                                                                                            <div class="mt-6">                                                                                                        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Message Stream</h2>
+          </div>
+          <div class="p-6">
+            <ThingMessageFeed
+              :thing="thingWithExpandedEdge"
+              :maxMessages="50"
+            />
+          </div>
+        </div>
+      </div> 
+
       <!-- Graph Link Card -->
       <div class="mt-6">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
@@ -252,21 +265,6 @@
                 @click="openInGrafana(thing.id)"
               />
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Message Stream Card -->
-      <div class="mt-6">
-        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
-          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Message Stream</h2>
-          </div>
-          <div class="p-6">
-            <ThingMessageFeed 
-              :thing="thingWithExpandedEdge"
-              :maxMessages="50"
-            />
           </div>
         </div>
       </div>
