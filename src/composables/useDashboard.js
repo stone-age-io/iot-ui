@@ -1,133 +1,161 @@
 // src/composables/useDashboard.js
-import { ref, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { edgeService, locationService, thingService, clientService } from '../services/index'
 import { useAuditLogs } from './useAuditLogs'
 import { useApiOperation } from './useApiOperation'
+import { useReactiveData } from './useReactiveData'
 import configService from '../services/config/configService'
 
 /**
  * Composable for dashboard functionality
- * Enhanced to properly handle activity data
+ * Enhanced to properly utilize the reactive caching system
  * @returns {Object} - Dashboard state and methods
  */
 export function useDashboard() {
-  // Direct state with initial values to prevent null
-  const edgesCount = ref(0)
-  const locationsCount = ref(0)
-  const thingsCount = ref(0)
-  const clientsCount = ref(0)
-  
   // Activity data - this is a ref that will hold the array of activities
   const activity = ref([])
   
-  // Loading state
-  const loading = ref(false)
-  
-  // Status counts by type
-  const statusCounts = reactive({
-    active: 0,
-    inactive: 0,
-    warning: 0,
-    error: 0
-  })
-
-  // Use API operation for consistent handling
-  const { performOperation } = useApiOperation()
-  
-  // Load audit logs using the useAuditLogs composable
+  // Use the audit logs composable for activity data
   const { auditLogs, loading: auditLoading, loadRecentLogs } = useAuditLogs()
+  
+  // Use reactive data for edge count with proper caching
+  const edgesCountData = useReactiveData({
+    collection: 'edges',
+    operation: 'count',
+    fetchFunction: fetchEdgesCountRaw,
+    processData: data => data?.totalItems || 0
+  })
+  
+  // Use reactive data for location count with proper caching
+  const locationsCountData = useReactiveData({
+    collection: 'locations',
+    operation: 'count',
+    fetchFunction: fetchLocationsCountRaw,
+    processData: data => data?.totalItems || 0
+  })
+  
+  // Use reactive data for thing count with proper caching
+  const thingsCountData = useReactiveData({
+    collection: 'things',
+    operation: 'count',
+    fetchFunction: fetchThingsCountRaw,
+    processData: data => data?.totalItems || 0
+  })
+  
+  // Use reactive data for client count with proper caching
+  const clientsCountData = useReactiveData({
+    collection: 'clients',
+    operation: 'count',
+    fetchFunction: fetchClientsCountRaw,
+    processData: data => data?.totalItems || 0
+  })
+  
+  // Expose computed properties for the count values
+  const edgesCount = computed(() => edgesCountData.data.value || 0)
+  const locationsCount = computed(() => locationsCountData.data.value || 0)
+  const thingsCount = computed(() => thingsCountData.data.value || 0)
+  const clientsCount = computed(() => clientsCountData.data.value || 0)
+  
+  // Compute overall loading state from all data sources
+  const loading = computed(() => 
+    edgesCountData.loading.value || 
+    locationsCountData.loading.value || 
+    thingsCountData.loading.value || 
+    clientsCountData.loading.value ||
+    auditLoading.value
+  )
+  
+  /**
+   * Raw function to fetch edges count - used by useReactiveData
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} - Raw response
+   */
+  async function fetchEdgesCountRaw(options = {}) {
+    return await edgeService.getList({ 
+      rows: 1,
+      ...options
+    })
+  }
+  
+  /**
+   * Raw function to fetch locations count - used by useReactiveData
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} - Raw response
+   */
+  async function fetchLocationsCountRaw(options = {}) {
+    return await locationService.getList({ 
+      rows: 1,
+      ...options
+    })
+  }
+  
+  /**
+   * Raw function to fetch things count - used by useReactiveData
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} - Raw response
+   */
+  async function fetchThingsCountRaw(options = {}) {
+    return await thingService.getList({ 
+      rows: 1,
+      ...options
+    })
+  }
+  
+  /**
+   * Raw function to fetch clients count - used by useReactiveData
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} - Raw response
+   */
+  async function fetchClientsCountRaw(options = {}) {
+    return await clientService.getList({ 
+      rows: 1,
+      ...options
+    })
+  }
   
   /**
    * Fetch all dashboard data
+   * This will update all reactive data sources and the activity feed
+   * @param {boolean} skipCache - Whether to force refresh from API
    * @returns {Promise<void>}
    */
-  const fetchDashboardData = async () => {
-    loading.value = true
-    
+  const fetchDashboardData = async (skipCache = false) => {
     try {
-      // Fetch entity counts in parallel
+      // Refresh all reactive data in parallel
       await Promise.all([
-        fetchEdgesCount(),
-        fetchLocationsCount(),
-        fetchThingsCount(),
-        fetchClientsCount(),
+        edgesCountData.refreshData(skipCache),
+        locationsCountData.refreshData(skipCache),
+        thingsCountData.refreshData(skipCache),
+        clientsCountData.refreshData(skipCache),
         fetchRecentActivity()
       ])
       
-      // Copy the audit logs to our activity ref
-      // This ensures we have a clean reactive reference
+      // Copy the audit logs to our activity ref for component access
       activity.value = [...auditLogs.value]
     } catch (error) {
-      // Error handling without logging
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  /**
-   * Fetch edges count directly, no reactive data
-   */
-  const fetchEdgesCount = async () => {
-    try {
-      const { data } = await edgeService.getList({ rows: 1 })
-      edgesCount.value = data.totalItems || 0
-    } catch (error) {
-      // Keep existing value on error
-    }
-  }
-  
-  /**
-   * Fetch locations count directly
-   */
-  const fetchLocationsCount = async () => {
-    try {
-      const { data } = await locationService.getList({ rows: 1 })
-      locationsCount.value = data.totalItems || 0
-    } catch (error) {
-      // Keep existing value on error
-    }
-  }
-  
-  /**
-   * Fetch things count directly
-   */
-  const fetchThingsCount = async () => {
-    try {
-      const { data } = await thingService.getList({ rows: 1 })
-      thingsCount.value = data.totalItems || 0
-    } catch (error) {
-      // Keep existing value on error
-    }
-  }
-  
-  /**
-   * Fetch clients count directly
-   */
-  const fetchClientsCount = async () => {
-    try {
-      const { data } = await clientService.getList({ rows: 1 })
-      clientsCount.value = data.totalItems || 0
-    } catch (error) {
-      // Keep existing value on error
+      console.error('Error fetching dashboard data:', error)
     }
   }
   
   /**
    * Fetch recent activity from audit logs
-   * Modified to be more inclusive in filtering
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} - Formatted activity items
    */
-  const fetchRecentActivity = async () => {
+  const fetchRecentActivity = async (options = {}) => {
     try {
       // Use skipFiltering option to get more inclusive results
-      // This will show all activity types, not just "_request" ones
       const logs = await loadRecentLogs({ 
         limit: 15,
-        skipFiltering: true 
+        skipFiltering: true,
+        ...options
       })
       
-      // The activity value will be updated in fetchDashboardData
+      // Update the activity ref
+      activity.value = logs || []
       return logs
     } catch (error) {
+      console.error('Error fetching recent activity:', error)
       return []
     }
   }
@@ -141,18 +169,17 @@ export function useDashboard() {
   }
 
   return {
-    // State - these are simple refs with primitive values
+    // State - expose the computed values for component access
     edgesCount,
     locationsCount,
     thingsCount,
     clientsCount,
-    activity, 
+    activity,
     loading,
-    statusCounts,
     
     // Methods
     fetchDashboardData,
-    fetchRecentActivity, // Exposed for debugging if needed
+    fetchRecentActivity,
     openGrafana
   }
 }
