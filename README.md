@@ -48,6 +48,7 @@ src/
 │   ├── topic-permission/# Topic permission services
 │   ├── type/            # Type management services
 │   ├── nats/            # NATS messaging services
+│   ├── organiztion/     # Organization-related services
 │   ├── user/            # User profile services
 │   └── index.js         # Central export point
 ├── stores/              # Pinia state stores
@@ -120,9 +121,13 @@ The application follows several key architectural principles:
 The UI can be configured via environment variables:
 
 - `VITE_API_URL`: Base URL for API endpoints
-- `VITE_MQTT_HOST`: MQTT broker URL for connection credentials display
 - `VITE_GRAFANA_URL`: Grafana dashboard URL for monitoring integration
-- `VITE_NATS_HOST`: NATS WebSocket server URL for real-time messaging
+- `VITE_NATS_HOST`: NATS server URL for real-time messaging
+- `VITE_NATS_PORT`: NATS port for real-time messaging
+- `VITE_MQTT_HOST`: MQTT server URL for real-time messaging
+- `VITE_MQTT_PORT`: MQTT port for real-time messaging
+- `VITE_WS_HOST`: WebSocket server URL for real-time messaging
+- `VITE_WS_PORT`: WebSocket port for real-time messaging
 
 ## Building for Production
 
