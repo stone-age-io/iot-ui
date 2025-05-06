@@ -1,6 +1,6 @@
 // src/stores/organization.js
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { clearAllCache } from '../utils/cacheUtils'
 import { useTypesStore } from './types'
 import { organizationService } from '../services/organization/organizationService'
@@ -8,6 +8,7 @@ import { organizationService } from '../services/organization/organizationServic
 /**
  * Centralized Pinia store for organization data and operations
  * Provides a single source of truth for organization state
+ * Enhanced with persistence and better initialization
  */
 export const useOrganizationStore = defineStore('organization', () => {
   // State
@@ -15,6 +16,9 @@ export const useOrganizationStore = defineStore('organization', () => {
   const userOrganizations = ref([])
   const isLoading = ref(false)
   const error = ref(null)
+  
+  // Initialize from localStorage if available
+  initFromLocalStorage()
   
   // Computed values for commonly needed data
   const currentOrganizationCode = computed(() => {
@@ -30,12 +34,64 @@ export const useOrganizationStore = defineStore('organization', () => {
     return 'org'; // Default fallback
   });
   
+  // Watch for changes to currentOrganization and persist to localStorage
+  watch(currentOrganization, (newOrg) => {
+    if (newOrg) {
+      localStorage.setItem('currentOrganization', JSON.stringify(newOrg));
+    } else {
+      localStorage.removeItem('currentOrganization');
+    }
+  }, { deep: true });
+  
+  // Watch for changes to userOrganizations and persist to localStorage
+  watch(userOrganizations, (newOrgs) => {
+    if (newOrgs && newOrgs.length > 0) {
+      localStorage.setItem('userOrganizations', JSON.stringify(newOrgs));
+    } else {
+      localStorage.removeItem('userOrganizations');
+    }
+  }, { deep: true });
+  
+  /**
+   * Initialize from localStorage on store creation/page reload
+   */
+  function initFromLocalStorage() {
+    try {
+      // Try to restore currentOrganization from localStorage
+      const storedOrg = localStorage.getItem('currentOrganization');
+      if (storedOrg) {
+        currentOrganization.value = JSON.parse(storedOrg);
+        console.debug('Restored currentOrganization from localStorage:', currentOrganization.value.name);
+      }
+      
+      // Try to restore userOrganizations from localStorage
+      const storedUserOrgs = localStorage.getItem('userOrganizations');
+      if (storedUserOrgs) {
+        userOrganizations.value = JSON.parse(storedUserOrgs);
+        console.debug('Restored userOrganizations from localStorage:', userOrganizations.value.length);
+      }
+    } catch (error) {
+      console.warn('Failed to initialize organization data from localStorage:', error);
+    }
+  }
+  
   /**
    * Set the current organization
    * @param {Object} organization - Organization data
    */
   function setCurrentOrganization(organization) {
     currentOrganization.value = organization
+    
+    // Update auth data for cache segmentation and API context
+    try {
+      const authData = JSON.parse(localStorage.getItem('auth') || '{}');
+      authData.currentOrgId = organization?.id || null;
+      localStorage.setItem('auth', JSON.stringify(authData));
+      
+      console.debug('Updated auth.currentOrgId in localStorage:', organization?.id);
+    } catch (e) {
+      console.warn('Failed to update organization ID in auth data:', e);
+    }
     
     // Log organization details to help with debugging
     if (process.env.NODE_ENV !== 'production') {
@@ -205,6 +261,92 @@ export const useOrganizationStore = defineStore('organization', () => {
     return currentOrganization.value;
   }
   
+  /**
+   * Initialize organization data from all possible sources
+   * Used for recovery after page refresh or when the primary method fails
+   */
+  async function initFromAllSources() {
+    console.debug('Attempting to initialize organization data from all sources');
+    
+    // If we already have data, we're good
+    if (currentOrganization.value) {
+      console.debug('Organization already initialized:', currentOrganization.value.code);
+      return true;
+    }
+    
+    try {
+      // 1. Try localStorage first (already done in constructor, but check again)
+      const storedOrg = localStorage.getItem('currentOrganization');
+      if (storedOrg) {
+        try {
+          const parsedOrg = JSON.parse(storedOrg);
+          if (parsedOrg && parsedOrg.id) {
+            setCurrentOrganization(parsedOrg);
+            console.debug('Initialized organization from localStorage:', parsedOrg.code);
+            return true;
+          }
+        } catch (e) {
+          console.warn('Failed to parse stored organization:', e);
+        }
+      }
+      
+      // 2. Try to get from auth data in localStorage
+      const authData = JSON.parse(localStorage.getItem('auth') || '{}');
+      let orgId = null;
+      
+      if (authData.currentOrgId) {
+        orgId = authData.currentOrgId;
+        console.debug('Found organization ID in auth.currentOrgId:', orgId);
+      } else if (authData.user?.current_organization_id) {
+        orgId = authData.user.current_organization_id;
+        console.debug('Found organization ID in auth.user.current_organization_id:', orgId);
+      }
+      
+      if (orgId) {
+        const org = await findOrganizationById(orgId);
+        if (org) {
+          setCurrentOrganization(org);
+          console.debug('Initialized organization from auth data:', org.code);
+          return true;
+        }
+      }
+      
+      // 3. Try JWT token payload as last resort
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length >= 2) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            if (payload.current_organization_id) {
+              const org = await findOrganizationById(payload.current_organization_id);
+              if (org) {
+                setCurrentOrganization(org);
+                console.debug('Initialized organization from JWT payload:', org.code);
+                return true;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to extract organization from token:', e);
+        }
+      }
+      
+      // 4. Last resort: Use first available organization if we have any
+      if (userOrganizations.value.length > 0) {
+        setCurrentOrganization(userOrganizations.value[0]);
+        console.debug('Set fallback organization (first available):', userOrganizations.value[0].code);
+        return true;
+      }
+      
+      console.warn('Failed to initialize organization data from any source');
+      return false;
+    } catch (error) {
+      console.error('Error during organization initialization:', error);
+      return false;
+    }
+  }
+  
   return {
     // State
     currentOrganization,
@@ -223,6 +365,7 @@ export const useOrganizationStore = defineStore('organization', () => {
     findOrganizationByCode,
     clearCachesAndReload,
     loadCurrentOrganizationDetails,
-    ensureOrganizationCode
+    ensureOrganizationCode,
+    initFromAllSources
   }
 })

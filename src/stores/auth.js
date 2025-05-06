@@ -215,6 +215,8 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('auth')
+    localStorage.removeItem('currentOrganization')
+    localStorage.removeItem('userOrganizations')
     
     // Reset organization store
     const organizationStore = useOrganizationStore()
@@ -249,6 +251,30 @@ export const useAuthStore = defineStore('auth', () => {
       logout()
       return false
     }
+    
+    // Ensure we still have the user data and auth info properly synchronized
+    try {
+      // If user data is missing but token exists, try to decode token again
+      if (!user.value && token.value) {
+        const decoded = jwtDecode(token.value);
+        user.value = {
+          id: decoded.id || decoded.sub,
+          email: decoded.email,
+          name: decoded.name || decoded.email,
+          org_roles: decoded.org_roles || {},
+          current_organization_id: decoded.current_organization_id || ''
+        };
+        
+        // Re-store auth data to ensure it's consistent
+        localStorage.setItem('auth', JSON.stringify({ 
+          user: user.value,
+          currentOrgId: user.value.current_organization_id
+        }));
+      }
+    } catch (err) {
+      console.warn('Error during token check:', err);
+    }
+    
     return true
   }
 
@@ -356,6 +382,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
   
+  /**
+   * Initialize organization data from current user
+   * This is referenced in main.js but was missing in the implementation
+   */
+  async function initOrganization() {
+    if (!user.value?.current_organization_id) {
+      console.warn('No current_organization_id in user data');
+      return false;
+    }
+    
+    try {
+      const organizationStore = useOrganizationStore();
+      
+      // If the organization is already set, return success
+      if (organizationStore.currentOrganization?.id === user.value.current_organization_id) {
+        console.debug('Organization already set correctly');
+        return true;
+      }
+      
+      const orgResponse = await organizationService.getById(user.value.current_organization_id);
+      if (orgResponse && orgResponse.data) {
+        organizationStore.setCurrentOrganization(orgResponse.data);
+        console.log('Initialized organization from auth store:', orgResponse.data.code);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error initializing organization:', error);
+      return false;
+    }
+  }
+  
   // Preload essential data after login for better UX
   async function preloadEssentialData() {
     try {
@@ -394,6 +453,7 @@ export const useAuthStore = defineStore('auth', () => {
     checkToken,
     updateUser,
     refreshUserData,
-    preloadEssentialData
+    preloadEssentialData,
+    initOrganization // Added missing method
   }
 })

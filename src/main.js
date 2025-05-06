@@ -106,7 +106,7 @@ const preloadAppData = async () => {
   }
 }
 
-// Additional function to ensure organization data is initialized
+// Improved function to ensure organization data is initialized
 const initializeOrganizationData = async () => {
   const authStore = useAuthStore()
   const organizationStore = useOrganizationStore()
@@ -120,33 +120,60 @@ const initializeOrganizationData = async () => {
   try {
     console.log('Initializing organization data...')
     
-    // If user is authenticated, try to initialize
+    // Multi-step initialization process:
+    
+    // Step 1: Try to initialize from auth store
     if (authStore.isAuthenticated && authStore.user?.current_organization_id) {
-      // Initialize org from auth store
+      // Initialize org from auth store using the added method
       const result = await authStore.initOrganization()
       
       if (result) {
-        console.log('Successfully initialized organization:', organizationStore.currentOrganizationCode)
+        console.log('Successfully initialized organization from auth store:', organizationStore.currentOrganizationCode)
         return true
       } else {
         console.warn('Failed to initialize organization from auth store')
       }
-    } else {
-      console.log('No current_organization_id available or user not authenticated')
     }
     
-    // If we still don't have organization data, add a fallback here
-    if (!organizationStore.currentOrganization && authStore.isAuthenticated) {
-      // Optional: attempt to load first available organization from user organizations
-      const userOrgs = organizationStore.userOrganizations
-      if (userOrgs && userOrgs.length > 0) {
-        organizationStore.setCurrentOrganization(userOrgs[0])
-        console.log('Set fallback organization from user organizations')
+    // Step 2: If auth store initialization failed, try the comprehensive method
+    if (!organizationStore.currentOrganization) {
+      const result = await organizationStore.initFromAllSources()
+      
+      if (result) {
+        console.log('Successfully initialized organization from alternate sources:', organizationStore.currentOrganizationCode)
         return true
       }
     }
     
-    return false
+    // Step 3: If we still don't have organization data, use fallback
+    if (!organizationStore.currentOrganization && authStore.isAuthenticated) {
+      // Attempt to load first available organization from user organizations
+      const userOrgs = organizationStore.userOrganizations
+      if (userOrgs && userOrgs.length > 0) {
+        organizationStore.setCurrentOrganization(userOrgs[0])
+        console.log('Set fallback organization from user organizations:', userOrgs[0].code)
+        
+        // Update auth store to keep them in sync
+        if (authStore.user && userOrgs[0].id) {
+          authStore.updateUser({
+            ...authStore.user,
+            current_organization_id: userOrgs[0].id
+          })
+        }
+        
+        return true
+      } else {
+        console.warn('No available organizations found for user')
+      }
+    }
+    
+    if (!authStore.isAuthenticated) {
+      console.log('User not authenticated, skipping organization initialization')
+    } else if (!organizationStore.currentOrganization) {
+      console.warn('Failed to initialize organization data from any source')
+    }
+    
+    return !!organizationStore.currentOrganization
   } catch (error) {
     console.error('Error initializing organization data:', error)
     return false

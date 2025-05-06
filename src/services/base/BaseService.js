@@ -33,7 +33,7 @@ export class BaseService {
   }
 
   /**
-   * Get user auth data from localStorage for cache segmentation
+   * Get user auth data from localStorage for organization context and cache segmentation
    * @returns {Object|null} - User auth data or null
    */
   getUserAuthData() {
@@ -41,10 +41,64 @@ export class BaseService {
       const token = localStorage.getItem('token');
       if (!token) return null;
       
-      const authData = JSON.parse(localStorage.getItem('auth') || '{"user":null, "currentOrgId":null}');
+      // Try multiple ways to get the organization ID from localStorage
+      let currentOrgId = null;
+      let userId = 'anonymous';
+      
+      try {
+        // Most likely structure based on the auth store code
+        const authDataStr = localStorage.getItem('auth');
+        if (authDataStr) {
+          const authData = JSON.parse(authDataStr);
+          
+          // Check different possible locations for org ID
+          if (authData.currentOrgId) {
+            currentOrgId = authData.currentOrgId;
+          } else if (authData.user?.current_organization_id) {
+            currentOrgId = authData.user.current_organization_id;
+          }
+          
+          // Get user ID
+          userId = authData.user?.id || 'anonymous';
+        }
+      } catch (parseError) {
+        console.warn('Error parsing auth data:', parseError);
+      }
+      
+      // Try looking for direct token data as another possibility
+      if (!currentOrgId) {
+        try {
+          // Some implementations store current_organization_id in the JWT payload
+          const tokenParts = token.split('.');
+          if (tokenParts.length >= 2) {
+            const tokenPayload = JSON.parse(atob(tokenParts[1]));
+            if (tokenPayload.current_organization_id) {
+              currentOrgId = tokenPayload.current_organization_id;
+            }
+          }
+        } catch (tokenError) {
+          console.warn('Error extracting data from token:', tokenError);
+        }
+      }
+      
+      // Fallback to checking the organization store's persisted data
+      if (!currentOrgId) {
+        try {
+          const storedOrg = localStorage.getItem('currentOrganization');
+          if (storedOrg) {
+            const parsedOrg = JSON.parse(storedOrg);
+            if (parsedOrg && parsedOrg.id) {
+              currentOrgId = parsedOrg.id;
+            }
+          }
+        } catch (storageError) {
+          console.warn('Error reading from localStorage:', storageError);
+        }
+      }
+      
       return {
-        userId: authData.user?.id || 'anonymous',
-        currentOrgId: authData.currentOrgId || null
+        userId,
+        currentOrgId
       };
     } catch (error) {
       console.warn('Failed to get user auth data:', error);
@@ -159,7 +213,7 @@ export class BaseService {
 
   /**
    * Create a new entity with auto-generated UUIDv7
-   * Now automatically includes the current organization ID if available
+   * Automatically includes the current organization ID if available
    * @param {Object} entity - Entity data
    * @returns {Promise} - Axios promise with created entity
    */
@@ -176,6 +230,12 @@ export class BaseService {
     // Add organization_id if not already provided and we have a current org
     if (currentOrgId && !entityData.organization_id) {
       entityData.organization_id = currentOrgId;
+      console.debug(`BaseService.create - Adding organization_id ${currentOrgId} to ${this.collectionName}`);
+    } else if (!currentOrgId) {
+      // Log a warning if we couldn't find an organization ID
+      console.warn(`BaseService.create - No current organization ID found for ${this.collectionName}`);
+    } else if (entityData.organization_id) {
+      console.debug(`BaseService.create - Entity already has organization_id: ${entityData.organization_id}`);
     }
     
     // Generate a UUIDv7 for the entity if ID is not already specified
