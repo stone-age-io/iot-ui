@@ -14,6 +14,7 @@ import LoginView from '../views/Auth/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import MapView from '../views/MapView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import PubSubView from '../views/PubSubView.vue'
 
 // Edge Views
 import EdgeListView from '../views/Entities/Edges/EdgeListView.vue'
@@ -147,6 +148,12 @@ const router = createRouter({
           component: MapView,
           meta: { title: 'Locations Map' }
         },
+	{
+	  path: 'pubsub',
+	  name: 'pubsub',
+	  component: PubSubView,
+	  meta: { title: 'Pub/Sub' }
+	},
         // Profile route
         {
           path: 'profile',
