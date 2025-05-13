@@ -1,3 +1,4 @@
+```vue
 <template>
   <div>
     <PageHeader title="Thing Types" subtitle="Manage your thing type definitions">
@@ -35,13 +36,6 @@
               {{ data.code }}
             </span>
           </template>
-
-          <!-- Abbreviation column -->
-          <template #abbreviation-body="{ data }">
-            <span class="text-sm font-mono px-2 py-1 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-              {{ getTypeAbbreviation(data.code) }}
-            </span>
-          </template>
           
           <!-- Description column with truncation -->
           <template #description-body="{ data }">
@@ -50,13 +44,6 @@
               :title="data.description"
             >
               {{ data.description || 'No description' }}
-            </div>
-          </template>
-          
-          <!-- Created date column -->
-          <template #created-body="{ data }">
-            <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
-              {{ formatDate(data.created) }}
             </div>
           </template>
           
@@ -120,9 +107,7 @@ const {
   types,
   loading,
   fetchTypes,
-  formatDate,
   deleteType,
-  getTypeAbbreviation,
   navigateToTypeList,
   navigateToTypeDetail,
   navigateToTypeEdit,
@@ -137,13 +122,11 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - updated order: name, code, description
 const columns = [
   { field: 'type', header: 'Name', sortable: true },
   { field: 'code', header: 'Code', sortable: true },
-  { field: 'abbreviation', header: 'Abbreviation', sortable: false },
-  { field: 'description', header: 'Description', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'description', header: 'Description', sortable: true }
 ]
 
 // Fetch thing types on component mount
@@ -205,3 +188,4 @@ const handleDeleteConfirm = async () => {
   background: rgba(var(--primary-200-rgb), 0.16);
 }
 </style>
+```

@@ -1,3 +1,4 @@
+```vue
 <template>
   <div>
     <PageHeader title="Edge Regions" subtitle="Manage your edge region definitions">
@@ -43,13 +44,6 @@
               :title="data.description"
             >
               {{ data.description || 'No description' }}
-            </div>
-          </template>
-          
-          <!-- Created date column -->
-          <template #created-body="{ data }">
-            <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
-              {{ formatDate(data.created) }}
             </div>
           </template>
           
@@ -113,7 +107,6 @@ const {
   types,
   loading,
   fetchTypes,
-  formatDate,
   deleteType,
   navigateToTypeList,
   navigateToTypeDetail,
@@ -129,12 +122,11 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - updated order: name, code, description
 const columns = [
   { field: 'type', header: 'Name', sortable: true },
   { field: 'code', header: 'Code', sortable: true },
-  { field: 'description', header: 'Description', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'description', header: 'Description', sortable: true }
 ]
 
 // Fetch edge regions on component mount
@@ -196,3 +188,4 @@ const handleDeleteConfirm = async () => {
   background: rgba(var(--primary-200-rgb), 0.16);
 }
 </style>
+```

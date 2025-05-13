@@ -1,3 +1,4 @@
+```vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -48,75 +49,96 @@
         </div>
       </div>
       
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Details Card -->
-        <div class="lg:col-span-2">
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+      <!-- Main Details Card - Now full width -->
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+            <!-- Name -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+              <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
             </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                <!-- Name -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
-                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
-                </div>
-                
-                <!-- Code -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
-                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
-                </div>
-                
-                <!-- Description -->
-                <div class="md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
-                  <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
-                    {{ typeData.description || 'No description provided' }}
-                  </div>
-                </div>
+            
+            <!-- Code -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+              <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
+            </div>
+            
+            <!-- Created Date -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
+            </div>
+            
+            <!-- Last Updated -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.updated) }}</div>
+            </div>
+            
+            <!-- Description -->
+            <div class="md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+              <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
+                {{ typeData.description || 'No description provided' }}
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- Stats/Info Card -->
-        <div>
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Information</h2>
-            </div>
-            <div class="p-6">
-              <div class="space-y-6">
-                <!-- Created Date -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
+      </div>
+      
+      <!-- Usage Stats Card -->
+      <div class="mt-6" v-if="usageStats">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              Usage Statistics
+            </h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Edge Count -->
+              <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg p-4 border border-border-light dark:border-border-light-dark">
+                <div class="text-sm text-content-secondary dark:text-content-secondary-dark mb-1">Edges Using This Type</div>
+                <div class="flex items-center">
+                  <i class="pi pi-server mr-2 text-blue-600 dark:text-blue-400"></i>
+                  <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats.count || 0 }}</div>
                 </div>
-                
-                <!-- Last Updated -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.updated) }}</div>
-                </div>
-                
-                <!-- Edge Usage -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Used by Edges</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-server mr-2 text-blue-600 dark:text-blue-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats?.count || 0 }}</div>
-                  </div>
-                  <Button
-                    label="View Edges"
-                    icon="pi pi-arrow-right"
-                    class="p-button-text p-button-sm mt-2"
-                    @click="navigateToEdges(typeData.code)"
-                    :disabled="!usageStats?.count"
-                  />
-                </div>
+                <Button
+                  label="View Edges"
+                  icon="pi pi-arrow-right"
+                  class="p-button-text p-button-sm mt-3"
+                  @click="navigateToEdges(typeData.code)"
+                  :disabled="!usageStats.count"
+                />
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Code Example Card -->
+      <div class="mt-6">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Code Example</h2>
+          </div>
+          <div class="p-6">
+            <p class="mb-3 text-content-secondary dark:text-content-secondary-dark">
+              This is an example of how this edge type's code is used to generate edge codes:
+            </p>
+            
+            <div class="p-4 rounded-md font-mono border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark">
+              <div class="text-content-secondary dark:text-content-secondary-dark">// Example edge code structure</div>
+              <div class="mt-2">
+                <span class="text-blue-600 dark:text-blue-400">{{ typeData.code }}</span>
+                <span class="text-content-secondary dark:text-content-secondary-dark">-region-number</span>
+              </div>
+              <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ typeData.code }}-na-001</div>
             </div>
           </div>
         </div>
@@ -204,7 +226,7 @@ const fetchUsageStats = async () => {
   
   try {
     const { edgeService } = await import('../../../services')
-    const response = await edgeService.getEdges({
+    const response = await edgeService.getList({
       type: typeData.value.code,
       fields: 'id', // Only fetch IDs to make the request lighter
       '$countOnly': true // Request only count if endpoint supports it
@@ -270,7 +292,7 @@ const handleDeleteConfirm = async () => {
   margin-bottom: 0.25rem;
 }
 
-.detail-field, .stat-item {
+.detail-field {
   display: flex;
   flex-direction: column;
 }
@@ -294,3 +316,4 @@ const handleDeleteConfirm = async () => {
   color: var(--primary-300);
 }
 </style>
+```

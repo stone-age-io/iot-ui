@@ -1,3 +1,4 @@
+```vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -48,87 +49,102 @@
         </div>
       </div>
       
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Details Card -->
-        <div class="lg:col-span-2">
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+      <!-- Main Details Card - Now full width -->
+      <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+        <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+          <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Type Details</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+            <!-- Name -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
+              <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
             </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                <!-- Name -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Name</div>
-                  <div class="text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</div>
-                </div>
-                
-                <!-- Code -->
-                <div class="detail-field">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
-                  <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
-                </div>
-                
-                <!-- Description -->
-                <div class="md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
-                  <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
-                    {{ typeData.description || 'No description provided' }}
-                  </div>
-                </div>
-
-                <!-- Style Preview -->
-                <div class="md:col-span-2">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Style Preview</div>
-                  <div class="flex items-center mt-2">
-                    <span 
-                      :class="[getTypeClass(typeData.code), 'px-3 py-1 rounded-full text-sm mr-2']"
-                    >
-                      {{ typeData.type }}
-                    </span>
-                  </div>
-                </div>
+            
+            <!-- Code -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code</div>
+              <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
+            </div>
+            
+            <!-- Style Preview -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Style Preview</div>
+              <div class="flex items-center mt-2">
+                <span 
+                  :class="[getTypeClass(typeData.code), 'px-3 py-1 rounded-full text-sm']"
+                >
+                  {{ typeData.type }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Created Date -->
+            <div class="detail-field">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
+              <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
+            </div>
+            
+            <!-- Description -->
+            <div class="md:col-span-2">
+              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Description</div>
+              <div class="p-3 rounded border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark text-content-primary dark:text-content-primary-dark">
+                {{ typeData.description || 'No description provided' }}
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- Stats/Info Card -->
-        <div>
-          <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition h-full">
-            <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Information</h2>
-            </div>
-            <div class="p-6">
-              <div class="space-y-6">
-                <!-- Created Date -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Created</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.created) }}</div>
+      </div>
+      
+      <!-- Usage Stats Card -->
+      <div class="mt-6" v-if="usageStats">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+              Usage Statistics
+            </h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Location Count -->
+              <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg p-4 border border-border-light dark:border-border-light-dark">
+                <div class="text-sm text-content-secondary dark:text-content-secondary-dark mb-1">Locations Using This Type</div>
+                <div class="flex items-center">
+                  <i class="pi pi-map-marker mr-2 text-green-600 dark:text-green-400"></i>
+                  <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats.count || 0 }}</div>
                 </div>
-                
-                <!-- Last Updated -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Last Updated</div>
-                  <div class="text-content-secondary dark:text-content-secondary-dark">{{ formatDate(typeData.updated) }}</div>
-                </div>
-                
-                <!-- Location Usage -->
-                <div class="stat-item">
-                  <div class="field-label text-content-secondary dark:text-content-secondary-dark">Used by Locations</div>
-                  <div class="flex items-center">
-                    <i class="pi pi-map-marker mr-2 text-green-600 dark:text-green-400"></i>
-                    <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats?.count || 0 }}</div>
-                  </div>
-                  <Button
-                    label="View Locations"
-                    icon="pi pi-arrow-right"
-                    class="p-button-text p-button-sm mt-2"
-                    @click="navigateToLocations(typeData.code)"
-                    :disabled="!usageStats?.count"
-                  />
-                </div>
+                <Button
+                  label="View Locations"
+                  icon="pi pi-arrow-right"
+                  class="p-button-text p-button-sm mt-3"
+                  @click="navigateToLocations(typeData.code)"
+                  :disabled="!usageStats.count"
+                />
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Code Example Card -->
+      <div class="mt-6">
+        <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+          <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
+            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">Code Example</h2>
+          </div>
+          <div class="p-6">
+            <p class="mb-3 text-content-secondary dark:text-content-secondary-dark">
+              This is an example of how this location type's code is used to generate location codes:
+            </p>
+            
+            <div class="p-4 rounded-md font-mono border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark">
+              <div class="text-content-secondary dark:text-content-secondary-dark">// Example location code structure</div>
+              <div class="mt-2">
+                <span class="text-blue-600 dark:text-blue-400">{{ typeData.code }}</span>
+                <span class="text-content-secondary dark:text-content-secondary-dark">-101</span>
+              </div>
+              <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ typeData.code }}-101</div>
             </div>
           </div>
         </div>
@@ -217,7 +233,7 @@ const fetchUsageStats = async () => {
   
   try {
     const { locationService } = await import('../../../services')
-    const response = await locationService.getLocations({
+    const response = await locationService.getList({
       type: typeData.value.code,
       fields: 'id', // Only fetch IDs to make the request lighter
       '$countOnly': true // Request only count if endpoint supports it
@@ -283,7 +299,7 @@ const handleDeleteConfirm = async () => {
   margin-bottom: 0.25rem;
 }
 
-.detail-field, .stat-item {
+.detail-field {
   display: flex;
   flex-direction: column;
 }
@@ -307,3 +323,4 @@ const handleDeleteConfirm = async () => {
   color: var(--primary-300);
 }
 </style>
+```

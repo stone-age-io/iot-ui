@@ -1,3 +1,4 @@
+```vue
 <template>
   <div>
     <PageHeader title="Edge Types" subtitle="Manage edge type definitions">
@@ -17,21 +18,23 @@
           :columns="columns"
           :loading="loading"
           :searchable="true"
-          :searchFields="['code', 'type', 'description']"
+          :searchFields="['type', 'code', 'description']"
           empty-message="No edge types found"
           @row-click="(data) => navigateToTypeDetail(data.id)"
           :paginated="true"
           :rows="10"
         >
           
-          <!-- Code column with custom formatting -->
-          <template #code-body="{ data }">
-            <div class="font-mono text-primary-700 dark:text-primary-400">{{ data.code }}</div>
+          <!-- Type column -->
+          <template #type-body="{ data }">
+            <div class="font-medium text-primary-700 dark:text-primary-400">{{ data.type }}</div>
           </template>
           
-          <!-- Type name column -->
-          <template #type-body="{ data }">
-            <div class="font-medium text-content-primary dark:text-content-primary-dark">{{ data.type }}</div>
+          <!-- Code column -->
+          <template #code-body="{ data }">
+            <span class="text-sm font-mono px-2 py-1 rounded bg-surface-secondary dark:bg-surface-secondary-dark text-content-primary dark:text-content-primary-dark">
+              {{ data.code }}
+            </span>
           </template>
           
           <!-- Description column with truncation -->
@@ -41,13 +44,6 @@
               :title="data.description"
             >
               {{ data.description || 'No description' }}
-            </div>
-          </template>
-          
-          <!-- Created date column -->
-          <template #created-body="{ data }">
-            <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
-              {{ formatDate(data.created) }}
             </div>
           </template>
           
@@ -115,7 +111,6 @@ const {
   types,
   loading,
   fetchTypes,
-  formatDate,
   deleteType,
   navigateToTypeList,
   navigateToTypeDetail,
@@ -131,12 +126,11 @@ const {
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
-// Table columns definition
+// Table columns definition - updated order: name, code, description
 const columns = [
-  { field: 'code', header: 'Code', sortable: true },
   { field: 'type', header: 'Name', sortable: true },
-  { field: 'description', header: 'Description', sortable: true },
-  { field: 'created', header: 'Created', sortable: true }
+  { field: 'code', header: 'Code', sortable: true },
+  { field: 'description', header: 'Description', sortable: true }
 ]
 
 // Fetch edge types on component mount
@@ -206,3 +200,4 @@ const handleDeleteConfirm = async () => {
   background: rgba(var(--primary-200-rgb), 0.16);
 }
 </style>
+```
