@@ -53,7 +53,15 @@ function generateStandardizedMessage(thingId, edgeId, messageType, payload = {},
  * @returns {string} - Formatted NATS topic
  */
 function generateStandardTopic({ orgId, edgeCode, thingType, thingCode, messageType }) {
-  return [orgId, edgeCode, thingType, thingCode, messageType].filter(Boolean).join('.');
+  // Ensure all components are present - use defaults if needed
+  const orgIdVal = orgId || 'org';
+  const edgeCodeVal = edgeCode || 'edge';
+  const thingTypeVal = thingType || 'device';
+  const thingCodeVal = thingCode || 'generic';
+  const messageTypeVal = messageType || 'event';
+  
+  // Join components to create topic
+  return [orgIdVal, edgeCodeVal, thingTypeVal, thingCodeVal, messageTypeVal].join('.');
 }
 
 /**
@@ -80,7 +88,7 @@ function parseStandardTopic(topic) {
  * Composable for managing Pub/Sub functionality
  * Handles button configuration, layout, and NATS message publishing
  * 
- * @returns {Object} PubSub functionality
+ * @returns {Object} - PubSub functionality
  */
 export function usePubSub() {
   const toast = useToast()
@@ -245,10 +253,6 @@ export function usePubSub() {
    * @returns {string} - Topic string
    */
   const generateTopicFromButton = (button) => {
-    // If the topic is already set, use it
-    if (button.topic) return button.topic;
-    
-    // Otherwise, build from components
     return generateStandardTopic({
       orgId: organizationCode.value,
       edgeCode: button.edgeCode,
@@ -299,6 +303,13 @@ export function usePubSub() {
     if (index === -1) return false
     
     buttons.value[index] = { ...button }
+    
+    // Update any associated subscription topic as well
+    const associatedSubId = `sub-${button.id}`
+    const subIndex = subscriptions.value.findIndex(s => s.id === associatedSubId)
+    if (subIndex !== -1) {
+      subscriptions.value[subIndex].topic = button.topic
+    }
     
     return true
   }

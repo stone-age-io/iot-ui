@@ -259,7 +259,7 @@
         
         <div class="field mb-4">
           <label for="button-topic" class="font-medium">Topic</label>
-          <InputText id="button-topic" v-model="currentButton.topic" />
+          <InputText id="button-topic" v-model="currentButton.topic" disabled />
           <small class="text-content-secondary dark:text-content-secondary-dark">
             Standard format: {org_id}.{edge_code}.{thing_type}.{thing_code}.{message_type}
           </small>
@@ -653,6 +653,9 @@ function editButton(button) {
   metadataJSON.value = JSON.stringify(button.message?.metadata || {}, null, 2)
   contextJSON.value = JSON.stringify(button.message?.context || {}, null, 2)
   
+  // Update the topic
+  updateTopicFromComponents()
+  
   buttonDialogVisible.value = true
 }
 
@@ -664,10 +667,8 @@ function saveButton() {
     currentButton.value.message.metadata = JSON.parse(metadataJSON.value || '{}')
     currentButton.value.message.context = JSON.parse(contextJSON.value || '{}')
     
-    // Ensure topic is set
-    if (!currentButton.value.topic) {
-      updateTopicFromComponents()
-    }
+    // Always update the topic from components
+    updateTopicFromComponents()
     
     if (dialogMode.value === 'add') {
       addButton(currentButton.value)
@@ -704,9 +705,7 @@ function saveButton() {
 
 // Update topic based on edge/thing selection
 function updateTopicFromComponents() {
-  if (!selectedEdge.value && !selectedThing.value) return;
-  
-  // Update IDs and codes in current button
+  // Update topic based on selected components
   if (selectedEdge.value) {
     currentButton.value.edgeId = selectedEdge.value.id
     currentButton.value.edgeCode = selectedEdge.value.code
@@ -718,7 +717,7 @@ function updateTopicFromComponents() {
     currentButton.value.thingType = selectedThing.value.type
   }
   
-  // Generate topic based on the current button configuration
+  // Always regenerate the topic based on components
   currentButton.value.topic = generateTopicFromButton(currentButton.value)
 }
 
@@ -765,6 +764,9 @@ function onTemplateChange() {
   // Update the message in the current button
   currentButton.value.message.payload = selectedTemplate.value.payload;
   currentButton.value.message.metadata = selectedTemplate.value.metadata;
+  
+  // Update the topic when template changes
+  updateTopicFromComponents();
 }
 
 // Confirm and delete a button
