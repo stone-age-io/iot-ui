@@ -166,9 +166,6 @@
     <div v-if="paused && paginatedMessages.length > 0" class="paused-indicator mt-2 p-2 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 text-center text-sm rounded">
       <i class="pi pi-pause mr-1"></i> Message stream is paused. Click Start to resume.
     </div>
-    
-    <!-- Toast for copy notification -->
-    <Toast position="bottom-right" />
   </div>
 </template>
 

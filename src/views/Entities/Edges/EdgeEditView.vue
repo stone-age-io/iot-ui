@@ -187,9 +187,6 @@
         </div>
       </div>
     </div>
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 
