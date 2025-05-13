@@ -262,9 +262,6 @@
       details="This action cannot be undone. Clients using this permission role will lose their access."
       @confirm="handleDeletePermission"
     />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 

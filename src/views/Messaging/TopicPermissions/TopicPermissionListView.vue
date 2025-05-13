@@ -164,9 +164,6 @@
         />
       </template>
     </Dialog>
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 

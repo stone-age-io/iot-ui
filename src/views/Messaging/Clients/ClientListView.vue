@@ -100,9 +100,6 @@
       details="This action cannot be undone."
       @confirm="handleDeleteClient"
     />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 

@@ -354,9 +354,6 @@
       details="This action cannot be undone. All things associated with this location will be orphaned or deleted."
       @confirm="handleDeleteConfirm"
     />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 

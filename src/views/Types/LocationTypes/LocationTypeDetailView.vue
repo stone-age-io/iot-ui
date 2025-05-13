@@ -147,9 +147,6 @@
       :details="deleteDialog.details"
       @confirm="handleDeleteConfirm"
     />
-    
-    <!-- Toast for success/error messages -->
-    <Toast />
   </div>
 </template>
 
