@@ -171,6 +171,11 @@ const menuSections = [
         label: 'Map',
         icon: 'pi pi-map',
         to: '/map'
+      },
+      {
+        label: 'Pub/Sub',
+        icon: 'pi pi-sync',
+        to: '/pubsub'
       }
     ]
   },

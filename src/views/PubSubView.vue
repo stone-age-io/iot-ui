@@ -61,44 +61,60 @@
       </div>
       
       <div v-else>
-        <!-- Layout controls shown only in edit mode -->
+        <!-- Layout controls shown only in edit mode - COMPLETELY REDESIGNED -->
         <div v-if="editMode" class="layout-controls mb-4 p-4 bg-surface-secondary dark:bg-gray-800 rounded-lg">
-          <div class="flex flex-wrap gap-4 justify-between items-center">
-            <h3 class="text-lg font-medium">Layout Configuration</h3>
+          <!-- Use grid layout for better control -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            <!-- Heading - spans full width on mobile, 3 columns on desktop -->
+            <div class="md:col-span-3">
+              <h3 class="text-lg font-medium">Layout Configuration</h3>
+            </div>
             
-            <div class="flex flex-wrap gap-3">
-              <div class="flex items-center">
-                <label for="grid-columns" class="mr-2">Columns:</label>
-                <InputNumber 
-                  id="grid-columns" 
-                  v-model="layout.columns" 
-                  :min="1" 
-                  :max="12" 
-                  showButtons 
-                  buttonLayout="horizontal"
-                  class="w-24"
-                />
+            <!-- Controls container - spans full width on mobile, 9 columns on desktop -->
+            <div class="md:col-span-9 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+              <!-- Columns Control - spans full width on mobile, 4 columns on sm+ -->
+              <div class="sm:col-span-4 flex items-center">
+                <label for="grid-columns" class="whitespace-nowrap mr-3 w-20">Columns:</label>
+                <div class="flex-grow">
+                  <InputNumber 
+                    id="grid-columns" 
+                    v-model="layout.columns" 
+                    :min="1" 
+                    :max="12" 
+                    showButtons 
+                    buttonLayout="horizontal"
+                    class="w-full"
+                    :inputStyle="{ width: '100%' }"
+                  />
+                </div>
               </div>
               
-              <div class="flex items-center">
-                <label for="gap-size" class="mr-2">Gap:</label>
-                <InputNumber 
-                  id="gap-size" 
-                  v-model="layout.gap" 
-                  :min="0" 
-                  :max="8" 
-                  showButtons 
-                  buttonLayout="horizontal"
-                  class="w-24"
-                />
+              <!-- Gap Control - spans full width on mobile, 4 columns on sm+ -->
+              <div class="sm:col-span-4 flex items-center">
+                <label for="gap-size" class="whitespace-nowrap mr-3 w-20">Gap:</label>
+                <div class="flex-grow">
+                  <InputNumber 
+                    id="gap-size" 
+                    v-model="layout.gap" 
+                    :min="0" 
+                    :max="8" 
+                    showButtons 
+                    buttonLayout="horizontal"
+                    class="w-full"
+                    :inputStyle="{ width: '100%' }"
+                  />
+                </div>
               </div>
 
-              <Button 
-                label="Add Button" 
-                icon="pi pi-plus" 
-                @click="openAddButtonDialog"
-                class="ml-auto"
-              />
+              <!-- Add Button - spans full width on mobile, 4 columns on sm+ -->
+              <div class="sm:col-span-4">
+                <Button 
+                  label="Add Button" 
+                  icon="pi pi-plus" 
+                  @click="openAddButtonDialog"
+                  class="w-full"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -149,12 +165,13 @@
       </TabView>
     </div>
 
-    <!-- Button configuration dialog -->
+    <!-- Button configuration dialog - IMPROVED LAYOUT -->
     <Dialog 
       v-model:visible="buttonDialogVisible" 
       :header="dialogMode === 'add' ? 'Add Button' : 'Edit Button'" 
       modal 
       :style="{ width: '90%', maxWidth: '650px' }"
+      class="pubsub-dialog"
     >
       <div class="p-fluid">
         <!-- Basic Settings -->
@@ -164,8 +181,8 @@
           <InputText id="button-label" v-model="currentButton.label" />
         </div>
         
-        <div class="flex flex-col md:flex-row gap-4">
-          <div class="field w-full md:w-1/2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="field">
             <label for="button-color" class="font-medium">Button Color</label>
             <Dropdown
               id="button-color"
@@ -176,7 +193,7 @@
             />
           </div>
           
-          <div class="field w-full md:w-1/2">
+          <div class="field">
             <label for="button-size" class="font-medium">Button Size</label>
             <Dropdown
               id="button-size"
@@ -190,8 +207,8 @@
         
         <!-- Topic Selection -->
         <h3 class="text-lg font-medium mb-3 mt-5">Topic Configuration</h3>
-        <div class="flex flex-col md:flex-row gap-4">
-          <div class="field w-full md:w-1/2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="field">
             <label for="button-edge" class="font-medium">Edge</label>
             <Dropdown
               id="button-edge"
@@ -217,7 +234,7 @@
             </Dropdown>
           </div>
           
-          <div class="field w-full md:w-1/2">
+          <div class="field">
             <label for="button-thing" class="font-medium">Thing</label>
             <Dropdown
               id="button-thing"
@@ -259,7 +276,7 @@
         
         <div class="field mb-4">
           <label for="button-topic" class="font-medium">Topic</label>
-          <InputText id="button-topic" v-model="currentButton.topic" disabled />
+          <InputText id="button-topic" v-model="currentButton.topic" />
           <small class="text-content-secondary dark:text-content-secondary-dark">
             Standard format: {org_id}.{edge_code}.{thing_type}.{thing_code}.{message_type}
           </small>
@@ -353,18 +370,21 @@
       </div>
       
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          class="p-button-text" 
-          @click="buttonDialogVisible = false"
-        />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
-          @click="saveButton"
-          :disabled="hasErrors"
-        />
+        <div class="flex flex-col sm:flex-row justify-end gap-2">
+          <Button 
+            label="Cancel" 
+            icon="pi pi-times" 
+            class="p-button-text w-full sm:w-auto" 
+            @click="buttonDialogVisible = false"
+          />
+          <Button 
+            label="Save" 
+            icon="pi pi-check" 
+            class="w-full sm:w-auto"
+            @click="saveButton"
+            :disabled="hasErrors"
+          />
+        </div>
       </template>
     </Dialog>
 
@@ -860,6 +880,53 @@ function exportConfig() {
 :deep(.dark) .button-grid.edit-mode {
   background-color: rgba(255, 255, 255, 0.02);
   border-color: var(--surface-border, #4b5563);
+}
+
+/* Enhanced dialog styling */
+:deep(.pubsub-dialog .p-dialog-content) {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Improve textarea responsiveness */
+:deep(.pubsub-dialog textarea.p-inputtextarea) {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Better dropdown display on small screens */
+@media (max-width: 640px) {
+  :deep(.p-dropdown-panel) {
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  :deep(.pubsub-dialog .p-dialog-content) {
+    padding: 0.75rem;
+  }
+}
+
+/* Enhanced styles for PrimeVue integration */
+:deep(.layout-controls .p-inputnumber) {
+  width: 100%;
+}
+
+:deep(.layout-controls .p-inputnumber-buttons-horizontal .p-inputnumber-input) {
+  width: 100%;
+  text-align: center;
+}
+
+/* Control overlapping UI elements on smaller screens */
+@media (max-width: 768px) {
+  :deep(.p-inputnumber-button-up),
+  :deep(.p-inputnumber-button-down) {
+    width: 2rem !important;
+  }
+}
+
+/* Fix PrimeVue InputNumber width issues across screen sizes */
+:deep(.p-inputnumber.p-component) {
+  display: flex;
 }
 
 /* Gap utilities based on layout settings */
