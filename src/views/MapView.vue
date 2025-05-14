@@ -53,8 +53,8 @@
     
     <!-- Location List -->
     <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
+	    <div class=p-6>
       <DataTable
-        title="Locations"
         :items="filteredLocations"
         :columns="columns"
         :loading="loading"
@@ -139,6 +139,7 @@
           </div>
         </template>
       </DataTable>
+	    </div>
     </div>
     
     <!-- Location Detail Dialog -->
