@@ -1,4 +1,3 @@
-```vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -91,31 +90,50 @@
         </div>
       </div>
       
-      <!-- Usage Stats Card -->
-      <div class="mt-6" v-if="usageStats">
+      <!-- Edges using this type with count in title -->
+      <div class="mt-6" v-if="totalEdgesCount > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-              Usage Statistics
-            </h2>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Edges
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ totalEdgesCount }} total)
+                </span>
+              </h2>
+              <Button
+                label="View All"
+                icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm"
+                @click="navigateToEdges(typeData.code)"
+              />
+            </div>
           </div>
           <div class="p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <!-- Edge Count -->
-              <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg p-4 border border-border-light dark:border-border-light-dark">
-                <div class="text-sm text-content-secondary dark:text-content-secondary-dark mb-1">Edges Using This Type</div>
-                <div class="flex items-center">
-                  <i class="pi pi-server mr-2 text-blue-600 dark:text-blue-400"></i>
-                  <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats.count || 0 }}</div>
+            <div v-if="recentEdges.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                v-for="edge in recentEdges" 
+                :key="edge.id"
+                class="rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer edge-card bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark theme-transition"
+                @click="navigateToEdgeDetail(edge.id)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <span class="text-primary-600 dark:text-primary-400 font-mono">{{ edge.code }}</span>
+                  <span 
+                    class="badge"
+                    :class="getEdgeRegionClass(edge.region)"
+                  >
+                    {{ getEdgeRegionName(edge.region) }}
+                  </span>
                 </div>
-                <Button
-                  label="View Edges"
-                  icon="pi pi-arrow-right"
-                  class="p-button-text p-button-sm mt-3"
-                  @click="navigateToEdges(typeData.code)"
-                  :disabled="!usageStats.count"
-                />
+                <div class="font-semibold mb-1 text-content-primary dark:text-content-primary-dark">{{ edge.name }}</div>
+                <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
+                  {{ edge.active ? 'Active' : 'Inactive' }}
+                </div>
               </div>
+            </div>
+            <div v-else class="p-4 text-center text-content-secondary dark:text-content-secondary-dark">
+              Loading edges...
             </div>
           </div>
         </div>
@@ -165,6 +183,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEdgeType } from '../../../composables/useEdgeType'
 import { useDeleteConfirmation } from '../../../composables/useConfirmation'
+import { useTypesStore } from '../../../stores/types'
 import ConfirmationDialog from '../../../components/common/ConfirmationDialog.vue'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
@@ -172,6 +191,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
+const typesStore = useTypesStore()
 
 // Edge type functionality from composable
 const { 
@@ -194,7 +214,8 @@ const {
 
 // Local state
 const typeData = ref(null)
-const usageStats = ref(null)
+const totalEdgesCount = ref(0)
+const recentEdges = ref([])
 
 // Fetch edge type data on component mount
 onMounted(async () => {
@@ -212,16 +233,19 @@ const loadTypeDetail = async () => {
     if (data) {
       typeData.value = data
       
-      // Fetch usage stats (edges using this type)
-      await fetchUsageStats()
+      // Fetch usage stats and recent edges
+      await Promise.all([
+        fetchEdgesCount(),
+        fetchRecentEdges()
+      ])
     }
   } catch (err) {
     // Error handling is done in the composable
   }
 }
 
-// Fetch stats about how many edges use this type
-const fetchUsageStats = async () => {
+// Fetch count of edges using this type
+const fetchEdgesCount = async () => {
   if (!typeData.value || !typeData.value.code) return
   
   try {
@@ -232,13 +256,39 @@ const fetchUsageStats = async () => {
       '$countOnly': true // Request only count if endpoint supports it
     })
     
-    usageStats.value = {
-      count: response.data.totalItems || 0
-    }
+    totalEdgesCount.value = response.data.totalItems || 0
   } catch (err) {
-    console.error('Error fetching usage stats:', err)
-    usageStats.value = { count: 0 }
+    console.error('Error fetching edges count:', err)
+    totalEdgesCount.value = 0
   }
+}
+
+// Fetch recent edges using this type
+const fetchRecentEdges = async () => {
+  if (!typeData.value || !typeData.value.code) return
+  
+  try {
+    const { edgeService } = await import('../../../services')
+    const response = await edgeService.getList({
+      type: typeData.value.code,
+      sort: '-created',
+      perPage: 3, // Limit to 3 recent edges
+    })
+    
+    recentEdges.value = response.data.items || []
+  } catch (err) {
+    console.error('Error fetching recent edges:', err)
+    recentEdges.value = []
+  }
+}
+
+// Get edge region name and class
+const getEdgeRegionName = (regionCode) => {
+  return typesStore.getTypeName(regionCode, 'edgeRegions')
+}
+
+const getEdgeRegionClass = (regionCode) => {
+  return typesStore.getEdgeRegionClass(regionCode)
 }
 
 // Navigate to edges filtered by this type
@@ -249,19 +299,27 @@ const navigateToEdges = (typeCode) => {
   })
 }
 
+// Navigate to edge detail
+const navigateToEdgeDetail = (id) => {
+  router.push({ 
+    name: 'edge-detail', 
+    params: { id } 
+  })
+}
+
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!typeData.value) return
   
   // Show warning if there are edges using this type
-  if (usageStats.value && usageStats.value.count > 0) {
+  if (totalEdgesCount.value > 0) {
     confirmDelete(
       typeData.value,
       'edge type',
       'type',
       {
         message: `Are you sure you want to delete edge type "${typeData.value.type}"?`,
-        details: `This type is currently used by ${usageStats.value.count} edge${usageStats.value.count > 1 ? 's' : ''}. Deleting it may cause issues with those edges.`
+        details: `This type is currently used by ${totalEdgesCount.value} edge${totalEdgesCount.value > 1 ? 's' : ''}. Deleting it may cause issues with those edges.`
       }
     )
   } else {
@@ -292,9 +350,27 @@ const handleDeleteConfirm = async () => {
   margin-bottom: 0.25rem;
 }
 
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .detail-field {
   display: flex;
   flex-direction: column;
+}
+
+.edge-card {
+  transition: all 0.2s ease;
+}
+
+.edge-card:hover {
+  transform: translateY(-2px);
 }
 
 /* Fix button styling */
@@ -316,4 +392,3 @@ const handleDeleteConfirm = async () => {
   color: var(--primary-300);
 }
 </style>
-```

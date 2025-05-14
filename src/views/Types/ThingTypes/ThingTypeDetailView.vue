@@ -1,4 +1,3 @@
-```vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -26,12 +25,9 @@
         <div>
           <div class="text-sm mb-1 text-content-secondary dark:text-content-secondary-dark">Thing Type</div>
           <h1 class="text-2xl font-bold mb-1 text-content-primary dark:text-content-primary-dark">{{ typeData.type }}</h1>
-          <div class="text-content-secondary dark:text-content-secondary-dark flex flex-wrap gap-2">
-            <span class="font-mono px-2 py-1 rounded bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark">
+          <div class="font-mono text-content-secondary dark:text-content-secondary-dark">
+            <span class="px-2 py-1 rounded bg-surface-secondary dark:bg-surface-secondary-dark border border-border-secondary dark:border-border-secondary-dark">
               {{ typeData.code }}
-            </span>
-            <span class="font-mono px-2 py-1 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-border-secondary dark:border-border-secondary-dark">
-              {{ getTypeAbbreviation(typeData.code) }}
             </span>
           </div>
         </div>
@@ -71,13 +67,6 @@
               <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ typeData.code }}</div>
             </div>
             
-            <!-- Abbreviation -->
-            <div class="detail-field">
-              <div class="field-label text-content-secondary dark:text-content-secondary-dark">Code Abbreviation</div>
-              <div class="font-mono text-lg text-content-primary dark:text-content-primary-dark">{{ getTypeAbbreviation(typeData.code) }}</div>
-              <div class="text-sm mt-1 text-content-secondary dark:text-content-secondary-dark">Used in thing codes</div>
-            </div>
-            
             <!-- Style Preview -->
             <div class="detail-field">
               <div class="field-label text-content-secondary dark:text-content-secondary-dark">Style Preview</div>
@@ -113,31 +102,44 @@
         </div>
       </div>
       
-      <!-- Usage Stats Card -->
-      <div class="mt-6" v-if="usageStats">
+      <!-- Things using this type with count in title -->
+      <div class="mt-6" v-if="totalThingsCount > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-              Usage Statistics
-            </h2>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Things
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ totalThingsCount }} total)
+                </span>
+              </h2>
+              <Button
+                label="View All"
+                icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm"
+                @click="navigateToThings(typeData.code)"
+              />
+            </div>
           </div>
           <div class="p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <!-- Thing Count -->
-              <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg p-4 border border-border-light dark:border-border-light-dark">
-                <div class="text-sm text-content-secondary dark:text-content-secondary-dark mb-1">Things Using This Type</div>
-                <div class="flex items-center">
-                  <i class="pi pi-cog mr-2 text-blue-600 dark:text-blue-400"></i>
-                  <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats.count || 0 }}</div>
+            <div v-if="recentThings.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                v-for="thing in recentThings" 
+                :key="thing.id"
+                class="rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer thing-card bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark theme-transition"
+                @click="navigateToThingDetail(thing.id)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <span class="text-primary-600 dark:text-primary-400 font-mono">{{ thing.code }}</span>
                 </div>
-                <Button
-                  label="View Things"
-                  icon="pi pi-arrow-right"
-                  class="p-button-text p-button-sm mt-3"
-                  @click="navigateToThings(typeData.code)"
-                  :disabled="!usageStats.count"
-                />
+                <div class="font-semibold mb-1 text-content-primary dark:text-content-primary-dark">{{ thing.name }}</div>
+                <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
+                  {{ getLocationName(thing) }}
+                </div>
               </div>
+            </div>
+            <div v-else class="p-4 text-center text-content-secondary dark:text-content-secondary-dark">
+              Loading things...
             </div>
           </div>
         </div>
@@ -157,10 +159,10 @@
             <div class="p-4 rounded-md font-mono border bg-surface-secondary dark:bg-surface-secondary-dark border-border-primary dark:border-border-primary-dark">
               <div class="text-content-secondary dark:text-content-secondary-dark">// Example thing code structure</div>
               <div class="mt-2">
-                <span class="text-blue-600 dark:text-blue-400">{{ getTypeAbbreviation(typeData.code) }}</span>
-                <span class="text-content-secondary dark:text-content-secondary-dark">-location_identifier-001</span>
+                <span class="text-blue-600 dark:text-blue-400">{{ typeData.code }}</span>
+                <span class="text-content-secondary dark:text-content-secondary-dark">-location-001</span>
               </div>
-              <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ getTypeAbbreviation(typeData.code) }}-main-001</div>
+              <div class="mt-2 text-content-secondary dark:text-content-secondary-dark">// e.g., {{ typeData.code }}-main-001</div>
             </div>
           </div>
         </div>
@@ -202,7 +204,6 @@ const {
   formatDate,
   fetchType,
   deleteType,
-  getTypeAbbreviation,
   getTypeClass,
   navigateToTypeList,
   navigateToTypeEdit
@@ -218,7 +219,9 @@ const {
 
 // Local state
 const typeData = ref(null)
-const usageStats = ref(null)
+const totalThingsCount = ref(0)
+const recentThings = ref([])
+const locations = ref({}) // Map of location_id -> location_name for display
 
 // Fetch thing type data on component mount
 onMounted(async () => {
@@ -236,16 +239,19 @@ const loadTypeDetail = async () => {
     if (data) {
       typeData.value = data
       
-      // Fetch usage stats (things using this type)
-      await fetchUsageStats()
+      // Fetch usage stats and recent things
+      await Promise.all([
+        fetchThingsCount(),
+        fetchRecentThings()
+      ])
     }
   } catch (err) {
     // Error handling is done in the composable
   }
 }
 
-// Fetch stats about how many things use this type
-const fetchUsageStats = async () => {
+// Fetch count of things using this type
+const fetchThingsCount = async () => {
   if (!typeData.value || !typeData.value.code) return
   
   try {
@@ -256,13 +262,46 @@ const fetchUsageStats = async () => {
       '$countOnly': true // Request only count if endpoint supports it
     })
     
-    usageStats.value = {
-      count: response.data.totalItems || 0
-    }
+    totalThingsCount.value = response.data.totalItems || 0
   } catch (err) {
-    console.error('Error fetching usage stats:', err)
-    usageStats.value = { count: 0 }
+    console.error('Error fetching things count:', err)
+    totalThingsCount.value = 0
   }
+}
+
+// Fetch recent things using this type
+const fetchRecentThings = async () => {
+  if (!typeData.value || !typeData.value.code) return
+  
+  try {
+    const { thingService } = await import('../../../services')
+    const response = await thingService.getList({
+      type: typeData.value.code,
+      sort: '-created',
+      perPage: 3, // Limit to 3 recent things
+      expand: 'location_id' // Expand location data
+    })
+    
+    recentThings.value = response.data.items || []
+    
+    // Extract location names from expanded data
+    recentThings.value.forEach(thing => {
+      if (thing.expand && thing.expand.location_id) {
+        locations.value[thing.location_id] = thing.expand.location_id.name
+      }
+    })
+  } catch (err) {
+    console.error('Error fetching recent things:', err)
+    recentThings.value = []
+  }
+}
+
+// Get location name for a thing
+const getLocationName = (thing) => {
+  if (thing.expand && thing.expand.location_id) {
+    return thing.expand.location_id.name
+  }
+  return locations.value[thing.location_id] || 'Unknown location'
 }
 
 // Navigate to things filtered by this type
@@ -273,19 +312,27 @@ const navigateToThings = (typeCode) => {
   })
 }
 
+// Navigate to thing detail
+const navigateToThingDetail = (id) => {
+  router.push({ 
+    name: 'thing-detail', 
+    params: { id } 
+  })
+}
+
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!typeData.value) return
   
   // Show warning if there are things using this type
-  if (usageStats.value && usageStats.value.count > 0) {
+  if (totalThingsCount.value > 0) {
     confirmDelete(
       typeData.value,
       'thing type',
       'type',
       {
         message: `Are you sure you want to delete thing type "${typeData.value.type}"?`,
-        details: `This type is currently used by ${usageStats.value.count} thing${usageStats.value.count > 1 ? 's' : ''}. Deleting it may cause issues with those things.`
+        details: `This type is currently used by ${totalThingsCount.value} thing${totalThingsCount.value > 1 ? 's' : ''}. Deleting it may cause issues with those things.`
       }
     )
   } else {
@@ -321,6 +368,14 @@ const handleDeleteConfirm = async () => {
   flex-direction: column;
 }
 
+.thing-card {
+  transition: all 0.2s ease;
+}
+
+.thing-card:hover {
+  transform: translateY(-2px);
+}
+
 /* Fix button styling */
 :deep(.p-button-text) {
   color: var(--primary-color);
@@ -340,4 +395,3 @@ const handleDeleteConfirm = async () => {
   color: var(--primary-300);
 }
 </style>
-```

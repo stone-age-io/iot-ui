@@ -1,4 +1,3 @@
-```vue
 <template>
   <div>
     <PageHeader title="Location Types" subtitle="Manage your location type definitions">
@@ -188,4 +187,3 @@ const handleDeleteConfirm = async () => {
   background: rgba(var(--primary-200-rgb), 0.16);
 }
 </style>
-```

@@ -1,4 +1,3 @@
-```vue
 <template>
   <div>
     <!-- Loading Spinner -->
@@ -97,31 +96,44 @@
         </div>
       </div>
       
-      <!-- Usage Stats Card -->
-      <div class="mt-6" v-if="usageStats">
+      <!-- Locations using this type with count in title -->
+      <div class="mt-6" v-if="totalLocationsCount > 0">
         <div class="bg-surface-primary dark:bg-surface-primary-dark rounded-lg border border-border-primary dark:border-border-primary-dark shadow-theme-md theme-transition">
           <div class="p-6 border-b border-border-primary dark:border-border-primary-dark">
-            <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
-              Usage Statistics
-            </h2>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-content-primary dark:text-content-primary-dark">
+                Locations
+                <span class="text-base font-normal text-content-secondary dark:text-content-secondary-dark">
+                  ({{ totalLocationsCount }} total)
+                </span>
+              </h2>
+              <Button
+                label="View All"
+                icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm"
+                @click="navigateToLocations(typeData.code)"
+              />
+            </div>
           </div>
           <div class="p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <!-- Location Count -->
-              <div class="bg-surface-secondary dark:bg-surface-secondary-dark rounded-lg p-4 border border-border-light dark:border-border-light-dark">
-                <div class="text-sm text-content-secondary dark:text-content-secondary-dark mb-1">Locations Using This Type</div>
-                <div class="flex items-center">
-                  <i class="pi pi-map-marker mr-2 text-green-600 dark:text-green-400"></i>
-                  <div class="text-2xl font-semibold text-content-primary dark:text-content-primary-dark">{{ usageStats.count || 0 }}</div>
+            <div v-if="recentLocations.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                v-for="location in recentLocations" 
+                :key="location.id"
+                class="rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer location-card bg-surface-secondary dark:bg-surface-secondary-dark border border-border-light dark:border-border-light-dark theme-transition"
+                @click="navigateToLocationDetail(location.id)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <span class="text-primary-600 dark:text-primary-400 font-mono">{{ location.code }}</span>
                 </div>
-                <Button
-                  label="View Locations"
-                  icon="pi pi-arrow-right"
-                  class="p-button-text p-button-sm mt-3"
-                  @click="navigateToLocations(typeData.code)"
-                  :disabled="!usageStats.count"
-                />
+                <div class="font-semibold mb-1 text-content-primary dark:text-content-primary-dark">{{ location.name }}</div>
+                <div class="text-sm text-content-secondary dark:text-content-secondary-dark">
+                  {{ formatPath(location.path) }}
+                </div>
               </div>
+            </div>
+            <div v-else class="p-4 text-center text-content-secondary dark:text-content-secondary-dark">
+              Loading locations...
             </div>
           </div>
         </div>
@@ -201,7 +213,8 @@ const {
 
 // Local state
 const typeData = ref(null)
-const usageStats = ref(null)
+const totalLocationsCount = ref(0)
+const recentLocations = ref([])
 
 // Fetch location type data on component mount
 onMounted(async () => {
@@ -219,16 +232,19 @@ const loadTypeDetail = async () => {
     if (data) {
       typeData.value = data
       
-      // Fetch usage stats (locations using this type)
-      await fetchUsageStats()
+      // Fetch usage stats and recent locations
+      await Promise.all([
+        fetchLocationsCount(),
+        fetchRecentLocations()
+      ])
     }
   } catch (err) {
     // Error handling is done in the composable
   }
 }
 
-// Fetch stats about how many locations use this type
-const fetchUsageStats = async () => {
+// Fetch count of locations using this type
+const fetchLocationsCount = async () => {
   if (!typeData.value || !typeData.value.code) return
   
   try {
@@ -239,13 +255,36 @@ const fetchUsageStats = async () => {
       '$countOnly': true // Request only count if endpoint supports it
     })
     
-    usageStats.value = {
-      count: response.data.totalItems || 0
-    }
+    totalLocationsCount.value = response.data.totalItems || 0
   } catch (err) {
-    console.error('Error fetching usage stats:', err)
-    usageStats.value = { count: 0 }
+    console.error('Error fetching locations count:', err)
+    totalLocationsCount.value = 0
   }
+}
+
+// Fetch recent locations using this type
+const fetchRecentLocations = async () => {
+  if (!typeData.value || !typeData.value.code) return
+  
+  try {
+    const { locationService } = await import('../../../services')
+    const response = await locationService.getList({
+      type: typeData.value.code,
+      sort: '-created',
+      perPage: 3, // Limit to 3 recent locations
+    })
+    
+    recentLocations.value = response.data.items || []
+  } catch (err) {
+    console.error('Error fetching recent locations:', err)
+    recentLocations.value = []
+  }
+}
+
+// Format location path for display
+const formatPath = (path) => {
+  if (!path) return ''
+  return path.split('/').join(' > ')
 }
 
 // Navigate to locations filtered by this type
@@ -256,19 +295,27 @@ const navigateToLocations = (typeCode) => {
   })
 }
 
+// Navigate to location detail
+const navigateToLocationDetail = (id) => {
+  router.push({ 
+    name: 'location-detail', 
+    params: { id } 
+  })
+}
+
 // Handle delete button click
 const handleDeleteClick = () => {
   if (!typeData.value) return
   
   // Show warning if there are locations using this type
-  if (usageStats.value && usageStats.value.count > 0) {
+  if (totalLocationsCount.value > 0) {
     confirmDelete(
       typeData.value,
       'location type',
       'type',
       {
         message: `Are you sure you want to delete location type "${typeData.value.type}"?`,
-        details: `This type is currently used by ${usageStats.value.count} location${usageStats.value.count > 1 ? 's' : ''}. Deleting it may cause issues with those locations.`
+        details: `This type is currently used by ${totalLocationsCount.value} location${totalLocationsCount.value > 1 ? 's' : ''}. Deleting it may cause issues with those locations.`
       }
     )
   } else {
@@ -304,6 +351,14 @@ const handleDeleteConfirm = async () => {
   flex-direction: column;
 }
 
+.location-card {
+  transition: all 0.2s ease;
+}
+
+.location-card:hover {
+  transform: translateY(-2px);
+}
+
 /* Fix button styling */
 :deep(.p-button-text) {
   color: var(--primary-color);
@@ -323,4 +378,3 @@ const handleDeleteConfirm = async () => {
   color: var(--primary-300);
 }
 </style>
-```
