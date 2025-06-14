@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode'
 import { ref, computed } from 'vue'
 import apiService from '../services/api'
 import router from '../router'
-import { ENDPOINTS } from '../services/pocketbase-config'
+import configService from '../services/config/configService'
 import { useTypesStore } from './types'
 import { useOrganizationStore } from './organization'
 import { clearUserCache } from '../utils/cacheUtils'
@@ -79,13 +79,14 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      // Add expand parameters to get organization data immediately
+      // Use ConfigService to build the login endpoint with expand parameters
+      const loginEndpoint = configService.getAuthEndpoint(configService.endpoints.AUTH.LOGIN)
       const queryParams = new URLSearchParams({
         expand: 'organizations,current_organization_id'
       }).toString()
       
-      // Login with expand parameters
-      const response = await apiService.post(`/pb/api${ENDPOINTS.LOGIN}?${queryParams}`, credentials)
+      // Login with expand parameters using ConfigService
+      const response = await apiService.post(`${loginEndpoint}?${queryParams}`, credentials)
       
       // Store the token and user info
       token.value = response.data.token

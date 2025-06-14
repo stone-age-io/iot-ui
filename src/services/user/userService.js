@@ -12,7 +12,7 @@ import configService from '../config/configService'
  * 
  * User Schema Documentation
  * 
- * This service interacts with the '_superusers' collection in PocketBase.
+ * This service interacts with the 'users' collection in PocketBase.
  * The schema consists of:
  * - id: Unique identifier (auto-generated)
  * - email: User's email address (used as username)
@@ -41,12 +41,12 @@ export class UserService extends BaseService {
   
   /**
    * Get current user profile with organizations data
-   * Ensuring organizations are properly expanded
+   * Uses ConfigService for proper endpoint construction
    * @returns {Promise} - Axios promise with user data
    */
   getCurrentUser() {
-    // Use proper path construction from config service
-    const endpoint = configService.getPocketBaseUrl(configService.endpoints.AUTH.REFRESH)
+    // Use ConfigService to build the auth refresh endpoint
+    const endpoint = configService.getAuthEndpoint(configService.endpoints.AUTH.REFRESH)
     
     // Add expansions for organization data
     const params = {
@@ -92,14 +92,14 @@ export class UserService extends BaseService {
   }
   
   /**
-   * Update user profile
+   * Update user profile using BaseService pattern
    * @param {string} id - User ID
    * @param {Object} userData - Updated user data
    * @returns {Promise} - Axios promise with updated user
    */
   updateProfile(id, userData) {
-    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, id)
-    return apiHelpers.update(endpoint, null, userData)
+    // Use BaseService update method for consistency
+    return this.update(id, userData)
   }
   
   /**
@@ -113,14 +113,65 @@ export class UserService extends BaseService {
   }
   
   /**
-   * Change user password
+   * Change user password using proper endpoint construction
    * @param {string} id - User ID
    * @param {Object} passwordData - Password change data
    * @returns {Promise} - Axios promise
    */
   changePassword(id, passwordData) {
-    const endpoint = this.collectionEndpoint(COLLECTIONS.USERS, id)
+    // Use ConfigService to build the endpoint
+    const endpoint = configService.getCollectionEndpoint(COLLECTIONS.USERS, id)
+    
+    // Append the password change path to the endpoint
     return apiHelpers.axiosInstance.patch(`${endpoint}/change-password`, passwordData)
+  }
+  
+  /**
+   * Upload user avatar file
+   * @param {string} id - User ID
+   * @param {FormData} formData - FormData containing the avatar file
+   * @returns {Promise} - Axios promise with updated user
+   */
+  uploadAvatar(id, formData) {
+    const endpoint = configService.getCollectionEndpoint(COLLECTIONS.USERS, id)
+    
+    // Use apiHelpers for consistency, with multipart form data headers
+    return apiHelpers.axiosInstance.patch(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  }
+  
+  /**
+   * Get user avatar URL using ConfigService
+   * @param {Object} user - User object with avatar field
+   * @returns {string|null} - URL of the avatar image or null
+   */
+  getAvatarUrl(user) {
+    if (!user || !user.avatar) {
+      return null
+    }
+    
+    // Use ConfigService for consistent file URL construction
+    return configService.getFileUrl(COLLECTIONS.USERS, user.id, user.avatar)
+  }
+  
+  /**
+   * Get user avatar thumbnail URL using ConfigService
+   * @param {Object} user - User object with avatar field
+   * @param {string} size - Thumbnail size (e.g., '100x100')
+   * @returns {string|null} - URL of the avatar thumbnail or null
+   */
+  getAvatarThumbnailUrl(user, size = '100x100') {
+    if (!user || !user.avatar) {
+      return null
+    }
+    
+    // Use ConfigService with thumbnail parameters
+    return configService.getFileUrl(COLLECTIONS.USERS, user.id, user.avatar, {
+      thumb: size
+    })
   }
 }
 

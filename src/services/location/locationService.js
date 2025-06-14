@@ -5,9 +5,11 @@ import {
   collectionEndpoint 
 } from '../pocketbase-config'
 import { apiHelpers } from '../api'
+import configService from '../config/configService'
 
 /**
  * Service for Location entity operations
+ * Updated to use ConfigService for all URL construction
  */
 export class LocationService extends BaseService {
   constructor() {
@@ -55,9 +57,10 @@ export class LocationService extends BaseService {
    * @returns {Promise} - Axios promise with updated location
    */
   uploadFloorPlan(id, formData) {
-    const endpoint = this.collectionEndpoint(this.collectionName, id)
+    // Use ConfigService to build the endpoint consistently
+    const endpoint = configService.getCollectionEndpoint(COLLECTIONS.LOCATIONS, id)
     
-    // Use custom axios config for multipart/form-data
+    // Use apiHelpers for consistency, with multipart form data headers
     return apiHelpers.axiosInstance.patch(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -66,23 +69,50 @@ export class LocationService extends BaseService {
   }
   
   /**
-   * Get the floor plan image URL
+   * Get the floor plan image URL using ConfigService for consistent URL construction
    * @param {Object} location - Location object with floorplan field
-   * @returns {string} - URL of the floor plan image
+   * @returns {string|null} - URL of the floor plan image or null
    */
   getFloorPlanImageUrl(location) {
     if (!location || !location.floorplan) {
-      return null;
+      return null
     }
 
-    // Construct the PocketBase file URL with /pb prefix
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    const collectionName = 'locations'; // Use the fixed collection name
-    const recordId = location.id;
-    const filename = location.floorplan;
-    
-    // Return direct URL without attempting to fetch
-    return `${baseUrl}/pb/api/files/${collectionName}/${recordId}/${filename}`;
+    // Use ConfigService for consistent file URL construction
+    return configService.getFileUrl(COLLECTIONS.LOCATIONS, location.id, location.floorplan)
+  }
+  
+  /**
+   * Get the floor plan image thumbnail URL using ConfigService
+   * @param {Object} location - Location object with floorplan field
+   * @param {string} size - Thumbnail size (e.g., '800x600')
+   * @returns {string|null} - URL of the floor plan thumbnail or null
+   */
+  getFloorPlanThumbnailUrl(location, size = '800x600') {
+    if (!location || !location.floorplan) {
+      return null
+    }
+
+    // Use ConfigService with thumbnail parameters
+    return configService.getFileUrl(COLLECTIONS.LOCATIONS, location.id, location.floorplan, {
+      thumb: size
+    })
+  }
+  
+  /**
+   * Get downloadable floor plan URL using ConfigService
+   * @param {Object} location - Location object with floorplan field
+   * @returns {string|null} - URL for downloading the floor plan or null
+   */
+  getFloorPlanDownloadUrl(location) {
+    if (!location || !location.floorplan) {
+      return null
+    }
+
+    // Use ConfigService with download parameter
+    return configService.getFileUrl(COLLECTIONS.LOCATIONS, location.id, location.floorplan, {
+      download: '1'
+    })
   }
   
   /**
@@ -103,6 +133,31 @@ export class LocationService extends BaseService {
         ...metadata.coordinates,
         lat: coordinates.lat,
         lng: coordinates.lng
+      }
+      
+      // Update location with new metadata
+      return this.update(id, { metadata })
+    })
+  }
+  
+  /**
+   * Update location indoor coordinates (for floor plan positioning)
+   * @param {string} id - Location ID
+   * @param {Object} coordinates - {x, y} coordinates on floor plan
+   * @returns {Promise} - Axios promise with updated location
+   */
+  updateLocationIndoorCoordinates(id, coordinates) {
+    return this.getById(id).then(response => {
+      const location = response.data
+      
+      // Create or update metadata
+      let metadata = location.metadata || {}
+      
+      // Set indoor coordinates
+      metadata.indoorCoordinates = {
+        ...metadata.indoorCoordinates,
+        x: coordinates.x,
+        y: coordinates.y
       }
       
       // Update location with new metadata

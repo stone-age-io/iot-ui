@@ -9,6 +9,7 @@ import { userService } from '../user/userService'
  * Service for Organization operations
  * 
  * Handles CRUD operations for organizations and organization membership
+ * Now uses ConfigService for all endpoint construction
  */
 export class OrganizationService extends BaseService {
   constructor() {
@@ -101,39 +102,121 @@ export class OrganizationService extends BaseService {
   }
   
   /**
-   * Add a user to an organization
+   * Add a user to an organization using proper endpoint construction
    * @param {string} organizationId - Organization ID
    * @param {string} userId - User ID
    * @param {string} role - Role ('admin' or 'member')
    * @returns {Promise} - Axios promise
    */
   addUserToOrganization(organizationId, userId, role = 'member') {
-    return apiHelpers.axiosInstance.post(`/pb/api/organizations/${organizationId}/users`, {
+    // Use ConfigService to build the custom endpoint
+    const endpoint = configService.getCustomEndpoint(`organizations/${organizationId}/users`)
+    
+    return apiHelpers.axiosInstance.post(endpoint, {
       user_id: userId,
       role: role
     })
   }
   
   /**
-   * Remove a user from an organization
+   * Remove a user from an organization using proper endpoint construction
    * @param {string} organizationId - Organization ID
    * @param {string} userId - User ID
    * @returns {Promise} - Axios promise
    */
   removeUserFromOrganization(organizationId, userId) {
-    return apiHelpers.axiosInstance.delete(`/pb/api/organizations/${organizationId}/users/${userId}`)
+    // Use ConfigService to build the custom endpoint
+    const endpoint = configService.getCustomEndpoint(`organizations/${organizationId}/users/${userId}`)
+    
+    return apiHelpers.axiosInstance.delete(endpoint)
   }
   
   /**
-   * Update a user's role in an organization
+   * Update a user's role in an organization using proper endpoint construction
    * @param {string} organizationId - Organization ID
    * @param {string} userId - User ID
    * @param {string} role - New role ('admin' or 'member')
    * @returns {Promise} - Axios promise
    */
   updateUserRole(organizationId, userId, role) {
-    return apiHelpers.axiosInstance.patch(`/pb/api/organizations/${organizationId}/users/${userId}`, {
+    // Use ConfigService to build the custom endpoint
+    const endpoint = configService.getCustomEndpoint(`organizations/${organizationId}/users/${userId}`)
+    
+    return apiHelpers.axiosInstance.patch(endpoint, {
       role: role
+    })
+  }
+  
+  /**
+   * Get organization members using proper endpoint construction
+   * @param {string} organizationId - Organization ID
+   * @param {Object} params - Query parameters
+   * @returns {Promise} - Axios promise with members data
+   */
+  getOrganizationMembers(organizationId, params = {}) {
+    // Use ConfigService to build the custom endpoint
+    const endpoint = configService.getCustomEndpoint(`organizations/${organizationId}/members`)
+    
+    return apiHelpers.getList(endpoint, params)
+  }
+  
+  /**
+   * Get organization statistics using proper endpoint construction
+   * @param {string} organizationId - Organization ID
+   * @returns {Promise} - Axios promise with statistics data
+   */
+  getOrganizationStats(organizationId) {
+    // Use ConfigService to build the custom endpoint
+    const endpoint = configService.getCustomEndpoint(`organizations/${organizationId}/stats`)
+    
+    return apiHelpers.axiosInstance.get(endpoint)
+  }
+  
+  /**
+   * Upload organization logo using proper endpoint construction
+   * @param {string} organizationId - Organization ID
+   * @param {FormData} formData - FormData containing the logo file
+   * @returns {Promise} - Axios promise with updated organization
+   */
+  uploadLogo(organizationId, formData) {
+    // Use ConfigService to build the collection endpoint
+    const endpoint = configService.getCollectionEndpoint(COLLECTIONS.ORGANIZATIONS, organizationId)
+    
+    return apiHelpers.axiosInstance.patch(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  }
+  
+  /**
+   * Get organization logo URL using ConfigService
+   * @param {Object} organization - Organization object with logo field
+   * @returns {string|null} - URL of the logo image or null
+   */
+  getLogoUrl(organization) {
+    if (!organization || !organization.logo) {
+      return null
+    }
+    
+    // Use ConfigService for consistent file URL construction
+    return configService.getFileUrl(COLLECTIONS.ORGANIZATIONS, organization.id, organization.logo)
+  }
+  
+  /**
+   * Get organization logo thumbnail URL using ConfigService
+   * @param {Object} organization - Organization object with logo field
+   * @param {string} size - Thumbnail size (e.g., '100x100')
+   * @returns {string|null} - URL of the logo thumbnail or null
+   */
+  getLogoThumbnailUrl(organization, size = '100x100') {
+    if (!organization || !organization.logo) {
+      return null
+    }
+    
+    // Use ConfigService with thumbnail parameters
+    return configService.getFileUrl(COLLECTIONS.ORGANIZATIONS, organization.id, organization.logo, {
+      thumb: size
     })
   }
   
@@ -156,7 +239,7 @@ export class OrganizationService extends BaseService {
       code = code.padEnd(2, 'o');
     }
     
-    return code;
+    return code
   }
   
   /**

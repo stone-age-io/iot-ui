@@ -1,9 +1,9 @@
-// Updated src/services/api.js with reactive store integration
+// src/services/api.js - Updated with ConfigService integration
 import axios from 'axios'
 import configService from './config/configService'
 import { generateCacheKey, getCache, setCache, getCacheTimestamp } from '../utils/cacheUtils'
 
-// Create axios instance with default config
+// Create axios instance with ConfigService baseURL
 const apiService = axios.create({
   baseURL: configService.getApiBaseUrl(),
   timeout: configService.env.API_TIMEOUT,
@@ -203,14 +203,37 @@ export const apiHelpers = {
   axiosInstance: apiService,
   
   /**
+   * Get the current API base URL from ConfigService
+   * @returns {string} - Current API base URL
+   */
+  getBaseUrl: () => configService.getApiBaseUrl(),
+  
+  /**
+   * Update the API base URL (useful for environment switching)
+   * @param {string} newBaseUrl - New base URL
+   */
+  updateBaseUrl: (newBaseUrl) => {
+    apiService.defaults.baseURL = newBaseUrl;
+  },
+  
+  /**
    * Fetch a paginated list of resources with caching
-   * @param {string} endpoint - API endpoint
+   * @param {string} endpoint - API endpoint (should be relative or absolute URL)
    * @param {Object} params - Query parameters
    * @param {Object} cacheOptions - Optional caching options
    * @returns {Promise} - Axios promise
    */
   getList: (endpoint, params = {}, cacheOptions = null) => {
-    const apiCall = () => apiService.get(endpoint, { params });
+    // Handle both relative and absolute endpoints
+    const apiCall = () => {
+      if (endpoint.startsWith('http')) {
+        // Absolute URL - use directly
+        return axios.get(endpoint, { params })
+      } else {
+        // Relative URL - use configured instance
+        return apiService.get(endpoint, { params })
+      }
+    }
     
     if (cacheOptions) {
       return withCache(() => apiCall(), {
@@ -230,7 +253,15 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   getById: (endpoint, cacheOptions = null) => {
-    const apiCall = () => apiService.get(endpoint);
+    const apiCall = () => {
+      if (endpoint.startsWith('http')) {
+        // Absolute URL - use directly
+        return axios.get(endpoint)
+      } else {
+        // Relative URL - use configured instance
+        return apiService.get(endpoint)
+      }
+    }
     
     if (cacheOptions) {
       return withCache(() => apiCall(), {
@@ -249,7 +280,13 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   create: (endpoint, data) => {
-    return apiService.post(endpoint, data);
+    if (endpoint.startsWith('http')) {
+      // Absolute URL - use directly
+      return axios.post(endpoint, data)
+    } else {
+      // Relative URL - use configured instance
+      return apiService.post(endpoint, data)
+    }
   },
   
   /**
@@ -260,7 +297,13 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   update: (endpoint, id, data) => {
-    return apiService.patch(endpoint, data);
+    if (endpoint.startsWith('http')) {
+      // Absolute URL - use directly
+      return axios.patch(endpoint, data)
+    } else {
+      // Relative URL - use configured instance
+      return apiService.patch(endpoint, data)
+    }
   },
   
   /**
@@ -269,8 +312,56 @@ export const apiHelpers = {
    * @returns {Promise} - Axios promise
    */
   delete: (endpoint) => {
-    return apiService.delete(endpoint);
+    if (endpoint.startsWith('http')) {
+      // Absolute URL - use directly
+      return axios.delete(endpoint)
+    } else {
+      // Relative URL - use configured instance
+      return apiService.delete(endpoint)
+    }
+  },
+  
+  /**
+   * Generic HTTP request method with full control
+   * @param {Object} config - Axios request configuration
+   * @returns {Promise} - Axios promise
+   */
+  request: (config) => {
+    // Always use the configured instance for generic requests
+    return apiService.request(config)
+  },
+  
+  /**
+   * Upload file with progress tracking
+   * @param {string} endpoint - Upload endpoint
+   * @param {FormData} formData - Form data with file
+   * @param {Object} options - Upload options
+   * @returns {Promise} - Axios promise with progress events
+   */
+  upload: (endpoint, formData, options = {}) => {
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      ...options
+    }
+    
+    if (endpoint.startsWith('http')) {
+      // Absolute URL - use directly
+      return axios.post(endpoint, formData, config)
+    } else {
+      // Relative URL - use configured instance
+      return apiService.post(endpoint, formData, config)
+    }
   }
+}
+
+// Update base URL if ConfigService URL changes (for hot reloading in development)
+if (import.meta.hot) {
+  import.meta.hot.accept(['./config/configService'], () => {
+    apiService.defaults.baseURL = configService.getApiBaseUrl()
+    console.log('API base URL updated:', apiService.defaults.baseURL)
+  })
 }
 
 export default apiService
