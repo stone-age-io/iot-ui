@@ -28,8 +28,11 @@ src/
 │   ├── type/            # Type management services
 │   ├── nats/            # NATS messaging services
 │   ├── user/            # User profile services
-│   └── index.js         # Central export point
+│   ├── organization/    # Organization services
+│   ├── audit/           # Audit log services
+│   └── config/          # Configuration services
 ├── stores/              # Pinia state stores
+├── utils/               # Utility functions
 └── views/               # Page components
     ├── Auth/            # Authentication views
     ├── Entities/        # Entity management views
@@ -151,6 +154,7 @@ export function useApiOperation() {
    * @param {string} options.successMessage - Success message to display (optional)
    * @param {Function} options.onSuccess - Callback for successful operation (optional)
    * @param {Function} options.onError - Callback for failed operation (optional)
+   * @param {string} options.collection - Collection name for cache updates (optional)
    * @returns {Promise<any>} - Result of the operation
    */
   const performOperation = async (operation, options) => {
@@ -160,7 +164,8 @@ export function useApiOperation() {
       errorMessage = 'Operation failed',
       successMessage,
       onSuccess,
-      onError
+      onError,
+      collection
     } = options
 
     // Set loading state
@@ -208,7 +213,6 @@ export function useApiOperation() {
         return onError(err)
       }
 
-      // Return a default value or rethrow
       return null
     } finally {
       // Reset loading state
@@ -220,10 +224,10 @@ export function useApiOperation() {
    * Specialized operation handlers for common operation types
    */
   const performCreate = async (operation, options) => {
-    // Implementation for creation operations
     const {
       entityName = 'item',
       entityIdentifier,
+      collection,
       ...restOptions
     } = options
 
@@ -231,18 +235,44 @@ export function useApiOperation() {
       successMessage: entityIdentifier 
         ? `${entityName} ${entityIdentifier} has been created`
         : `${entityName} has been created`,
+      collection,
       ...restOptions
     })
   }
 
   const performUpdate = async (operation, options) => {
-    // Implementation for update operations
-    // Similar pattern to performCreate
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      collection,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been updated`
+        : `${entityName} has been updated`,
+      collection,
+      ...restOptions
+    })
   }
 
   const performDelete = async (operation, options) => {
-    // Implementation for delete operations
-    // Similar pattern to performCreate
+    const {
+      entityName = 'item',
+      entityIdentifier,
+      collection,
+      ...restOptions
+    } = options
+
+    return performOperation(operation, {
+      successMessage: entityIdentifier 
+        ? `${entityName} ${entityIdentifier} has been deleted`
+        : `${entityName} has been deleted`,
+      onSuccess: () => true,
+      collection,
+      ...restOptions
+    })
   }
 
   return {
@@ -259,6 +289,7 @@ This pattern centralizes:
 - Error handling and user feedback
 - Toast notifications
 - Success and error callbacks
+- Cache invalidation
 
 ### Entity Composables
 
@@ -268,9 +299,8 @@ Entity composables use the `useApiOperation` composable for standardized API int
 // src/composables/useEntity.js
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { entityService } from '../services'
 import { useApiOperation } from './useApiOperation'
+import { useReactiveData } from './useReactiveData'
 
 /**
  * Composable for entity-related functionality
@@ -278,31 +308,73 @@ import { useApiOperation } from './useApiOperation'
  */
 export function useEntity() {
   const router = useRouter()
-  const toast = useToast()
   const { performOperation, performDelete } = useApiOperation()
   
   // Common state
-  const entities = ref([])
   const loading = ref(false)
   const error = ref(null)
   
-  // Data fetching with standardized operation handling
-  const fetchEntities = async (params = {}) => {
-    return performOperation(
-      () => entityService.getList(params),
-      {
-        loadingRef: loading,
-        errorRef: error,
-        errorMessage: 'Failed to load entities',
-        onSuccess: (response) => {
-          entities.value = response.data.items || []
-          return entities.value
-        }
-      }
-    )
+  // Set up reactive data from the cache store
+  const entitiesData = useReactiveData({
+    collection: 'entities',
+    operation: 'list',
+    fetchFunction: fetchEntitiesRaw,
+    processData: data => data?.items || []
+  })
+  
+  // Expose entities as a computed property from reactive cache
+  const entities = computed(() => entitiesData.data.value || [])
+  
+  /**
+   * Raw function to fetch entities - used internally by useReactiveData
+   */
+  async function fetchEntitiesRaw(options = {}) {
+    return await entityService.getList({
+      ...options,
+      skipCache: options?.skipCache
+    })
   }
   
-  // Delete with standardized operation handling
+  /**
+   * Fetch all entities with optional filtering
+   */
+  const fetchEntities = async (params = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const skipCache = params.skipCache || Object.keys(params).length > 0
+      
+      if (skipCache || Object.keys(params).length > 0) {
+        // For filtered queries, use direct API call
+        const response = await entityService.getList({
+          ...params,
+          skipCache
+        })
+        
+        // Update the cache with this response
+        if (response && response.data) {
+          entitiesData.updateData(response)
+          return response.data.items || []
+        }
+        return []
+      } else {
+        // Use the reactive data system for standard fetches
+        await entitiesData.refreshData(skipCache)
+        return entities.value
+      }
+    } catch (err) {
+      console.error('Error in fetchEntities:', err)
+      error.value = 'Failed to load entities'
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Delete an entity
+   */
   const deleteEntity = async (id, code) => {
     return performDelete(
       () => entityService.delete(id),
@@ -311,13 +383,16 @@ export function useEntity() {
         errorRef: error,
         errorMessage: 'Failed to delete entity',
         entityName: 'Entity',
-        entityIdentifier: code
+        entityIdentifier: code,
+        collection: 'entities',
+        onSuccess: async () => {
+          // Force refresh to update the UI
+          await entitiesData.refreshData(true)
+          return true
+        }
       }
     )
   }
-  
-  // Other operations and helpers
-  // ...
   
   // Navigation methods
   const navigateToEntityList = () => router.push({ name: 'entities' })
@@ -347,6 +422,7 @@ The application implements entity-specific composables for each entity type:
 - **useThing**: Encapsulates IoT device operations and styling
 - **useClient**: Encapsulates messaging client operations
 - **useTopicPermission**: Encapsulates MQTT topic permission operations
+- **useOrganization**: Encapsulates organization operations
 
 ### Form Composables
 
@@ -364,9 +440,6 @@ import { useApiOperation } from './useApiOperation'
 /**
  * Composable for entity form handling
  * Manages form state, validation, and submission
- * 
- * @param {string} mode - 'create' or 'edit'
- * @returns {Object} - Form methods and state
  */
 export function useEntityForm(mode = 'create') {
   const router = useRouter()
@@ -391,13 +464,7 @@ export function useEntityForm(mode = 'create') {
   // Initialize Vuelidate
   const v$ = useVuelidate(rules, entity)
   
-  // Load entity data for editing
-  const loadEntity = (entityData) => {
-    if (!entityData) return
-    entity.value = { ...entityData }
-  }
-  
-  // Handle form submission with standardized operation handling
+  // Handle form submission
   const submitForm = async () => {
     const isValid = await v$.value.$validate()
     if (!isValid) return false
@@ -411,6 +478,7 @@ export function useEntityForm(mode = 'create') {
         errorRef: null,
         errorMessage: `Failed to ${mode === 'create' ? 'create' : 'update'} entity`,
         successMessage: `Entity ${entity.value.name} has been ${mode === 'create' ? 'created' : 'updated'}`,
+        collection: 'entities',
         onSuccess: (response) => {
           router.push({ name: 'entity-detail', params: { id: response.data.id } })
           return true
@@ -420,19 +488,11 @@ export function useEntityForm(mode = 'create') {
     )
   }
   
-  // Reset form
-  const resetForm = () => {
-    entity.value = { id: '', name: '' /* other fields reset */ }
-    v$.value.$reset()
-  }
-  
   return {
     entity,
     v$,
     loading,
-    loadEntity,
-    submitForm,
-    resetForm
+    submitForm
   }
 }
 ```
@@ -459,17 +519,20 @@ The application includes several utility composables:
 - **useNatsMessages**: Handles NATS message subscriptions and display
 - **useNatsSettings**: Manages NATS connection settings
 - **useUserProfile**: Handles user profile operations
+- **useReactiveData**: Manages reactive data with caching
+- **useTheme**: Theme-related utilities
 
 ## Service Layer Pattern
 
 ### Base Service Class
 
-The application uses a BaseService class for common CRUD operations with enhanced field mapping:
+The application uses a BaseService class for common CRUD operations:
 
 ```javascript
 // src/services/base/BaseService.js
 import { apiHelpers } from '../api'
-import { transformResponse, transformPaginationParams } from '../pocketbase-config'
+import configService from '../config/configService'
+import { generateUUIDv7 } from '../../utils/uuidUtils'
 
 export class BaseService {
   /**
@@ -485,7 +548,6 @@ export class BaseService {
       // Default options
       jsonFields: [], // Fields to be parsed/stringified as JSON
       expandFields: [], // Fields to expand in queries
-      fieldMappings: {}, // Field mappings between API and client fields
       ...options
     }
   }
@@ -493,64 +555,38 @@ export class BaseService {
   // CRUD Operations
   getList(params = {}) { /* ... */ }
   getById(id) { /* ... */ }
-  create(entity) { /* ... */ }
-  update(id, entity) { /* ... */ }
-  delete(id) { /* ... */ }
-
-  // Field mapping methods
-  mapApiToClientFields(apiData) {
-    const result = { ...apiData }
-    const mappings = this.options.fieldMappings
+  
+  async create(entity) {
+    // Get current organization ID and automatically add it
+    const authData = this.getUserAuthData()
+    const currentOrgId = authData?.currentOrgId
     
-    // Skip if no mappings defined
-    if (!mappings || Object.keys(mappings).length === 0) {
-      return result
+    const entityData = { ...entity }
+    
+    // Add organization_id if not already provided and we have a current org
+    if (currentOrgId && !entityData.organization_id) {
+      entityData.organization_id = currentOrgId
     }
     
-    // Apply mappings: API field name -> client field name
-    Object.entries(mappings).forEach(([apiField, clientField]) => {
-      if (apiData[apiField] !== undefined) {
-        result[clientField] = apiData[apiField]
-        
-        // Remove the original field if it's different from the client field
-        if (apiField !== clientField) {
-          delete result[apiField]
-        }
-      }
-    })
-    
-    return result
-  }
-
-  mapClientToApiFields(clientData) {
-    const result = { ...clientData }
-    const mappings = this.options.fieldMappings
-    
-    // Skip if no mappings defined
-    if (!mappings || Object.keys(mappings).length === 0) {
-      return result
+    // Generate a UUIDv7 for the entity if ID is not already specified
+    const entityWithId = {
+      ...entityData,
+      id: entityData.id || generateUUIDv7()
     }
     
-    // Create reverse mappings: client field name -> API field name
-    const reverseMappings = {}
-    Object.entries(mappings).forEach(([apiField, clientField]) => {
-      reverseMappings[clientField] = apiField
-    })
+    // Process entity data before sending to API
+    const processedData = this.stringifyJsonFields(entityWithId)
     
-    // Apply reverse mappings
-    Object.entries(reverseMappings).forEach(([clientField, apiField]) => {
-      if (clientData[clientField] !== undefined) {
-        result[apiField] = clientData[clientField]
-        
-        // Remove the original field if it's different from the API field
-        if (apiField !== clientField) {
-          delete result[clientField]
-        }
-      }
-    })
+    const response = await apiHelpers.create(endpoint, processedData)
     
-    return result
+    // Clear cache after creation
+    await this.clearCache()
+    
+    return response
   }
+  
+  async update(id, entity) { /* ... */ }
+  async delete(id) { /* ... */ }
 
   // Utility methods
   parseJsonFields(entity) { /* ... */ }
@@ -562,17 +598,18 @@ export class BaseService {
 The BaseService provides:
 
 - Standardized CRUD operations
-- Automated field mapping between API and client field names
+- Automatic organization_id injection on creation
+- UUIDv7 generation for new entities
 - JSON field parsing and stringification
 - Query parameter transformation
-- Extension points for entity-specific services
+- Cache management integration
 
 ### Entity Services
 
-Entity services extend the BaseService to provide entity-specific functionality, focusing on specialized methods only:
+Entity services extend the BaseService to provide entity-specific functionality:
 
 ```javascript
-// Example: Entity Service with Field Mapping
+// Example: Entity Service
 export class ThingService extends BaseService {
   constructor() {
     super(
@@ -580,11 +617,7 @@ export class ThingService extends BaseService {
       collectionEndpoint,
       {
         jsonFields: ['metadata', 'current_state'],
-        expandFields: ['location_id', 'edge_id'],
-        fieldMappings: {
-          'code': 'thing_code',
-          'type': 'thing_type'
-        }
+        expandFields: ['location_id', 'edge_id']
       }
     )
   }
@@ -596,7 +629,7 @@ export class ThingService extends BaseService {
 }
 ```
 
-Entity services rely on the BaseService for standard CRUD operations and focus on providing only entity-specific functionality:
+Entity services focus on providing only entity-specific functionality:
 
 1. **EdgeService**: Edge-specific operations
 2. **LocationService**: Location-specific operations
@@ -604,6 +637,7 @@ Entity services rely on the BaseService for standard CRUD operations and focus o
 4. **ClientService**: Client-specific operations
 5. **TopicPermissionService**: Topic permission-specific operations
 6. **UserService**: User profile-specific operations
+7. **OrganizationService**: Organization-specific operations
 
 ### Type Services
 
@@ -615,14 +649,41 @@ Type services manage entity type definitions using the same pattern:
 4. **LocationTypeService**: Location type-specific functionality
 5. **ThingTypeService**: Thing type-specific functionality
 
-### Utility Services
+### Configuration Service
 
-Utility services provide additional functionality:
+The ConfigService centralizes all configuration and URL construction:
 
-1. **apiHelpers**: Axios wrapper for API requests
-2. **natsService**: Manages NATS messaging connections
-3. **natsConfigService**: Manages NATS configuration storage
-4. **natsConnectionManager**: Manages NATS connection lifecycle
+```javascript
+// src/services/config/configService.js
+class ConfigService {
+  constructor() {
+    this.env = {
+      API_URL: import.meta.env.VITE_API_URL || 'http://localhost:8080/pb',
+      // ... other environment variables
+    }
+  }
+  
+  getApiBaseUrl() {
+    return this.env.API_URL
+  }
+  
+  getCollectionEndpoint(collection, recordId = null) {
+    const base = `/api/collections/${collection}/records`
+    return recordId ? `${base}/${recordId}` : base
+  }
+  
+  getFileUrl(collection, recordId, filename, params = {}) {
+    let fileUrl = `${this.env.API_URL}/api/files/${collection}/${recordId}/${filename}`
+    
+    const queryParams = new URLSearchParams(params)
+    if (queryParams.toString()) {
+      fileUrl += `?${queryParams.toString()}`
+    }
+    
+    return fileUrl
+  }
+}
+```
 
 ## API Interaction Pattern
 
@@ -631,7 +692,7 @@ The application uses a standardized pattern for API interactions:
 ### Service Layer
 - BaseService handles common CRUD operations
 - Entity services provide entity-specific operations
-- Field mapping is automated based on configuration
+- ConfigService manages all URL construction
 - Parameter transformation follows a strategy pattern
 
 ### Composable Layer
@@ -664,6 +725,7 @@ const fetchEntities = async (params = {}) => {
       loadingRef: loading,
       errorRef: error,
       errorMessage: 'Failed to load entities',
+      collection: 'entities',
       onSuccess: (response) => {
         entities.value = response.data.items || []
         return entities.value
@@ -686,7 +748,6 @@ Views follow consistent patterns based on their purpose:
 ### List Views
 
 ```vue
-<!-- Example ListView using Composables -->
 <template>
   <div>
     <PageHeader title="Entities" subtitle="Manage your entities">
@@ -728,20 +789,13 @@ Views follow consistent patterns based on their purpose:
 import { onMounted } from 'vue'
 import { useEntity } from '../../composables/useEntity'
 import { useDeleteConfirmation } from '../../composables/useConfirmation'
-import DataTable from '../../components/common/DataTable.vue'
-import PageHeader from '../../components/common/PageHeader.vue'
-import ConfirmationDialog from '../../components/common/ConfirmationDialog.vue'
-import Button from 'primevue/button'
-import Toast from 'primevue/toast'
 
 // Get entity functionality from composable
 const { 
   entities,
   loading,
   fetchEntities,
-  formatDate,
   deleteEntity,
-  navigateToEntityList,
   navigateToEntityDetail,
   navigateToEntityCreate
 } = useEntity()
@@ -750,7 +804,6 @@ const {
 const { 
   deleteDialog,
   confirmDelete,
-  updateDeleteDialog,
   resetDeleteDialog 
 } = useDeleteConfirmation()
 
@@ -758,9 +811,6 @@ const {
 onMounted(async () => {
   await fetchEntities()
 })
-
-// Handle delete operations
-// ...
 </script>
 ```
 
@@ -776,7 +826,7 @@ Form views use the specialized form composables for handling form state, validat
 
 The application uses a combination of approaches for state management:
 
-1. **Pinia Stores**: For global state (auth, settings, etc.)
+1. **Pinia Stores**: For global state (auth, settings, types, cache)
 2. **Composables**: For entity-specific state and operations
 3. **Component State**: For UI-specific state that doesn't need to be shared
 
@@ -784,13 +834,13 @@ The application uses a combination of approaches for state management:
 
 The architecture enforces several best practices:
 
-1. **DRY Principle**: Common patterns in `useApiOperation` and BaseService field mapping prevent code duplication.
+1. **DRY Principle**: Common patterns in `useApiOperation` and BaseService prevent code duplication.
 
 2. **Single Responsibility**: Entity services focus on entity-specific functionality with common CRUD operations handled by the BaseService.
 
 3. **Consistent Error Handling**: The standardized error handling in `useApiOperation` provides a uniform approach across the application.
 
-4. **Field Mapping**: The field mapping mechanism in BaseService handles differences between API and client field names.
+4. **Automatic Organization Context**: The BaseService automatically adds organization_id to created entities.
 
 5. **Separation of Concerns**: 
    - Services handle data access and API interactions
@@ -801,7 +851,7 @@ The architecture enforces several best practices:
 
 7. **Toast Notification Standardization**: The toast notification pattern in `useApiOperation` ensures consistent user feedback.
 
-8. **Avoid Direct Dependencies**: Composables do not directly depend on specific view components, and views do not directly use services.
+8. **Centralized Configuration**: ConfigService manages all URL construction and environment variables.
 
 ## Feature Development Workflow
 
@@ -810,12 +860,13 @@ When adding a new feature or entity:
 1. **Define Service**:
    - Create a new directory in `services/` for the entity
    - Implement entity service extending BaseService
-   - Configure field mappings if needed
+   - Configure JSON fields and expand fields if needed
    - Export from central `services/index.js`
 
 2. **Create Composables**:
    - Create entity composable using `useApiOperation`
    - Create form composable for form handling
+   - Integrate with `useReactiveData` for caching
 
 3. **Implement Views**:
    - Create List, Detail, Create, and Edit views
@@ -831,4 +882,4 @@ When adding a new feature or entity:
 
 This architecture document provides a comprehensive overview of the IoT Platform UI codebase organization and design patterns. By following these established patterns, developers can maintain consistency and improve maintainability when extending the application with new features.
 
-The architecture is based on Vue 3's Composition API, emphasizing reusable composables, a strong service layer with field mapping, centralized API operation handling, and consistent UI patterns across the application. This approach promotes separation of concerns and makes the codebase more maintainable and extensible while following DRY principles.
+The architecture is based on Vue 3's Composition API, emphasizing reusable composables, a strong service layer with automatic organization context, centralized API operation handling, and consistent UI patterns across the application. This approach promotes separation of concerns and makes the codebase more maintainable and extensible while following DRY principles.
